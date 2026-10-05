@@ -30,7 +30,11 @@ is an open decision (PLANNING).
 Rendering rules (measured on this board, binding):
 - Compose in internal-SRAM bands, push to PSRAM framebuffer. Never draw per-pixel
   into the PSRAM framebuffer. Never put art in PSRAM — art lives in flash.
-- Frames phase-lock to panel refresh at ~25.3 fps (39.6 ms). That is the budget.
+- The panel refreshes at 25.26 Hz (39.59 ms, from the RGB timings). main.cpp paces
+  render to that period; rendering faster wastes CPU and tears. That is the budget.
+- Measured (R0, 2026-10-05): a full-screen push costs ~23 ms on core 0, running in
+  parallel with compose on core 1. Frame time ≈ max(compose, push), so compose can
+  use up to ~39 ms before frames drop.
 - Draw cost is dominated by CALL COUNT, not pixels: ~3 µs per LovyanGFX call.
   Prefer few large calls (block pushImage, fillRect) over many small ones.
 - No band.drawPixel() loops in hot paths.

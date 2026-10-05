@@ -55,8 +55,9 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | game_state | src/game_state.* | overworld / encounter / menus | R5 |
 
 ## Performance Budget
-- Frame = 39.6 ms (panel-locked ~25.3 fps). Cave Escape compose ran 34–36 ms with
-  parallax + sprites; budget for the lane renderer is ≤ 35 ms compose.
+- Frame = 39.59 ms (render paced to the 25.26 Hz panel refresh). Full-screen push
+  measured at ~23 ms (R0, unpaced run at 43 fps); push runs on core 0 in parallel
+  with compose on core 1. Budget for the lane renderer: compose ≤ 35 ms.
 - Draw cost ≈ call count × ~3 µs. Design renderers around few, large calls.
 - Logic runs on core 1 alongside compose; GPS parsing and ESP-NOW must stay light
   (callbacks enqueue, game loop consumes).

@@ -9,6 +9,16 @@
 #include "board_config.h"
 
 static const float    UPDATE_DT = 1.0f / UPDATE_HZ;
+
+// Panel refresh period, from the RGB timings: 535 x 296 clocks @ 4 MHz = 39,590 us
+// (25.26 Hz). The panel can't show frames faster than this, so render is paced to
+// it: rendering faster wastes CPU and writes the framebuffer mid-scan (tearing,
+// render-vs-refresh beat). Carried over from Cave Escape; omitted in R0-R2 by
+// mistake, which ran unpaced at 43 fps (R0-3).
+static const uint32_t FRAME_US =
+    (uint64_t)(LCD_WIDTH  + LCD_HSYNC_FRONT_PORCH + LCD_HSYNC_PULSE_WIDTH + LCD_HSYNC_BACK_PORCH) *
+    (LCD_HEIGHT + LCD_VSYNC_FRONT_PORCH + LCD_VSYNC_PULSE_WIDTH + LCD_VSYNC_BACK_PORCH) *
+    1000000ULL / LCD_PCLK_HZ;
 static float          s_scroll = 0.0f;   // test-pattern phase, px
 
 // R0 test layer: vertical bars scrolling right at 120 px/s (proves continuous
@@ -35,7 +45,7 @@ static uint32_t s_msMin = 0xFFFFFFFF, s_msMax = 0, s_msSum = 0;
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners R0-R2 ===");
+  Serial.println("\n=== Runners R0-R3 ===");
   if (!display::init())  { Serial.println("FATAL: display init failed");  for(;;) delay(1000); }
   if (!renderer::init()) { Serial.println("FATAL: renderer init failed"); for(;;) delay(1000); }
   if (!input::init())    { Serial.println("FATAL: input init failed");    for(;;) delay(1000); }
@@ -59,6 +69,15 @@ void loop() {
     s_scroll += 120.0f * UPDATE_DT;
     acc -= UPDATE_DT;
   }
+
+  // Frame pacer: lock render cadence to the panel refresh period.
+  static uint32_t s_nextFrameUs = micros();
+  int32_t wait = (int32_t)(s_nextFrameUs - micros());
+  if (wait > 2000) delayMicroseconds(wait - 1000);       // coarse sleep
+  while ((int32_t)(s_nextFrameUs - micros()) > 0) {}     // fine spin
+  s_nextFrameUs += FRAME_US;
+  if ((int32_t)(micros() - s_nextFrameUs) > (int32_t)FRAME_US)
+    s_nextFrameUs = micros() + FRAME_US;                 // resync after a stall
 
   uint32_t t0 = millis();
   renderer::renderFrame();

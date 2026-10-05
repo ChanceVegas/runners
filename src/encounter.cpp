@@ -205,7 +205,15 @@ void update(float dt) {
   // Controls.
   if (in.laneSwipe < 0 && s_laneTarget > -1) --s_laneTarget;
   if (in.laneSwipe > 0 && s_laneTarget <  1) ++s_laneTarget;
-  if (in.jumpPressed && s_jumpY <= 0.0f) s_jumpV = RUN_JUMP_VEL_PX_S;
+  const bool jumpOk = in.jumpPressed && s_jumpY <= 0.0f;
+  if (jumpOk) s_jumpV = RUN_JUMP_VEL_PX_S;
+#if DEBUG_INPUT_LOG
+  if (in.laneSwipe) Serial.printf("[in] swipe %+d -> lane %d at %d m\n",
+                                  in.laneSwipe, s_laneTarget, (int)(s_travel - s_runStart));
+  if (in.jumpPressed) Serial.printf("[in] jump%s at %d m\n",
+                                    jumpOk ? "" : " (ignored: airborne)",
+                                    (int)(s_travel - s_runStart));
+#endif
 
   // Sideways glide toward the target lane.
   const float step = RUN_LANE_SPEED * dt;
@@ -238,7 +246,15 @@ void update(float dt) {
     const float z = o.wz - s_travel;
     if (z < 0.5f) { o.active = false; continue; }   // passed and off-screen
     if (fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
-      if (o.kind == Kind::Wall || s_jumpY < OBST_CLEAR_PX) { endRun(State::Lose); return; }
+      if (o.kind == Kind::Wall || s_jumpY < OBST_CLEAR_PX) {
+#if DEBUG_INPUT_LOG
+        Serial.printf("[hit] %s lane %d, runner lane %.2f jumpY %d at %d m\n",
+                      o.kind == Kind::Wall ? "WALL" : "BARRIER", o.lane, s_laneX,
+                      (int)s_jumpY, (int)(s_travel - s_runStart));
+#endif
+        endRun(State::Lose);
+        return;
+      }
     }
   }
 

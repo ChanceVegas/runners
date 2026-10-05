@@ -46,9 +46,9 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
 | renderer | src/renderer.* | band compositor, layer callbacks | DONE (R0, hw-verified) |
-| input | src/input.* | touch gestures → abstract actions (move, jump flick, lane swipe, tap) | R1: + laneSwipe/pressed edges |
-| lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | R1 code done, hw-verify pending |
-| encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | R1 code done, hw-verify pending |
+| input | src/input.* | touch gestures → abstract actions (move, jump flick, lane swipe, tap); 100 Hz sampler task | R1-R2: sampler task |
+| lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
+| encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | R1 works on hw; control feel = R1-R2 |
 | gps | src/gps.* | UART NMEA parse, fix/speed, fake-GPS replay | R2 |
 | world | src/world.* | GPS cell → deterministic map + spawns | R3 |
 | overworld | src/overworld.* | top-down map view + avatar | R3 |

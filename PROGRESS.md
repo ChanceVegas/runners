@@ -4,38 +4,39 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R1 CODE DONE (2026-10-05, tag R1-R1) — full playable encounter, compiled in
-  container (RAM 7.7%, Flash 29.7%), host-preview checked; hw-verify pending.
-  R0 hw-verified (R0-R2); R0-R3 pacer folded into the R1 gate (fps must read ~25.3).
-- Builds: yes (espressif32@6.5.0; RAM 6.6%, Flash 28.8% of 1.3 MB app partition)
-- Runs on hardware: yes — scrolling bars smooth, one touch dot, heap flat (~289.6 KB)
-- Measured: unpaced 43.1 fps, render 22–24 ms = full-screen push cost (R0-3).
+- Phase: R1 hw-tested (R1-R1, 2026-10-05): performance + visuals PASS, control feel
+  FAIL (sluggish). R1-R2 = 100 Hz touch sampler fix, compiled; hw-verify pending.
+- Builds: yes (espressif32@6.5.0; RAM 7.7%, Flash 29.7% of 1.3 MB app partition)
+- Runs on hardware: yes — encounter playable, colours correct ("match beautifully")
+- Measured (R1-R1): fps 25.2–25.3 paced, render ~21 ms (title 20.4, running 21.0),
+  heap flat 286,204 across ~12 runs. R0-R3 pacer confirmed working.
 
 ## Next Up (in order)
-1. R1 hardware gate (tag R1-R1):
-   a. Boot: banner `=== Runners R1-R1 ===`, then `[lanes] band buffer byte order: ...`
-      line (paste it). Title screen: sky, hills, road scrolling slowly, "RUNNERS".
-   b. Colours right: blue sky, green grass, grey road, red/white rumble strips. Wrong
-      colours everywhere = byte-order self-test got it wrong; report.
-   c. Tap → run starts. Swipe left/right changes lane (one lane per ~40 px drag).
-      Flick up jumps. Orange barriers are jumpable, dark walls must be dodged.
-   d. Hit something → CAUGHT!; reach 900 m → ESCAPED!; tap after ~1 s → retry.
-   e. Serial: fps ≈ 25.3, render ms (compose budget ≤ 35), heap flat.
-   f. FEEL report: are swipes and flicks reliable while running? Too hard/easy? Road
-      speed feel? Anything unreadable on screen?
+1. R1-R2 feel gate (tag R1-R2): banner `=== Runners R1-R2 ===`. Play several runs.
+   a. Do swipes and flicks feel immediate now?
+   b. Serial now logs every swipe/jump the game receives (`[in] ...`) and the cause
+      of each crash (`[hit] WALL/BARRIER lane .. runner lane .. jumpY ..`). Paste a
+      log covering a few runs: it shows whether a missed dodge was a missed input or
+      a late one.
+   c. fps still ~25.3, render ms, heap flat.
 2. R2 — GPS bring-up (breakdown for user approval BEFORE code; needs module).
 3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
 
 ## Known Issues / Risks
-- R1-BYTE (watch): the road writes the band buffer directly (fast path), so it must
-  match LovyanGFX's 16-bit storage order. lanes::init() measures it at boot (fills a
-  1x1 sprite red through the library, reads the raw word) and converts the palette.
-  Possibly related to Cave Escape's unexplained magenta (CARRY-1) — the boot line
-  will tell us which order the buffer uses.
-- R1-FEEL (open): swipe/flick reliability while running on resistive touch is the
-  real unknown in R1 (PLANNING Open Decision #3). Tunables: INPUT_SWIPE_PX,
+- R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
+  (boot self-test: red 0xF800 reads 0x00F8). Any direct write into a band buffer
+  must swap. lanes::init() detects it and converts; colours verified on hardware.
+- R1-FEEL (fix pending hw-verify, R1-R2): controls felt sluggish; four deaths at
+  exactly 59 m = the FIRST obstacle row, which gives ~4 s warning → inputs weren't
+  registering, not a reaction-time problem. Root cause: touch read inside the logic
+  ticks, which run in a burst before each frame → effectively 25 Hz sampling (the
+  INPUT-2 limit documented in Cave Escape). Fix: dedicated 100 Hz sampler task on
+  core 1 running the gesture state machine; edges counted and delivered one per
+  tick (swipes queue, so a double swipe moves two lanes). Jump speed now measured
+  over a 40 ms window. Swipe 40 → 30 px, lane change 143 → 100 ms. Serial logs each
+  input and crash cause (DEBUG_INPUT_LOG). Remaining tunables: INPUT_SWIPE_PX,
   INPUT_JUMP_*, RUN_LANE_SPEED, RUN_SPEED_*, OBST_GAP_*.
-- R0-3 (fix pending hw check, R0-R3): frame pacer from Cave Escape main.cpp was not
+- R0-3 (fixed, hw-verified R1-R1: fps 25.3): frame pacer from Cave Escape main.cpp was not
   carried over; R0-R2 rendered unpaced at 43 fps against a 25.26 Hz panel. Restored.
 - TOUCH-1 (closed, data): absolute touch mapping verified 2026-10-05, orientation
   correct, no mirroring. Readings: TL 22,16 · TR 447,37 · BL 19,232 / 30,235 ·
@@ -49,10 +50,10 @@ session doesn't know it happened.
   marker uses input's smoothed point. If multiple dots persist, absolute touch
   mapping is wrong: Cave Escape only verified RELATIVE drag, never absolute position
   — corner xy readings will show mirroring/scaling.
-- CARRY-1 (open): Cave Escape's sprite color-key path showed unexplained magenta on
-  floor tiles (ART-2, diagnostic never run — project pivoted). R1 uses NO bitmaps
-  (all art is fillRect/fillEllipse + direct road writes), so it can't hit this. Run a
-  pushImage read-back self-test before the first bitmap art lands.
+- CARRY-1 (open, strong lead): Cave Escape showed unexplained magenta on floor tiles.
+  R1-BYTE proved band buffers are byte-swapped; Cave Escape's parallax wrote native
+  colours straight into them, and its sprite pushImage path never checked byte order.
+  R1 uses NO bitmaps. Before the first bitmap art: read-back test of pushImage.
 - HW-SUN (open, design): CrowPanel display not sunlight-readable; outdoor play needs
   different field hardware (PLANNING Open Decision #2).
 - GPS-INDOOR (open, process): GPS rarely fixes indoors. R2 must ship a fake-GPS
@@ -70,6 +71,14 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-05 — Session 1 (cont.) — R1-R1 hw results → R1-R2 input fix
+- PASS: colours correct, fps 25.2–25.3 paced, render ~21 ms (budget 35), heap flat,
+  full loop works (READY/RUN/LOSE/retry seen in log; best run 319 m).
+- Byte order measured: band buffer stores swapped RGB565 (R1-BYTE closed).
+- FAIL: controls sluggish. Log: 4 of ~12 runs died at 59 m = first row (~4 s
+  warning) → input not registering. Cause + fix in R1-FEEL (100 Hz sampler task).
+- Commit: fix(r1): 100 Hz touch sampler task, snappier swipe/lane, input + crash log
+
 ### 2026-10-05 — Session 1 (cont.) — R1: full encounter in one round
 - User: 3 lanes; build a fully working concept in one development round. Interpreted
   as the complete encounter loop (the part testable without GPS modules / 2nd board).

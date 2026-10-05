@@ -11,17 +11,22 @@
 #define BAND_HEIGHT         34      // px; 272/34 = 8 bands, 480*34*2 = 32,640 B SRAM each
 #define RENDER_MAX_LAYERS   8       // max compose callbacks per frame
 
-// --- Input: single-touch drag gestures (carried over, hw-verified 2026-07-13) ---
-// R1 re-maps these to lane swipes; constants stay until R1 measures otherwise.
+// --- Input: single-touch gestures, sampled by a dedicated task (R1-R2) ---
+#define INPUT_SAMPLE_HZ      100    // touch reads per second. The game loop alone only
+                                    // sampled ~25 Hz (ticks run in a burst per frame),
+                                    // which made controls feel sluggish (R1-FEEL).
 #define INPUT_DEADZONE_PX    10     // px from anchor before movement registers; kills resistive jitter
 #define INPUT_JOY_RANGE_PX   60     // px of drag = full deflection
 #define INPUT_JUMP_FLICK_PX  30     // finger must rise this far above anchor to jump
 #define INPUT_JUMP_REARM_PX  15     // finger must return within this of anchor to re-arm jump
-#define INPUT_EMA_ALPHA      0.5f   // touch smoothing 0..1; higher = snappier, noisier
-#define INPUT_JUMP_VEL_PX    14     // upward px between samples = flick (touch ~25 Hz)
-#define INPUT_SWIPE_PX       40     // px of horizontal drag = one lane change. The anchor
-                                    // re-centres after each swipe, so one long drag can
-                                    // cross two lanes. Lower = twitchier.
+#define INPUT_EMA_ALPHA      0.6f   // x/y smoothing per sample 0..1; at 100 Hz the lag is
+                                    // ~one 10 ms sample. Higher = snappier, noisier
+#define INPUT_JUMP_WINDOW    4      // samples (40 ms) over which upward speed is measured
+#define INPUT_JUMP_VEL_PX    14     // upward px within the window = flick. Same speed the
+                                    // R0/Cave Escape 25 Hz per-sample threshold meant
+#define INPUT_SWIPE_PX       30     // px of horizontal drag = one lane change (was 40 at
+                                    // R1-R1: felt sluggish). The anchor re-centres after
+                                    // each swipe, so one long drag can cross two lanes
 
 // --- Encounter road: pseudo-3D projection (R1) ---
 // Screen row y below the horizon has d = y - HORIZON rows of depth; world depth
@@ -43,7 +48,8 @@
 
 // --- Encounter runner (R1) ---
 #define RUN_FEET_Y           250    // px; screen row of the runner's feet
-#define RUN_LANE_SPEED       7.0f   // lanes/s sideways; 1/7 s per lane change
+#define RUN_LANE_SPEED       10.0f  // lanes/s sideways; 100 ms per lane change (was 7)
+#define DEBUG_INPUT_LOG      1      // 1 = print each swipe/jump the encounter consumes
 #define RUN_JUMP_VEL_PX_S    520.0f // px/s launch; apex = v^2/2g ≈ 90 px
 #define RUN_GRAVITY_PX_S2    1500.0f// px/s^2; airtime = 2v/g ≈ 0.69 s
 #define RUN_SPEED_START      14.0f  // m/s at the start of a run

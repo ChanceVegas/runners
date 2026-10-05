@@ -4,20 +4,28 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R0 CODE DONE (2026-10-05, tag R0-R1) — compiled in container; hw-verify pending.
+- Phase: R0 CODE DONE (2026-10-05, tag R0-R2) — R0-R1 failed hw test (harness bugs); fix compiled, hw-verify pending.
 - Builds: yes (espressif32@6.5.0; RAM 6.6%, Flash 28.8% of 1.3 MB app partition)
 - Runs on hardware: pending
 - Measured FPS: pending (expect ~25.3 panel-locked; test layer is light)
 
 ## Next Up (in order)
-1. R0 hardware verify (tag R0-R1): upload [SUCCESS] → RST → banner
-   `=== Runners R0-R1 ===` → scrolling diagonal stripes, no band seams or tearing →
-   green dot follows finger → serial: fps ≥ 25, render ms, heap flat, moveX responds
-   to horizontal drag.
+1. R0 hardware verify (tag R0-R2): upload [SUCCESS] → RST → banner
+   `=== Runners R0-R2 ===` → vertical grey bars glide smoothly to the RIGHT, never
+   jumping back, no seams at band boundaries → ONE green dot under the finger →
+   serial: fps ≥ 25, heap flat, moveX responds to drag, `xy` matches where you touch
+   (top-left ≈ 0,0; bottom-right ≈ 479,271). Report touch at the 4 corners.
 2. R1 — pseudo-3D lane renderer (breakdown for user approval BEFORE code).
 3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
 
 ## Known Issues / Risks
+- R0-1 (fixed in R0-R2): bars jerked backward — pattern period 64 px but scroll
+  wrapped at 32, swapping the two shades each cycle.
+- R0-2 (fix pending hw-verify): FOUR green dots per touch. main.cpp read the touch
+  controller a second time (raw, unsmoothed) outside input::. Now one read per tick,
+  marker uses input's smoothed point. If multiple dots persist, absolute touch
+  mapping is wrong: Cave Escape only verified RELATIVE drag, never absolute position
+  — corner xy readings will show mirroring/scaling.
 - CARRY-1 (open): Cave Escape's sprite color-key path showed unexplained magenta on
   floor tiles (ART-2, diagnostic never run — project pivoted). Sprite code is NOT
   carried into R0. When R1 adds sprites, run a pushImage round-trip self-test
@@ -39,6 +47,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-05 — Session 1 (cont.) — R0-R1 hw test FAILED
+- User: bars jerk back and forth; four green dots per touch. Both are R0 harness
+  bugs (see R0-1, R0-2), not carried-over modules. Fixed in R0-R2; added touch xy
+  to serial to verify absolute mapping. Also corrected docs: bars are vertical,
+  not diagonal.
+- Commit: fix(r0): bar wrap period + single touch read path; xy debug output
+
 ### 2026-10-05 — Session 1 (R0 scaffold)
 - Design proposed and accepted: two modes (GPS overworld / pseudo-3D encounters),
   serverless shared world via GPS-cell hashing, ESP-NOW for players.

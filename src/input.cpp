@@ -13,7 +13,7 @@
 
 namespace {
 
-input::State s_state = {0.0f, false, false};
+input::State s_state = {0.0f, false, false, -1, -1};
 
 bool  s_wasTouching = false;
 float s_anchorX = 0, s_anchorY = 0;
@@ -73,6 +73,12 @@ void update(float dt) {
       if (s_jumpArmed && rise > INPUT_JUMP_FLICK_PX) s_state.jumpPressed = true;
     }
     s_state.moveX = 0.0f;
+  }
+  if (touching) {
+    s_state.pointX = (int16_t)s_emaX;
+    s_state.pointY = (int16_t)s_emaY;
+  } else {
+    s_state.pointX = s_state.pointY = -1;
   }
   s_wasTouching = touching;
 }

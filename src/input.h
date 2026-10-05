@@ -9,6 +9,9 @@ namespace input {
 struct State {
   float moveX;        // -1..1, dead-zoned, smoothed
   bool  jumpPressed;  // edge: true for exactly one update tick per flick
+  int8_t laneSwipe;   // edge: -1 / +1 for one tick per INPUT_SWIPE_PX of horizontal
+                      //   drag (re-anchors after each, so a long drag can repeat)
+  bool  pressed;      // edge: true for one tick when a finger touches down (taps)
   bool  touching;     // finger down (debug/HUD use only, not gameplay)
   int16_t pointX;     // smoothed screen-space touch point (debug/UI only, not
   int16_t pointY;     //   gameplay); valid while touching. Single touch read/tick.

@@ -4,19 +4,37 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R0 HW-VERIFIED on R0-R2 (2026-10-05) except frame pacing; R0-R3 restores
-  the pacer — final check pending (fps must read ~25.3).
+- Phase: R1 CODE DONE (2026-10-05, tag R1-R1) — full playable encounter, compiled in
+  container (RAM 7.7%, Flash 29.7%), host-preview checked; hw-verify pending.
+  R0 hw-verified (R0-R2); R0-R3 pacer folded into the R1 gate (fps must read ~25.3).
 - Builds: yes (espressif32@6.5.0; RAM 6.6%, Flash 28.8% of 1.3 MB app partition)
 - Runs on hardware: yes — scrolling bars smooth, one touch dot, heap flat (~289.6 KB)
 - Measured: unpaced 43.1 fps, render 22–24 ms = full-screen push cost (R0-3).
 
 ## Next Up (in order)
-1. R0-R3 pacing check: banner `=== Runners R0-R3 ===`, serial fps ≈ 25.3 (not 43),
-   bars still smooth. Then R0 is closed.
-2. R1 — pseudo-3D lane renderer (breakdown for user approval BEFORE code).
+1. R1 hardware gate (tag R1-R1):
+   a. Boot: banner `=== Runners R1-R1 ===`, then `[lanes] band buffer byte order: ...`
+      line (paste it). Title screen: sky, hills, road scrolling slowly, "RUNNERS".
+   b. Colours right: blue sky, green grass, grey road, red/white rumble strips. Wrong
+      colours everywhere = byte-order self-test got it wrong; report.
+   c. Tap → run starts. Swipe left/right changes lane (one lane per ~40 px drag).
+      Flick up jumps. Orange barriers are jumpable, dark walls must be dodged.
+   d. Hit something → CAUGHT!; reach 900 m → ESCAPED!; tap after ~1 s → retry.
+   e. Serial: fps ≈ 25.3, render ms (compose budget ≤ 35), heap flat.
+   f. FEEL report: are swipes and flicks reliable while running? Too hard/easy? Road
+      speed feel? Anything unreadable on screen?
+2. R2 — GPS bring-up (breakdown for user approval BEFORE code; needs module).
 3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
 
 ## Known Issues / Risks
+- R1-BYTE (watch): the road writes the band buffer directly (fast path), so it must
+  match LovyanGFX's 16-bit storage order. lanes::init() measures it at boot (fills a
+  1x1 sprite red through the library, reads the raw word) and converts the palette.
+  Possibly related to Cave Escape's unexplained magenta (CARRY-1) — the boot line
+  will tell us which order the buffer uses.
+- R1-FEEL (open): swipe/flick reliability while running on resistive touch is the
+  real unknown in R1 (PLANNING Open Decision #3). Tunables: INPUT_SWIPE_PX,
+  INPUT_JUMP_*, RUN_LANE_SPEED, RUN_SPEED_*, OBST_GAP_*.
 - R0-3 (fix pending hw check, R0-R3): frame pacer from Cave Escape main.cpp was not
   carried over; R0-R2 rendered unpaced at 43 fps against a 25.26 Hz panel. Restored.
 - TOUCH-1 (closed, data): absolute touch mapping verified 2026-10-05, orientation
@@ -32,9 +50,9 @@ session doesn't know it happened.
   mapping is wrong: Cave Escape only verified RELATIVE drag, never absolute position
   — corner xy readings will show mirroring/scaling.
 - CARRY-1 (open): Cave Escape's sprite color-key path showed unexplained magenta on
-  floor tiles (ART-2, diagnostic never run — project pivoted). Sprite code is NOT
-  carried into R0. When R1 adds sprites, run a pushImage round-trip self-test
-  (read back pixels after push) before trusting any art on screen.
+  floor tiles (ART-2, diagnostic never run — project pivoted). R1 uses NO bitmaps
+  (all art is fillRect/fillEllipse + direct road writes), so it can't hit this. Run a
+  pushImage read-back self-test before the first bitmap art lands.
 - HW-SUN (open, design): CrowPanel display not sunlight-readable; outdoor play needs
   different field hardware (PLANNING Open Decision #2).
 - GPS-INDOOR (open, process): GPS rarely fixes indoors. R2 must ship a fake-GPS
@@ -52,6 +70,28 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-05 — Session 1 (cont.) — R1: full encounter in one round
+- User: 3 lanes; build a fully working concept in one development round. Interpreted
+  as the complete encounter loop (the part testable without GPS modules / 2nd board).
+- Done (R1-R1):
+  - lanes.*: per-scanline road written straight into the SRAM band buffer (one loop
+    per row, no per-pixel library calls): sky gradient, two parallax hill ridges
+    (1024-px sine tables), grass/road stripes on floor((z+travel)/SEG), rumble
+    strips, dashed lane lines, sine bend toward the horizon, project() for objects.
+    Boot self-test measures band byte order (R1-BYTE).
+  - encounter.*: obstacles at fixed world positions (z = wz - travel, so only travel
+    moves → trivial interpolation), rows block 1–2 lanes never 3, barrier = jump,
+    wall = dodge, speed ramps 50→100 km/h, gap shrinks 30→18 m, 900 m escape goal,
+    READY/RUN/WIN/LOSE with retry lockout, painter's-order draw (runner interleaved
+    by depth), HUD progress bar + distance + speed + titles. Placeholder art only.
+  - input: + laneSwipe edge (re-anchors per 40 px, so one long drag can cross two
+    lanes) and pressed (tap) edge.
+  - main: R1 loop; serial adds state, distance, speed.
+- Host preview (same math in Python) caught a design flaw before flashing: with the
+  camera 2 m behind (ROAD_CAM_K 352) obstacles were specks until ~15 m. Moved camera
+  to 5 m (K 880) — obstacles readable at 30 m+. Stripe length 4 → 6 m to match.
+- Commit: feat(r1): playable encounter — pseudo-3D lanes, runner, obstacles, loop
+
 ### 2026-10-05 — Session 1 (cont.) — R0-R2 hw results
 - Bars smooth, one touch dot, absolute touch mapping correct (TOUCH-1), heap flat.
 - Serial showed 43.1 fps: the Cave Escape frame pacer (render locked to the panel
@@ -81,4 +121,5 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
-- v0.0.1 — 2026-10-05 — R0 scaffold (unverified on hardware).
+- v0.1.0 — 2026-10-05 — R1 playable encounter (unverified on hardware).
+- v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

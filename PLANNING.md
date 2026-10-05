@@ -45,9 +45,10 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | config | include/config.h | all tunables | R0 |
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
-| renderer | src/renderer.* | band compositor, layer callbacks | R0 (generalized from Cave Escape) |
-| input | src/input.* | touch gestures → abstract actions | carried over; R1 remaps to lanes |
-| lanes | src/lanes.* | pseudo-3D encounter renderer | R1 |
+| renderer | src/renderer.* | band compositor, layer callbacks | DONE (R0, hw-verified) |
+| input | src/input.* | touch gestures → abstract actions (move, jump flick, lane swipe, tap) | R1: + laneSwipe/pressed edges |
+| lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | R1 code done, hw-verify pending |
+| encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | R1 code done, hw-verify pending |
 | gps | src/gps.* | UART NMEA parse, fix/speed, fake-GPS replay | R2 |
 | world | src/world.* | GPS cell → deterministic map + spawns | R3 |
 | overworld | src/overworld.* | top-down map view + avatar | R3 |
@@ -65,9 +66,11 @@ data (OpenStreetMap etc. — the map is fictional by design).
 ## Roadmap (risk-first)
 - **R0 — Toolchain + scaffold:** new repo, carried-over display/input/renderer, test
   pattern, fps stats. Gate: builds, flashes, banner, fps ≥ 25, touch marker tracks finger.
-- **R1 — Lane renderer (GO/NO-GO):** pseudo-3D road with 3 lanes, scrolling, a player
-  sprite and obstacles scaled by depth. Gate: ≥ 25 fps. If it fails, the encounter
-  design is revisited before anything else is built on it.
+- **R1 — Encounter (GO/NO-GO):** built in ONE round per user (2026-10-05): pseudo-3D
+  3-lane road with curves + hills, runner, barrier (jump) / wall (dodge) rows, swipe +
+  flick controls, collision, 900 m escape goal, READY → RUN → WIN/LOSE → retry loop.
+  Gate: ~25.3 fps with compose ≤ 35 ms, AND controls feel playable on resistive touch.
+  If either fails, the encounter design is revisited before anything else builds on it.
 - **R2 — GPS bring-up:** M10 on UART1, NMEA parse, fix/speed/still-walking-running
   classification, FAKE-GPS replay mode for desk development. Gate: outdoor walk test.
 - **R3 — Overworld:** deterministic world from GPS cells, top-down view, avatar
@@ -84,6 +87,7 @@ data (OpenStreetMap etc. — the map is fictional by design).
 2. **Field hardware:** CrowPanel 4.3 is prototype-only (transmissive TFT washes out
    in sun, resistive touch, no onboard battery). Decide by R6.
 3. **Encounter controls:** swipe/flick on resistive single-touch; validate at R1.
+   Lanes DECIDED: 3 (user, 2026-10-05).
 4. **Map scale + cell size:** how many real meters per map tile / per world cell. R3.
 5. **Spawn time window:** how often the shared spawn table rolls (e.g. 5–15 min). R3.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

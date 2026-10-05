@@ -13,11 +13,12 @@
 
 namespace {
 
-input::State s_state = {0.0f, false, false, -1, -1};
+input::State s_state = {0.0f, false, 0, false, false, -1, -1};
 
 bool  s_wasTouching = false;
 float s_anchorX = 0, s_anchorY = 0;
 float s_emaX = 0, s_emaY = 0;
+float s_swipeAnchorX = 0;
 float s_rawY = 0, s_prevRawY = 0;
 bool  s_jumpArmed = true;
 
@@ -36,6 +37,8 @@ bool init() {
 void update(float dt) {
   (void)dt;
   s_state.jumpPressed = false;
+  s_state.laneSwipe = 0;
+  s_state.pressed = false;
 
   int32_t rx, ry;
   bool touching = display::lcd().getTouch(&rx, &ry);
@@ -47,6 +50,8 @@ void update(float dt) {
     s_rawY = s_prevRawY = (float)ry;
     s_jumpArmed = true;
     s_state.moveX = 0.0f;
+    s_state.pressed = true;
+    s_swipeAnchorX = (float)rx;
   } else if (touching) {
     s_emaX += INPUT_EMA_ALPHA * ((float)rx - s_emaX);
     s_emaY += INPUT_EMA_ALPHA * ((float)ry - s_emaY);
@@ -58,6 +63,11 @@ void update(float dt) {
     else if (dx < -INPUT_DEADZONE_PX) dx += INPUT_DEADZONE_PX;
     else dx = 0.0f;
     s_state.moveX = clamp1(dx / (float)INPUT_JOY_RANGE_PX);
+
+    // Lane swipe: one edge per INPUT_SWIPE_PX of smoothed horizontal travel.
+    float sw = s_emaX - s_swipeAnchorX;
+    if (sw > INPUT_SWIPE_PX)       { s_state.laneSwipe = +1; s_swipeAnchorX = s_emaX; }
+    else if (sw < -INPUT_SWIPE_PX) { s_state.laneSwipe = -1; s_swipeAnchorX = s_emaX; }
 
     float rise = s_anchorY - s_rawY;
     float step = s_prevRawY - s_rawY;

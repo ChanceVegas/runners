@@ -46,7 +46,7 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
 | renderer | src/renderer.* | band compositor, layer callbacks | DONE (R0, hw-verified) |
-| input | src/input.* | touch gestures → abstract actions (move, jump flick, lane swipe, tap); 100 Hz sampler task | R1-R2: sampler task |
+| input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | R1-R3 |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | R1 works on hw; control feel = R1-R2 |
 | gps | src/gps.* | UART NMEA parse, fix/speed, fake-GPS replay | R2 |
@@ -86,8 +86,10 @@ data (OpenStreetMap etc. — the map is fictional by design).
    battery/supercap (fast re-fix). Two units. User to purchase.
 2. **Field hardware:** CrowPanel 4.3 is prototype-only (transmissive TFT washes out
    in sun, resistive touch, no onboard battery). Decide by R6.
-3. **Encounter controls:** swipe/flick on resistive single-touch; validate at R1.
-   Lanes DECIDED: 3 (user, 2026-10-05).
+3. **Encounter controls:** DECIDED 2026-10-06 (user): TAP ZONES — left third = lane
+   left, right third = lane right, middle = jump. Swipe/flick gestures were removed:
+   gesture recognition needs several samples, so it lagged on resistive touch even at
+   100 Hz; a zone tap fires on the 2nd sample. Lanes DECIDED: 3 (user, 2026-10-05).
 4. **Map scale + cell size:** how many real meters per map tile / per world cell. R3.
 5. **Spawn time window:** how often the shared spawn table rolls (e.g. 5–15 min). R3.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

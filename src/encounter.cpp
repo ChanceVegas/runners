@@ -203,14 +203,15 @@ void update(float dt) {
   }
 
   // Controls.
-  if (in.laneSwipe < 0 && s_laneTarget > -1) --s_laneTarget;
-  if (in.laneSwipe > 0 && s_laneTarget <  1) ++s_laneTarget;
+  if (in.laneStep < 0 && s_laneTarget > -1) --s_laneTarget;
+  if (in.laneStep > 0 && s_laneTarget <  1) ++s_laneTarget;
   const bool jumpOk = in.jumpPressed && s_jumpY <= 0.0f;
   if (jumpOk) s_jumpV = RUN_JUMP_VEL_PX_S;
 #if DEBUG_INPUT_LOG
-  if (in.laneSwipe) Serial.printf("[in] swipe %+d -> lane %d at %d m\n",
-                                  in.laneSwipe, s_laneTarget, (int)(s_travel - s_runStart));
-  if (in.jumpPressed) Serial.printf("[in] jump%s at %d m\n",
+  if (in.laneStep) Serial.printf("[in] tap %s -> lane %d at %d m\n",
+                                 in.laneStep < 0 ? "LEFT" : "RIGHT", s_laneTarget,
+                                 (int)(s_travel - s_runStart));
+  if (in.jumpPressed) Serial.printf("[in] tap MIDDLE: jump%s at %d m\n",
                                     jumpOk ? "" : " (ignored: airborne)",
                                     (int)(s_travel - s_runStart));
 #endif
@@ -309,11 +310,21 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     text(band, bandY, buf, LCD_WIDTH - 70, 34, 2, 0xFFFF);
   }
 
+  // Tap-zone hints along the bottom: where to tap for left / jump / right.
+  if (s_state == State::Run || s_state == State::Ready) {
+    rect(band, bandY, INPUT_ZONE_LEFT_X, LCD_HEIGHT - 14, 1, 14, 0x8410);
+    rect(band, bandY, INPUT_ZONE_RIGHT_X, LCD_HEIGHT - 14, 1, 14, 0x8410);
+    text(band, bandY, "<", INPUT_ZONE_LEFT_X / 2, LCD_HEIGHT - 10, 2, 0xC618);
+    text(band, bandY, "JUMP", LCD_WIDTH / 2, LCD_HEIGHT - 10, 1, 0xC618);
+    text(band, bandY, ">", (INPUT_ZONE_RIGHT_X + LCD_WIDTH) / 2, LCD_HEIGHT - 10, 2, 0xC618);
+  }
+
   switch (s_state) {
     case State::Ready:
       text(band, bandY, "RUNNERS", LCD_WIDTH / 2, 70, 5, 0xFFE0);
       text(band, bandY, "tap to run", LCD_WIDTH / 2, 150, 2, 0xFFFF);
-      text(band, bandY, "swipe = lane   flick up = jump", LCD_WIDTH / 2, 176, 1, 0xFFFF);
+      text(band, bandY, "tap LEFT / RIGHT side = change lane", LCD_WIDTH / 2, 178, 1, 0xFFFF);
+      text(band, bandY, "tap MIDDLE = jump", LCD_WIDTH / 2, 192, 1, 0xFFFF);
       break;
     case State::Win:
       text(band, bandY, "ESCAPED!", LCD_WIDTH / 2, 110, 4, 0x07E0);

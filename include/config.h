@@ -15,18 +15,11 @@
 #define INPUT_SAMPLE_HZ      100    // touch reads per second. The game loop alone only
                                     // sampled ~25 Hz (ticks run in a burst per frame),
                                     // which made controls feel sluggish (R1-FEEL).
-#define INPUT_DEADZONE_PX    10     // px from anchor before movement registers; kills resistive jitter
+#define INPUT_DEADZONE_PX    10     // px of drag before moveX registers (UI use; not encounter)
 #define INPUT_JOY_RANGE_PX   60     // px of drag = full deflection
-#define INPUT_JUMP_FLICK_PX  30     // finger must rise this far above anchor to jump
-#define INPUT_JUMP_REARM_PX  15     // finger must return within this of anchor to re-arm jump
-#define INPUT_EMA_ALPHA      0.6f   // x/y smoothing per sample 0..1; at 100 Hz the lag is
-                                    // ~one 10 ms sample. Higher = snappier, noisier
-#define INPUT_JUMP_WINDOW    4      // samples (40 ms) over which upward speed is measured
-#define INPUT_JUMP_VEL_PX    14     // upward px within the window = flick. Same speed the
-                                    // R0/Cave Escape 25 Hz per-sample threshold meant
-#define INPUT_SWIPE_PX       30     // px of horizontal drag = one lane change (was 40 at
-                                    // R1-R1: felt sluggish). The anchor re-centres after
-                                    // each swipe, so one long drag can cross two lanes
+#define INPUT_EMA_ALPHA      0.6f   // x/y smoothing per sample 0..1 (drag axis/UI point)
+#define INPUT_ZONE_LEFT_X    160    // px; taps left of this = lane left (left third)
+#define INPUT_ZONE_RIGHT_X   320    // px; taps at/right of this = lane right; between = jump
 
 // --- Encounter road: pseudo-3D projection (R1) ---
 // Screen row y below the horizon has d = y - HORIZON rows of depth; world depth
@@ -49,7 +42,7 @@
 // --- Encounter runner (R1) ---
 #define RUN_FEET_Y           250    // px; screen row of the runner's feet
 #define RUN_LANE_SPEED       10.0f  // lanes/s sideways; 100 ms per lane change (was 7)
-#define DEBUG_INPUT_LOG      1      // 1 = print each swipe/jump the encounter consumes
+#define DEBUG_INPUT_LOG      1      // 1 = print each tap the encounter consumes + crash causes
 #define RUN_JUMP_VEL_PX_S    520.0f // px/s launch; apex = v^2/2g ≈ 90 px
 #define RUN_GRAVITY_PX_S2    1500.0f// px/s^2; airtime = 2v/g ≈ 0.69 s
 #define RUN_SPEED_START      14.0f  // m/s at the start of a run

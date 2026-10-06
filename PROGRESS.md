@@ -4,20 +4,20 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R1 hw-tested (R1-R1, 2026-10-05): performance + visuals PASS, control feel
-  FAIL (sluggish). R1-R2 = 100 Hz touch sampler fix, compiled; hw-verify pending.
+- Phase: R1 — performance + visuals PASS (R1-R1). Controls: R1-R2 (100 Hz sampler,
+  gestures) pushed but not play-tested; superseded by R1-R3 = TAP ZONES (user,
+  2026-10-06), compiled; hw-verify pending.
 - Builds: yes (espressif32@6.5.0; RAM 7.7%, Flash 29.7% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct ("match beautifully")
 - Measured (R1-R1): fps 25.2–25.3 paced, render ~21 ms (title 20.4, running 21.0),
   heap flat 286,204 across ~12 runs. R0-R3 pacer confirmed working.
 
 ## Next Up (in order)
-1. R1-R2 feel gate (tag R1-R2): banner `=== Runners R1-R2 ===`. Play several runs.
-   a. Do swipes and flicks feel immediate now?
-   b. Serial now logs every swipe/jump the game receives (`[in] ...`) and the cause
-      of each crash (`[hit] WALL/BARRIER lane .. runner lane .. jumpY ..`). Paste a
-      log covering a few runs: it shows whether a missed dodge was a missed input or
-      a late one.
+1. R1-R3 feel gate (tag R1-R3): banner `=== Runners R1-R3 ===`. Play several runs.
+   a. Tap left third = one lane left, right third = one lane right, middle = jump.
+      Do taps feel immediate? Any taps ignored or landing in the wrong zone?
+   b. Serial logs each tap the game receives (`[in] tap LEFT/RIGHT/MIDDLE ...`) and
+      each crash cause (`[hit] ...`). Paste a log covering a few runs.
    c. fps still ~25.3, render ms, heap flat.
 2. R2 — GPS bring-up (breakdown for user approval BEFORE code; needs module).
 3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
@@ -26,7 +26,7 @@ session doesn't know it happened.
 - R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
   (boot self-test: red 0xF800 reads 0x00F8). Any direct write into a band buffer
   must swap. lanes::init() detects it and converts; colours verified on hardware.
-- R1-FEEL (fix pending hw-verify, R1-R2): controls felt sluggish; four deaths at
+- R1-FEEL (fix pending hw-verify, R1-R3 tap zones): controls felt sluggish; four deaths at
   exactly 59 m = the FIRST obstacle row, which gives ~4 s warning → inputs weren't
   registering, not a reaction-time problem. Root cause: touch read inside the logic
   ticks, which run in a burst before each frame → effectively 25 Hz sampling (the
@@ -34,8 +34,12 @@ session doesn't know it happened.
   core 1 running the gesture state machine; edges counted and delivered one per
   tick (swipes queue, so a double swipe moves two lanes). Jump speed now measured
   over a 40 ms window. Swipe 40 → 30 px, lane change 143 → 100 ms. Serial logs each
-  input and crash cause (DEBUG_INPUT_LOG). Remaining tunables: INPUT_SWIPE_PX,
-  INPUT_JUMP_*, RUN_LANE_SPEED, RUN_SPEED_*, OBST_GAP_*.
+  input and crash cause (DEBUG_INPUT_LOG). Then (2026-10-06, before R1-R2 was
+  play-tested) user switched to TAP ZONES: gestures need several samples to
+  recognise, a zone tap fires on the 2nd sample (10 ms after touch-down; the first
+  resistive sample is unreliable, one-sample bounces are discarded). Learned from
+  touchscreen Game Boy emulators on the CYD (on-screen buttons, not gestures).
+  Tunables: INPUT_ZONE_LEFT_X / RIGHT_X, RUN_LANE_SPEED, RUN_SPEED_*, OBST_GAP_*.
 - R0-3 (fixed, hw-verified R1-R1: fps 25.3): frame pacer from Cave Escape main.cpp was not
   carried over; R0-R2 rendered unpaced at 43 fps against a 25.26 Hz panel. Restored.
 - TOUCH-1 (closed, data): absolute touch mapping verified 2026-10-05, orientation
@@ -71,6 +75,19 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-06 — Session 2 — tap zones (R1-R3)
+- User asked how touchscreen emulators on the CYD stay responsive (cyd-gb). Answer:
+  on-screen BUTTONS (state, fires on first sample) vs our GESTURES (need several
+  samples to recognise). Also clarified PSRAM isn't Doom's limiter (CYD Doom has no
+  PSRAM; our PSRAM holds the framebuffer and shares its bus with panel refresh); our
+  headroom is fine — visual gap is art. User: Doom was only an example.
+- User: switch to tap zones. Done: input.cpp gesture code replaced by zone taps
+  (left/right third = laneStep ∓1, middle = jumpPressed, any = pressed), kept the
+  100 Hz sampler task. laneSwipe renamed laneStep. Swipe/flick constants removed
+  from config; INPUT_ZONE_LEFT_X/RIGHT_X added. HUD: zone dividers + "<  JUMP  >"
+  hints along the bottom; title screen explains the zones. Serial tap log updated.
+- Commit: feat(r1): tap-zone controls replace swipe/flick gestures
+
 ### 2026-10-05 — Session 1 (cont.) — R1-R1 hw results → R1-R2 input fix
 - PASS: colours correct, fps 25.2–25.3 paced, render ~21 ms (budget 35), heap flat,
   full loop works (READY/RUN/LOSE/retry seen in log; best run 319 m).

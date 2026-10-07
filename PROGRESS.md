@@ -37,7 +37,8 @@ session doesn't know it happened.
    h. Serial: fps ~25.3; render ms on MENU, EXPLORE (full-screen terrain fast path),
       and in a chase; heap flat across mode switches.
 2. R2 GPS: ON HOLD (user). The locator API is ready for it; also needs the GPS
-   module + 2nd board purchases. Resume only when the user says so.
+   module + 2nd board purchases. Resume only when the user says so. Approved Safety
+   items 1–5 (PLANNING) are mandatory R2 scope.
 
 ## Known Issues / Risks
 - R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
@@ -47,10 +48,8 @@ session doesn't know it happened.
   "reveals" them for the rest of their window so stopping to engage works. Reveal +
   escape memory is RAM only (OW_DEFEATED_SLOTS ring), lost on reboot — acceptable
   since windows are short.
-- R3-BLOCK (open, for R2): user wants dense woods, rock and water impassable on the
-  map. Needs a GPS-compatible rule (avatar vs real position) — PLANNING Open
-  Decision 7, options + recommendation logged, awaiting user choice. Currently all
-  terrain is walkable.
+- R3-BLOCK (closed 2026-10-07): terrain blocking dropped by user — the approved
+  Safety section (PLANNING) addresses the real concern. All terrain walkable.
 - R3-PERF (watch): EXPLORE draws the full-screen terrain per row into the band
   buffer (no per-tile calls); the tile cache re-evaluates noise only when the view
   crosses a tile edge. Measure render ms in EXPLORE at the gate.
@@ -109,6 +108,9 @@ session doesn't know it happened.
 - R4-HW (open): player-to-player testing needs two boards + two GPS units.
 
 ## Decisions Made
+- 2026-10-07: Safety items 1–5 approved for R2 (startup notice, no input while moving,
+  audio enemy cue, speed lockout ~7 m/s, simplified moving view). Terrain blocking
+  dropped. OpenStreetMap deferred (microSD would be the route if ever revisited).
 - 2026-10-07: User: build the overworld (R3) in one iteration, before GPS (R2).
   Position simulated behind the locator API. Menu with EXPLORE / ARCADE modes.
 - 2026-10-07: Claude GitHub App installed by user → Claude pushes directly to main

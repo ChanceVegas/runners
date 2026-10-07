@@ -45,7 +45,10 @@ real river may be map grass). Therefore:
   5. Simplified map view while moving (less temptation to stare).
 - Future option: real map data (OpenStreetMap) to keep spawns away from real water and
   roads — the only way the game can know real hazards; big step (storage/connectivity).
-  Status: proposals AWAITING user approval.
+  Status: items 1–5 APPROVED by user 2026-10-07 — mandatory scope of R2.
+  OSM: DEFERRED (user unsure it fits). Note: the full map can't, but a regional
+  water/roads extract could live on a microSD card in the board's TF slot (shares the
+  touch SPI bus). Revisit only if spawn-placement safety becomes a need.
 
 ## Rendering Approach
 - Carried over: dual-core band compositor (SRAM bands → PSRAM framebuffer), now
@@ -125,16 +128,10 @@ real river may be map grass). Therefore:
    ~1 enemy per screen. Revisit with real walking at R2.
 5. **Spawn time window:** DECIDED R3 (tunable): 10 min. Sim uses a boot-relative
    clock; R2 must switch to GPS UTC so devices share windows.
-7. **Impassable terrain:** REOPENED 2026-10-07 (user): the player should NOT pass
-   through dense woods, rock or water — to be fixed with GPS (R2). Was: "water
-   walkable" (R3). Conflict: with GPS the avatar tracks a real person and the map
-   is fictional. Options proposed: (1) tethered avatar — stops at blocked terrain,
-   faint marker shows true GPS position, rejoins when the real position is passable;
-   (2) blocked terrain = dead ground (crossable, but no energy/distance, no engaging);
-   (3) hard-block in sim, (1)/(2) with GPS. Recommended: (1) for water + rock, and
-   split forest into walkable forest + impassable "thicket". AWAITING user choice.
-   NOTE: blocking is gameplay only — see Safety section; user's underlying concern
-   (2026-10-07) is real-world safety, addressed there.
+7. **Impassable terrain:** DECIDED 2026-10-07 (user): NO blocking — all map terrain
+   stays walkable. The user's underlying concern was real-world safety, which the
+   approved Safety section covers; in-game blocking can't protect anyone (fictional
+   map) and would desync the avatar from GPS.
 8. **Run energy use:** DECIDED R3: shields in chases (50 energy each, max 2, unused
    refunded). The PLANNING "boost" idea is deferred — no free tap zone for it.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

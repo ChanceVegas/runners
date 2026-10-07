@@ -46,9 +46,9 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
 | renderer | src/renderer.* | band compositor, layer callbacks | DONE (R0, hw-verified) |
-| input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | R1-R3 |
+| input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
-| encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | R1 works on hw; control feel = R1-R2 |
+| encounter | src/encounter.* | lane-chase gameplay: runner, obstacles, collision, goal, states | DONE (R1-R3, hw-verified) |
 | gps | src/gps.* | UART NMEA parse, fix/speed, fake-GPS replay | R2 |
 | world | src/world.* | GPS cell → deterministic map + spawns | R3 |
 | overworld | src/overworld.* | top-down map view + avatar | R3 |
@@ -66,7 +66,7 @@ data (OpenStreetMap etc. — the map is fictional by design).
 ## Roadmap (risk-first)
 - **R0 — Toolchain + scaffold:** new repo, carried-over display/input/renderer, test
   pattern, fps stats. Gate: builds, flashes, banner, fps ≥ 25, touch marker tracks finger.
-- **R1 — Encounter (GO/NO-GO):** built in ONE round per user (2026-10-05): pseudo-3D
+- **R1 — Encounter (GO/NO-GO):** ✅ DONE 2026-10-07 (GO). Built in ONE round per user (2026-10-05): pseudo-3D
   3-lane road with curves + hills, runner, barrier (jump) / wall (dodge) rows, swipe +
   flick controls, collision, 900 m escape goal, READY → RUN → WIN/LOSE → retry loop.
   Gate: ~25.3 fps with compose ≤ 35 ms, AND controls feel playable on resistive touch.

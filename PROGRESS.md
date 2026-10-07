@@ -4,29 +4,33 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R1 — performance + visuals PASS (R1-R1). Controls: R1-R2 (100 Hz sampler,
-  gestures) pushed but not play-tested; superseded by R1-R3 = TAP ZONES (user,
-  2026-10-06), compiled; hw-verify pending.
+- Phase: R1 COMPLETE ✅ (2026-10-07) — playable encounter with tap-zone controls,
+  hw-verified (tag R1-R3). Next: R2 GPS (breakdown for approval first).
 - Builds: yes (espressif32@6.5.0; RAM 7.7%, Flash 29.7% of 1.3 MB app partition)
-- Runs on hardware: yes — encounter playable, colours correct ("match beautifully")
-- Measured (R1-R1): fps 25.2–25.3 paced, render ~21 ms (title 20.4, running 21.0),
-  heap flat 286,204 across ~12 runs. R0-R3 pacer confirmed working.
+- Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
+- Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
+  281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. R1-R3 feel gate (tag R1-R3): banner `=== Runners R1-R3 ===`. Play several runs.
-   a. Tap left third = one lane left, right third = one lane right, middle = jump.
-      Do taps feel immediate? Any taps ignored or landing in the wrong zone?
-   b. Serial logs each tap the game receives (`[in] tap LEFT/RIGHT/MIDDLE ...`) and
-      each crash cause (`[hit] ...`). Paste a log covering a few runs.
-   c. fps still ~25.3, render ms, heap flat.
+1. R2 — GPS (breakdown for user approval BEFORE code). Can start without the module:
+   gps module with a FAKE-GPS replay source first (desk development), real M10 on
+   UART1 when it arrives. Gate for the real part: outdoor walk test.
 2. R2 — GPS bring-up (breakdown for user approval BEFORE code; needs module).
 3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
 
 ## Known Issues / Risks
+- TAP-1 (watch): R1-R3 test crash at 236 m — BARRIER in runner's lane, jumpY 0, no
+  tap logged after 195 m. Either no jump was attempted or a middle tap was missed.
+  If a "tapped but nothing happened" case is ever confirmed, check the one-sample
+  bounce discard in input.cpp first (a very light/short tap may read as a bounce).
+- CLEAN-1 (minor): build warning "LGFX_USE_V1 redefined" — defined both in
+  platformio.ini build_flags and display.h. Harmless; remove one in the next code
+  commit.
 - R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
   (boot self-test: red 0xF800 reads 0x00F8). Any direct write into a band buffer
   must swap. lanes::init() detects it and converts; colours verified on hardware.
-- R1-FEEL (fix pending hw-verify, R1-R3 tap zones): controls felt sluggish; four deaths at
+- R1-FEEL (CLOSED, hw-verified R1-R3 2026-10-07: "feels much improved"; every tap in
+  the test log registered): controls felt sluggish; four deaths at
   exactly 59 m = the FIRST obstacle row, which gives ~4 s warning → inputs weren't
   registering, not a reaction-time problem. Root cause: touch read inside the logic
   ticks, which run in a burst before each frame → effectively 25 Hz sampling (the
@@ -75,6 +79,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 2 (cont.) — R1 COMPLETE
+- R1-R3 tap zones on hardware: user "feels much improved". Log: 7 taps in one run
+  (LEFT/RIGHT/MIDDLE mix), each received immediately; fps 25.2–25.3, render ~21.3 ms,
+  heap flat 281,540. Best run 451 m at 97 km/h. One crash logged as TAP-1 (watch).
+- R1 gate passed: ≥25 fps with compose ≤35 ms AND playable controls on resistive touch.
+- Docs-only commit: docs(r1): R1 complete — tap zones hw-verified
+
 ### 2026-10-06 — Session 2 — tap zones (R1-R3)
 - User asked how touchscreen emulators on the CYD stay responsive (cyd-gb). Answer:
   on-screen BUTTONS (state, fires on first sample) vs our GESTURES (need several
@@ -147,5 +158,5 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
-- v0.1.0 — 2026-10-05 — R1 playable encounter (unverified on hardware).
+- v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).
 - v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

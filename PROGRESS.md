@@ -47,7 +47,10 @@ session doesn't know it happened.
   "reveals" them for the rest of their window so stopping to engage works. Reveal +
   escape memory is RAM only (OW_DEFEATED_SLOTS ring), lost on reboot — acceptable
   since windows are short.
-- R3-WATER (design): water is walkable (PLANNING Open Decision 7).
+- R3-BLOCK (open, for R2): user wants dense woods, rock and water impassable on the
+  map. Needs a GPS-compatible rule (avatar vs real position) — PLANNING Open
+  Decision 7, options + recommendation logged, awaiting user choice. Currently all
+  terrain is walkable.
 - R3-PERF (watch): EXPLORE draws the full-screen terrain per row into the band
   buffer (no per-tile calls); the tile cache re-evaluates noise only when the view
   crosses a tile edge. Measure render ms in EXPLORE at the gate.
@@ -120,6 +123,12 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 3 (cont.) — R3 flashed; impassable terrain request
+- User flashed R3. Request: dense woods, rock and water should block the player
+  (fix with GPS). Logged as R3-BLOCK / PLANNING Open Decision 7 with options; asked
+  user to choose. Framework warning in esp32-hal-uart.c explained: Espressif core
+  bug, harmless, not patched (pinned core).
+
 ### 2026-10-07 — Session 3 (cont.) — P1 hardware result
 - User: P1 (P1-R2) running smoothly on the board. Logged P1 COMPLETE on that report;
   no serial numbers captured for P1 — collect render ms in ARCADE at the R3 gate.

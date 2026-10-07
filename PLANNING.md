@@ -107,8 +107,14 @@ data (OpenStreetMap etc. — the map is fictional by design).
    ~1 enemy per screen. Revisit with real walking at R2.
 5. **Spawn time window:** DECIDED R3 (tunable): 10 min. Sim uses a boot-relative
    clock; R2 must switch to GPS UTC so devices share windows.
-7. **Water is walkable:** DECIDED R3. With GPS the avatar must follow the real person
-   wherever the fictional map draws a lake; blocking would desync it. The sim matches.
+7. **Impassable terrain:** REOPENED 2026-10-07 (user): the player should NOT pass
+   through dense woods, rock or water — to be fixed with GPS (R2). Was: "water
+   walkable" (R3). Conflict: with GPS the avatar tracks a real person and the map
+   is fictional. Options proposed: (1) tethered avatar — stops at blocked terrain,
+   faint marker shows true GPS position, rejoins when the real position is passable;
+   (2) blocked terrain = dead ground (crossable, but no energy/distance, no engaging);
+   (3) hard-block in sim, (1)/(2) with GPS. Recommended: (1) for water + rock, and
+   split forest into walkable forest + impassable "thicket". AWAITING user choice.
 8. **Run energy use:** DECIDED R3: shields in chases (50 energy each, max 2, unused
    refunded). The PLANNING "boost" idea is deferred — no free tap zone for it.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

@@ -4,34 +4,52 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: P1 polish pass CODE DONE + code-reviewed (tag P1-R2) — compiled; hw-verify
-  pending. R1 COMPLETE ✅ (2026-10-07). GPS (R2) + overworld (R3) ON HOLD (user).
-- Builds: yes (espressif32@6.5.0; RAM 8.2%, Flash 32.5% of 1.3 MB app partition)
+- Phase: R3 overworld CODE DONE (tag R3-R1) — compiled, host-previewed; hw-verify
+  pending. Includes P1 (also not yet hw-verified). R1 COMPLETE ✅. R2 GPS ON HOLD.
+- Builds: yes (espressif32@6.5.0; RAM 8.8%, Flash 33.6% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
   281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. P1 hardware gate (tag P1-R2): banner `=== Runners P1-R2 ===`, then
-   `[encounter] best score loaded: 0` on first boot.
-   a. Title: big RUNNERS, BEST, blinking TAP TO RUN, two instruction lines and
-      "< LANE  JUMP  LANE >" along the bottom — all readable, nothing clipped?
-   b. Tap → 3-2-1-GO → run. Coins: ground trails in the open lane, arcs over
-      barriers (jump to grab). Score / stage / coins in the top bar.
-   c. Crash → red flash, runner knocked flat → CAUGHT! with score, best / NEW BEST!,
-      stats line. Power-cycle: the title must show the saved best.
-   d. Reach 900 m → ESCAPED! STAGE 1 CLEAR → tap → STAGE 2 countdown, faster.
-   e. Pines / bushes / posts streaming past at the roadside.
-   f. Serial: fps ≈ 25.3, render ms (new content adds draw calls; budget 35 ms),
-      heap flat. Read render ms on the TITLE and GAME OVER screens too, not just
-      while running (text-heavy screens; review item 4).
-   g. Feel: arc coins over barriers — does grabbing the first coin ever still clip
-      the barrier? (Thresholds are both 30 px, so it should only happen on an early,
-      already-falling jump; review item 5.)
-2. ON HOLD (user, 2026-10-07): R2 GPS, R3 overworld — and the GPS module / 2nd
-   board purchases they need. Resume only when the user says so.
+1. R3 hardware gate (tag R3-R1). `git pull`, flash, banner `=== Runners R3-R1 ===`,
+   then `[renderer] band buffer byte order: SWAPPED`, `[encounter] best score loaded`,
+   `[game] profile: ...` lines.
+   a. MENU: RUNNERS title over the scrolling road, EXPLORE and ARCADE buttons, stats
+      line (coins / escapes / best), walked metres.
+   b. ARCADE = the P1 game (P1 checklist still applies: text readable, countdown,
+      coins, crash flash, CAUGHT/NEW BEST, stage clear). Game over has a MENU button
+      (top-left) back to the menu.
+   c. EXPLORE: top-down map (grass, forest canopies, lakes with shore, rock, trails).
+      Drag from anywhere = walk (short drag) / run (long drag: RUN label, energy bar
+      fills, speed streaks). Release = STILL. Map scrolls smoothly?
+   d. Enemies: purple Shades, red horned Brutes. Cyan Phantoms appear only while
+      running and stay visible after.
+   e. Walk near one: yellow ring + name + banner. Release and hold still: red bar
+      fills (0.8 s) -> chase: "<NAME> IS CHASING YOU" countdown.
+   f. Chase: blue shield pips if energy >= 50 at the start; a hit with a shield =
+      runner blinks and keeps going. ESCAPED -> tap -> back on the map, enemy gone,
+      coins + bonus added. CAUGHT -> tap -> map, enemy still there, must walk away
+      and back before it can trigger again.
+   g. MENU (top-left on the map) -> menu. Power-cycle: coins / escapes / energy /
+      map position restored.
+   h. Serial: fps ~25.3; render ms on MENU, EXPLORE (full-screen terrain fast path),
+      and in a chase; heap flat across mode switches.
+2. R2 GPS: ON HOLD (user). The locator API is ready for it; also needs the GPS
+   module + 2nd board purchases. Resume only when the user says so.
 
 ## Known Issues / Risks
+- R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
+  spawn windows use a boot-relative clock, so two devices won't share windows yet.
+  R2 replaces both (GPS position + GPS UTC) behind locator / world::window().
+- R3-RARE (design): Phantoms are hidden unless the player is running; running
+  "reveals" them for the rest of their window so stopping to engage works. Reveal +
+  escape memory is RAM only (OW_DEFEATED_SLOTS ring), lost on reboot — acceptable
+  since windows are short.
+- R3-WATER (design): water is walkable (PLANNING Open Decision 7).
+- R3-PERF (watch): EXPLORE draws the full-screen terrain per row into the band
+  buffer (no per-tile calls); the tile cache re-evaluates noise only when the view
+  crosses a tile edge. Measure render ms in EXPLORE at the gate.
 - TAP-1 (watch): R1-R3 test crash at 236 m — BARRIER in runner's lane, jumpY 0, no
   tap logged after 195 m. Either no jump was attempted or a middle tap was missed.
   If a "tapped but nothing happened" case is ever confirmed, check the one-sample
@@ -87,6 +105,8 @@ session doesn't know it happened.
 - R4-HW (open): player-to-player testing needs two boards + two GPS units.
 
 ## Decisions Made
+- 2026-10-07: User: build the overworld (R3) in one iteration, before GPS (R2).
+  Position simulated behind the locator API. Menu with EXPLORE / ARCADE modes.
 - 2026-10-07: Claude GitHub App installed by user → Claude pushes directly to main
   (CLAUDE.md Transfer Protocol rewritten). User: `git pull` before flashing.
 - 2026-10-05: Cave Escape scrapped by user; archived at tag `cave-escape-final`.
@@ -99,6 +119,38 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 3 — R3 overworld in one iteration (R3-R1)
+- User: attack the overworld map in one iteration. Built before GPS: position comes
+  from a simulated source behind locator (drag = walk/run, 6x time scale, real-scale
+  speeds reported so classes/energy/engage behave as with GPS).
+- New modules:
+  - locator.*: Pos = int32 tile + float offset (no float precision loss at GPS-scale
+    coordinates), speed, Still/Walk/Run, heading, exact deltaM across tiles.
+  - world.*: terrain = 2-octave value noise on INTEGER tiles with integer periods
+    (exact for any absolute coordinate) + moisture + trail band → water / sand /
+    grass / forest / rock / trail. Spawns: hash(cell, window) → presence (45%),
+    kind (Shade / Brute 30% / rare Phantom 12%), tile in cell; never on water.
+    Escaped + revealed memory ring.
+  - overworld.*: camera on the player; terrain rows written straight into the band
+    buffer (canopy circles, wave glints, flowers, rock speckle via span tables);
+    visible-tile cache; enemies + avatar via primitives; engage = nearest enemy in
+    14 m + still for 0.8 s; must move again after a chase; Run energy from running.
+  - game_state.*: Menu (over the attract road) / Explore / Chase / Arcade; installs
+    each mode's layer stack; chase handshake: shields = floor(energy/50) max 2, paid
+    up front, unused refunded; escape bonus 25 coins x level; profile in NVS
+    ("profile": wallet, escapes, energy, walked, tile) saved on mode changes and
+    every 120 s exploring; first boot spirals to the nearest land tile.
+  - hud.*: shared band-clipped rect/frame/text (extracted from encounter).
+- Changed: encounter gains Arcade/Chase modes, shields with blink invulnerability,
+  enemy label + shield pips in the HUD, MENU button on arcade game over, title text
+  moved to the menu; renderer now owns the band byte-order test + raw(); input gains
+  moveY (vertical drag axis).
+- Host previews: world map render (46% grass, 25% forest, 9% trail, 8% water, 7% sand,
+  5% rock; ~1 enemy per screen) and a screen-scale overworld frame — caught a
+  chessboard look from alternate-tile shading; reduced to one green step on grass.
+- Commits: refactor(r3): renderer owns byte order, shared hud helpers, input moveY
+  / feat(r3): overworld — locator, world, map, enemies, chase mode, menu, profile
+
 ### 2026-10-07 — Session 2 (cont.) — P1 code review fixes (P1-R2)
 - User code-reviewed the P1 patch; six findings, verified against the code:
   1. Blink read from millis() per band → a string spanning a band seam could render
@@ -224,6 +276,7 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
+- v0.3.0 — 2026-10-07 — R3: overworld + menu + chase mode (unverified on hardware).
 - v0.2.0 — 2026-10-07 — P1: standalone polish (unverified on hardware).
 - v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).
 - v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

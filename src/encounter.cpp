@@ -2,10 +2,13 @@
 // positions (wz, metres along the road); their depth on screen is z = wz - travel,
 // so the only thing that moves each tick is travel. That keeps interpolation trivial.
 //
-// Flow: Ready (title, best score) -> tap -> Countdown -> Run -> hit -> Crash ->
-// GameOver -> tap -> Countdown (stage 1). Reaching RUN_GOAL_M -> StageClear -> tap
-// -> Countdown (next stage: faster, more walls). Score = metres across all stages
-// + coins x COIN_POINTS; best is saved to flash (NVS) at game over.
+// Flow: Ready (idle attract road; game_state's menu draws on top) -> startArcade() or
+// startChase() -> Countdown -> Run -> hit -> Crash -> GameOver, or goal -> StageClear.
+// ARCADE: StageClear -> tap -> next stage (faster, more walls); GameOver -> tap -> new
+// game, or MENU button -> finished(). Score = metres across stages + coins x
+// COIN_POINTS; arcade best saved to flash (NVS) at game over.
+// CHASE: one stage vs an overworld enemy (goal + speed tier from the enemy); shields
+// (bought with Run energy) absorb hits; either end screen -> tap -> finished().
 //
 // Art is drawn with fillRect/fillEllipse/fillTriangle (no bitmaps), so the open
 // sprite colour-key issue (CARRY-1) can't affect it. Text uses LovyanGFX's smooth
@@ -13,6 +16,7 @@
 #include "encounter.h"
 #include "lanes.h"
 #include "scenery.h"
+#include "hud.h"
 #include "input.h"
 #include "config.h"
 #include "color.h"
@@ -25,6 +29,7 @@
 namespace {
 
 using encounter::State;
+using encounter::Mode;
 
 // ---- World objects ------------------------------------------------------------
 enum class Kind : uint8_t { Barrier, Wall };
@@ -58,6 +63,16 @@ uint32_t s_bankedM = 0;                    // metres from cleared stages
 uint32_t s_best = 0;
 bool     s_newBest = false;
 Preferences s_prefs;
+
+// Mode: Arcade (menu -> endless stages, best score) or Chase (from the overworld:
+// one stage vs an enemy, shields from Run energy, result handed back to game_state).
+encounter::Mode s_mode = encounter::Mode::Arcade;
+float s_goalM = RUN_GOAL_M;                // stage length this run
+uint8_t s_shields = 0, s_shieldsUsed = 0;  // chase: hits absorbed
+float s_invuln = 0;                        // s of post-shield invulnerability left
+const char* s_label = "";                  // chase: enemy name for the HUD
+bool s_done = false;                       // chase finished / arcade exit requested
+encounter::Result s_result = {};
 
 // ---- Render-side (latched in beginRender) ---------------------------------------
 float d_travel = 0, d_laneX = 0, d_jumpY = 0, d_time = 0;
@@ -140,6 +155,11 @@ void spawnRow(float wz) {
 
 void setState(State st) { s_state = st; s_stateT = 0; }
 
+void finish(bool won, bool exitToMenu) {
+  s_result = { won, s_coins, s_shieldsUsed, exitToMenu };
+  s_done = true;
+}
+
 void beginStage() {
   clearWorld();
   const float step = (s_stage - 1) * STAGE_SPEED_STEP;
@@ -175,7 +195,7 @@ void crash() {
 
 void gameOver() {
   const uint32_t sc = currentScore();
-  if (sc > s_best) {
+  if (s_mode == encounter::Mode::Arcade && sc > s_best) {
     s_best = sc;
     s_newBest = true;
     s_prefs.putUInt("best", s_best);      // rare flash write: once per game over
@@ -190,35 +210,10 @@ void stageClear() {
   setState(State::StageClear);
 }
 
-// ---- Drawing helpers -------------------------------------------------------------
-
-inline bool rowsHit(int32_t y0, int32_t y1, int32_t bandY, int32_t bandH) {
-  return y1 > bandY && y0 < bandY + bandH;
-}
-
-void rect(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, int32_t w, int32_t h,
-          uint16_t c) {
-  if (w <= 0 || h <= 0 || !rowsHit(y, y + h, bandY, b.height())) return;
-  b.fillRect(x, y - bandY, w, h, c);
-}
-
-// Centred text with a drop shadow, auto-shrunk to fit maxW. Skips bands it misses.
-void text(lgfx::LGFX_Sprite& b, int32_t bandY, const char* str, int32_t x, int32_t y,
-          const lgfx::IFont* font, float size, uint16_t color, int32_t maxW = LCD_WIDTH - 16) {
-  b.setFont(font);
-  b.setTextSize(size);
-  // Band test first, from the font height alone: most bands miss each string, and
-  // this skips textWidth() (a per-glyph walk) for all of them.
-  const int32_t half = b.fontHeight() / 2 + 3;
-  if (!rowsHit(y - half, y + half, bandY, b.height())) return;
-  const int32_t w = b.textWidth(str);
-  if (w > maxW && w > 0) { size *= (float)maxW / w; b.setTextSize(size); }
-  b.setTextDatum(lgfx::middle_center);
-  b.setTextColor(rgb565(0, 0, 0));
-  b.drawString(str, x + 2, y - bandY + 2);
-  b.setTextColor(color);
-  b.drawString(str, x, y - bandY);
-}
+// ---- Drawing helpers (shared, see hud.h) ------------------------------------------
+using hud::rowsHit;
+using hud::rect;
+using hud::text;
 
 constexpr uint16_t C_WHITE  = rgb565(255, 255, 255);
 constexpr uint16_t C_YELLOW = rgb565(255, 220, 40);
@@ -278,6 +273,8 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const uint16_t JERSEY = rgb565(30, 170, 80), JERSEY_HI = rgb565(90, 225, 130);
   const uint16_t SKIN = rgb565(240, 196, 150), HAIR = rgb565(110, 60, 20);
   const uint16_t SHORTS = rgb565(40, 50, 90), SHOE = rgb565(240, 240, 240);
+
+  if (s_invuln > 0.0f && ((int32_t)(d_time * 12.0f) & 1)) return;   // shield blink
 
   if (down) {                                           // knocked flat
     rect(b, bandY, cx - 34, RUN_FEET_Y - 16, 50, 14, JERSEY);
@@ -352,8 +349,7 @@ void update(float dt) {
       // period 12) and curve (220 m) cycles so the road doesn't visibly jump. Only
       // the hashed scenery re-rolls, once every few hours of attract mode.
       if (s_travel > 100000.0f) { s_travel -= 660.0f; s_prevTravel -= 660.0f; }
-      if (in.pressed) newGame();
-      return;
+      return;                              // game_state's menu starts a mode
 
     case State::Countdown:
       s_travel += RUN_ATTRACT_SPEED * dt;
@@ -366,11 +362,16 @@ void update(float dt) {
 
     case State::StageClear:
       s_travel += RUN_ATTRACT_SPEED * dt;
-      if (s_stateT > RUN_END_LOCKOUT_S && in.pressed) { ++s_stage; beginStage(); }
+      if (s_done || s_stateT <= RUN_END_LOCKOUT_S || !in.pressed) return;
+      if (s_mode == Mode::Chase) finish(true, false);
+      else { ++s_stage; beginStage(); }
       return;
 
     case State::GameOver:
-      if (s_stateT > RUN_END_LOCKOUT_S && in.pressed) newGame();
+      if (s_done || s_stateT <= RUN_END_LOCKOUT_S || !in.pressed) return;
+      if (s_mode == Mode::Chase) finish(false, false);
+      else if (in.pointX >= 0 && in.pointX < 120 && in.pointY < 56) finish(false, true);  // MENU
+      else newGame();
       return;
 
     case State::Run:
@@ -404,14 +405,15 @@ void update(float dt) {
   s_speed = fminf(s_speed + RUN_SPEED_RAMP * dt, s_speedMax);
   s_travel += s_speed * dt;
   const float run = s_travel - s_runStart;
-  const float prog = run / RUN_GOAL_M;
+  const float prog = run / s_goalM;
 
-  while (s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + RUN_GOAL_M - 20.0f) {
+  while (s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + s_goalM - 20.0f) {
     spawnRow(s_nextRowWz);
     s_nextRowWz += OBST_GAP_START_M + (OBST_GAP_MIN_M - OBST_GAP_START_M) * fminf(prog, 1.0f);
   }
 
   const float pz = playerZ();
+  if (s_invuln > 0.0f) s_invuln -= dt;
 
   // Coins: collect or recycle.
   for (auto& c : s_coin) {
@@ -429,8 +431,18 @@ void update(float dt) {
     if (!o.active) continue;
     const float z = o.wz - s_travel;
     if (z < 0.5f) { o.active = false; continue; }
-    if (fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
+    if (s_invuln <= 0.0f && fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
       if (o.kind == Kind::Wall || s_jumpY < OBST_CLEAR_PX) {
+        if (s_shields > 0) {                       // shield absorbs the hit
+          --s_shields; ++s_shieldsUsed;
+          o.active = false;
+          s_invuln = SHIELD_INVULN_S;
+#if DEBUG_INPUT_LOG
+          Serial.printf("[hit] shield absorbed %s at %d m (%u left)\n",
+                        o.kind == Kind::Wall ? "WALL" : "BARRIER", (int)run, (unsigned)s_shields);
+#endif
+          continue;
+        }
 #if DEBUG_INPUT_LOG
         Serial.printf("[hit] %s lane %d, runner lane %.2f jumpY %d at %d m\n",
                       o.kind == Kind::Wall ? "WALL" : "BARRIER", o.lane, s_laneX,
@@ -442,7 +454,7 @@ void update(float dt) {
     }
   }
 
-  if (run >= RUN_GOAL_M) stageClear();
+  if (run >= s_goalM) stageClear();
 }
 
 void beginRender(float alpha) {
@@ -502,30 +514,34 @@ void composeObjects(lgfx::LGFX_Sprite& band, int32_t bandY) {
 
 void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   char buf[40];
-  const lgfx::IFont* F9  = &fonts::FreeSansBold9pt7b;
-  const lgfx::IFont* F12 = &fonts::FreeSansBold12pt7b;
-  const lgfx::IFont* F18 = &fonts::FreeSansBold18pt7b;
-  const lgfx::IFont* F24 = &fonts::FreeSansBold24pt7b;
+  using hud::F9; using hud::F12; using hud::F18; using hud::F24;
+  const bool chase = (s_mode == Mode::Chase);
   const int32_t cx = LCD_WIDTH / 2;
   const bool blink = d_blink;
 
   // In-game HUD: escape progress bar, score, stage, coins.
   if (s_state == State::Run || s_state == State::Countdown || s_state == State::Crash) {
-    const float p = fminf(runM() / RUN_GOAL_M, 1.0f);
+    const float p = fminf(runM() / s_goalM, 1.0f);
     rect(band, bandY, 10, 6, LCD_WIDTH - 20, 10, C_SHADOW);
     rect(band, bandY, 12, 8, (int32_t)((LCD_WIDTH - 24) * (s_state == State::Countdown ? 0 : p)),
          6, C_GREEN);
     snprintf(buf, sizeof buf, "%u", (unsigned)currentScore());
     text(band, bandY, buf, 70, 34, F12, 1.0f, C_WHITE, 130);
-    snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
-    text(band, bandY, buf, cx, 34, F9, 1.0f, C_GREY);
+    if (chase) {
+      text(band, bandY, s_label, cx, 34, F9, 1.0f, C_RED);
+      for (uint8_t i = 0; i < s_shields; ++i)            // shield pips under the label
+        hud::rect(band, bandY, cx - 14 + i * 18, 46, 12, 6, rgb565(90, 200, 255));
+    } else {
+      snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
+      text(band, bandY, buf, cx, 34, F9, 1.0f, C_GREY);
+    }
     drawCoinIcon(band, bandY, LCD_WIDTH - 90, 34);
     snprintf(buf, sizeof buf, "%u", (unsigned)s_coins);
     text(band, bandY, buf, LCD_WIDTH - 50, 34, F12, 1.0f, C_YELLOW, 70);
   }
 
   // Tap-zone hints: on the title, through the countdown and the first seconds of a run.
-  const bool hints = s_state == State::Ready || s_state == State::Countdown ||
+  const bool hints = s_state == State::Countdown ||
                      (s_state == State::Run && s_stateT < RUN_HINT_S);
   if (hints) {
     rect(band, bandY, INPUT_ZONE_LEFT_X, LCD_HEIGHT - 30, 2, 30, C_GREY);
@@ -537,20 +553,17 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   }
 
   switch (s_state) {
-    case State::Ready:
-      text(band, bandY, "RUNNERS", cx, 52, F24, 1.4f, C_YELLOW);
-      snprintf(buf, sizeof buf, "BEST  %u", (unsigned)s_best);
-      text(band, bandY, buf, cx, 104, F12, 1.0f, C_WHITE);
-      if (blink) text(band, bandY, "TAP TO RUN", cx, 146, F18, 1.0f, C_WHITE);
-      text(band, bandY, "Tap LEFT or RIGHT side to change lane", cx, 188, F12, 1.0f, C_WHITE);
-      text(band, bandY, "Tap the MIDDLE to jump", cx, 214, F12, 1.0f, C_WHITE);
+    case State::Ready:                     // menu (game_state) draws over this
       break;
 
     case State::Countdown: {
       const int n = 3 - (int)(s_stateT / (RUN_COUNTDOWN_S / 4.0f));
       if (n >= 1) { snprintf(buf, sizeof buf, "%d", n); text(band, bandY, buf, cx, 120, F24, 2.0f, C_YELLOW); }
       else text(band, bandY, "GO!", cx, 120, F24, 1.8f, C_GREEN);
-      if (s_stage > 1) {
+      if (chase) {
+        snprintf(buf, sizeof buf, "%s IS CHASING YOU", s_label);
+        text(band, bandY, buf, cx, 176, F18, 1.0f, C_RED);
+      } else if (s_stage > 1) {
         snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_WHITE);
       }
@@ -568,6 +581,15 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
 
     case State::StageClear:
       text(band, bandY, "ESCAPED!", cx, 70, F24, 1.3f, C_GREEN);
+      if (chase) {
+        snprintf(buf, sizeof buf, "You lost the %s", s_label);
+        text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
+        snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
+        text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
+        if (s_stateT > RUN_END_LOCKOUT_S && blink)
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+        break;
+      }
       snprintf(buf, sizeof buf, "STAGE %u CLEAR", (unsigned)s_stage);
       text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
       snprintf(buf, sizeof buf, "SCORE %u", (unsigned)currentScore());
@@ -578,6 +600,18 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
 
     case State::GameOver:
       text(band, bandY, "CAUGHT!", cx, 62, F24, 1.3f, C_RED);
+      if (chase) {
+        snprintf(buf, sizeof buf, "The %s got you", s_label);
+        text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
+        snprintf(buf, sizeof buf, "%u coins kept", (unsigned)s_coins);
+        text(band, bandY, buf, cx, 152, F12, 1.0f, C_YELLOW);
+        if (s_stateT > RUN_END_LOCKOUT_S)
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+        break;
+      }
+      hud::rect(band, bandY, 8, 8, 104, 40, rgb565(40, 40, 48));     // MENU button
+      hud::frame(band, bandY, 8, 8, 104, 40, C_GREY);
+      text(band, bandY, "MENU", 60, 28, F12, 1.0f, C_WHITE);
       snprintf(buf, sizeof buf, "SCORE %u", (unsigned)currentScore());
       text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
       if (s_newBest) {
@@ -596,6 +630,41 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       break;
   }
 }
+
+void startArcade() {
+  s_mode = Mode::Arcade;
+  s_goalM = RUN_GOAL_M;
+  s_shields = s_shieldsUsed = 0;
+  s_invuln = 0;
+  s_done = false;
+  newGame();
+}
+
+void startChase(uint8_t level, float goalM, uint8_t shields, const char* label) {
+  s_mode = Mode::Chase;
+  s_goalM = goalM;
+  s_shields = shields;
+  s_shieldsUsed = 0;
+  s_invuln = 0;
+  s_label = label;
+  s_done = false;
+  s_stage = level;
+  s_coins = 0;
+  s_bankedM = 0;
+  s_newBest = false;
+  beginStage();
+}
+
+bool finished() { return s_done; }
+Result result() { return s_result; }
+
+void idle() {
+  clearWorld();
+  s_done = false;
+  setState(State::Ready);
+}
+
+uint32_t bestScore() { return s_best; }
 
 State    state()     { return s_state; }
 float    distanceM() { return runM(); }

@@ -8,8 +8,26 @@
 namespace encounter {
 
 enum class State : uint8_t { Ready, Countdown, Run, Crash, StageClear, GameOver };
+enum class Mode : uint8_t { Arcade, Chase };
+
+struct Result {
+  bool won;            // chase: escaped
+  uint32_t coins;      // coins collected this encounter
+  uint8_t shieldsUsed; // chase: shields broken
+  bool exitToMenu;     // arcade: player tapped MENU on game over
+};
 
 bool init();                    // seed RNG, load best score from flash, enter Ready
+
+// Ready = idle attract road (the menu draws on top). Starting a mode runs the
+// countdown. Arcade: endless stages, best score, MENU button on game over.
+// Chase: one stage of `goalM` metres at speed tier `level`; `shields` absorb hits.
+void startArcade();
+void startChase(uint8_t level, float goalM, uint8_t shields, const char* label);
+bool finished();                // chase over, or arcade MENU tapped — read result()
+Result result();
+void idle();                    // back to Ready (attract road), clears the road
+uint32_t bestScore();           // arcade best (saved in flash)
 void update(float dt);          // one fixed logic tick; reads input::state()
 
 // Latch interpolated positions for this frame (alpha = fraction of a tick since

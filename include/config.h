@@ -106,3 +106,54 @@
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black
 #define COLOR_TOUCH_DEBUG    0x07E0 // green — touch-point marker (debug)
+
+// ============================================================================
+// --- Overworld (R3) ---
+// World coordinates are metres east (x) / south (y) on an absolute grid. The map is
+// generated from hashes of grid indices, so the same spot always looks the same and
+// (once GPS lands) every device builds the same world there.
+#define OW_TILE_M            6.0f   // m per map tile. Smaller = more detail, more walking
+#define OW_TILE_PX           24     // px per tile on screen (480/24 = 20 tiles across)
+#define OW_NOISE_SCALE_T     14     // tiles per terrain-noise cell: size of lakes/forests
+                                    // (integer so noise is exact on absolute tile indices)
+#define OW_WATER_LEVEL       0.30f  // elevation below this = water
+#define OW_SAND_LEVEL        0.35f  // ...below this = sand (shoreline)
+#define OW_ROCK_LEVEL        0.80f  // elevation above this = rock
+#define OW_FOREST_MOIST      0.58f  // moisture above this = forest
+#define OW_TRAIL_WIDTH       0.035f // band of the trail noise drawn as dirt trails
+
+// Spawns: one candidate enemy per spawn cell per time window, chosen by hash of
+// (cellX, cellY, window). Same cell + window -> same enemy on every device.
+#define OW_SPAWN_CELL_T      10     // tiles per spawn cell (60 m)
+#define OW_SPAWN_CHANCE      45     // % of cells holding an enemy in a window
+#define OW_RARE_CHANCE       12     // % of enemies that are rare (visible only while running)
+#define OW_SPAWN_WINDOW_S    600    // s per spawn window (10 min); table re-rolls after
+#define OW_DEFEATED_SLOTS    24     // remembered escapes (hidden until their window ends)
+
+// Engaging: walk within range, then STOP to start the chase (design: encounters only
+// start when the player is still — safety + resistive touch).
+#define OW_ENGAGE_RADIUS_M   14.0f  // m from an enemy that arms the engage prompt
+#define OW_STILL_HOLD_S      0.8f   // s of being still (in range) before the chase starts
+
+// Movement classes from ground speed (GPS later; simulated now).
+#define LOC_STILL_MS         0.4f   // m/s below this = still
+#define LOC_RUN_MS           2.5f   // m/s at/above this = running (else walking)
+
+// Simulated position source (until GPS): drag on the map from where the finger
+// lands. Small drag = walk, big drag = run. Sped up so desk testing isn't a hike.
+#define LOC_SIM_WALK_MS      1.4f   // m/s real-world walking pace being simulated
+#define LOC_SIM_RUN_MS       3.6f   // m/s running pace
+#define LOC_SIM_RUN_DRAG     0.75f  // drag magnitude (0..1) at/above which = running
+#define LOC_SIM_TIME_SCALE   6.0f   // sim speed-up: 6x = a 60 m spawn cell in ~7 s walking
+
+// Run energy: earned by running, spent as shields in chases (one hit absorbed each).
+#define ENERGY_PER_M_RUN     0.5f   // energy per metre covered while running
+#define ENERGY_MAX           100.0f
+#define ENERGY_PER_SHIELD    50.0f  // energy one shield costs at chase start (max 2)
+#define SHIELD_INVULN_S      1.2f   // s of blinking invulnerability after a shield breaks
+
+// Enemy kinds -> chase difficulty.
+#define ENEMY_SHADE_GOAL_M   600.0f // common: shorter chase
+#define ENEMY_BRUTE_GOAL_M   900.0f // tougher: stage-2 speed
+#define ENEMY_PHANTOM_GOAL_M 1200.0f// rare: stage-3 speed, long chase
+#define ESCAPE_BONUS_COINS   25     // wallet bonus for escaping (x level)

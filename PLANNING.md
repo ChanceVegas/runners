@@ -45,17 +45,19 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | config | include/config.h | all tunables | R0 |
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
-| renderer | src/renderer.* | band compositor, layer callbacks | DONE (R0, hw-verified) |
+| renderer | src/renderer.* | band compositor, layer callbacks, band byte-order test + raw() colour conversion | DONE (R0); raw() moved here R3 |
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-chase game: runner, obstacles, coins, stages, score + saved best (NVS), title/countdown/crash/clear/game-over flow, HUD | P1 polish code done, hw-verify pending |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | P1 code done, hw-verify pending |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
-| gps | src/gps.* | UART NMEA parse, fix/speed, fake-GPS replay | R2 |
-| world | src/world.* | GPS cell → deterministic map + spawns | R3 |
-| overworld | src/overworld.* | top-down map view + avatar | R3 |
+| hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
+| locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | R3 code done, hw-verify pending |
+| world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | R3 code done, hw-verify pending |
+| overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | R3 code done, hw-verify pending |
+| game_state | src/game_state.* | mode machine Menu/Explore/Chase/Arcade, layer stacks, chase handshake, profile in NVS | R3 code done, hw-verify pending |
+| gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
-| game_state | src/game_state.* | overworld / encounter / menus | R5 |
 
 ## Performance Budget
 - Frame = 39.59 ms (render paced to the 25.26 Hz panel refresh). Full-screen push
@@ -79,7 +81,12 @@ data (OpenStreetMap etc. — the map is fictional by design).
   roadside scenery, 3-2-1 countdown, crash flash + game-over screen, runner lean.
 - **R2 — GPS bring-up (ON HOLD):** ON HOLD (user, 2026-10-07). M10 on UART1, NMEA parse, fix/speed/still-walking-running
   classification, FAKE-GPS replay mode for desk development. Gate: outdoor walk test.
-- **R3 — Overworld (ON HOLD):** ON HOLD (user, 2026-10-07). deterministic world from GPS cells, top-down view, avatar
+- **R3 — Overworld:** built in ONE iteration per user (2026-10-07), BEFORE R2 GPS:
+  position is simulated from drag input behind the locator API, so R2 only adds a
+  GPS reader. Menu (EXPLORE / ARCADE), deterministic terrain + spawns, engage when
+  still, chase mode with Run-energy shields, rewards, saved profile. Code done;
+  hw-verify pending (tag R3-R1).
+- **R3 (original plan, superseded):** ON HOLD (user, 2026-10-07). deterministic world from GPS cells, top-down view, avatar
   follows real movement, enemy spawns, encounter trigger on stop.
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.
@@ -96,6 +103,12 @@ data (OpenStreetMap etc. — the map is fictional by design).
    left, right third = lane right, middle = jump. Swipe/flick gestures were removed:
    gesture recognition needs several samples, so it lagged on resistive touch even at
    100 Hz; a zone tap fires on the 2nd sample. Lanes DECIDED: 3 (user, 2026-10-05).
-4. **Map scale + cell size:** how many real meters per map tile / per world cell. R3.
-5. **Spawn time window:** how often the shared spawn table rolls (e.g. 5–15 min). R3.
+4. **Map scale + cell size:** DECIDED R3 (tunable): 6 m per tile, 60 m spawn cells,
+   ~1 enemy per screen. Revisit with real walking at R2.
+5. **Spawn time window:** DECIDED R3 (tunable): 10 min. Sim uses a boot-relative
+   clock; R2 must switch to GPS UTC so devices share windows.
+7. **Water is walkable:** DECIDED R3. With GPS the avatar must follow the real person
+   wherever the fictional map draws a lake; blocking would desync it. The sim matches.
+8. **Run energy use:** DECIDED R3: shields in chases (50 energy each, max 2, unused
+   refunded). The PLANNING "boost" idea is deferred — no free tap zone for it.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

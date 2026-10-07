@@ -20,6 +20,23 @@ QueueHandle_t s_qFree  = nullptr;
 QueueHandle_t s_qReady = nullptr;
 
 renderer::ComposeFn s_layers[RENDER_MAX_LAYERS];
+bool s_swap = false;                   // band buffer stores byte-swapped RGB565?
+
+// Fill a 1x1 sprite red through the library (guaranteed-correct path), read the raw
+// word back: tells us how direct buffer writes must be encoded.
+void byteOrderSelfTest() {
+  lgfx::LGFX_Sprite t;
+  t.setColorDepth(16);
+  t.setPsram(false);
+  if (t.createSprite(1, 1) == nullptr) { Serial.println("[renderer] self-test alloc FAILED"); return; }
+  const uint16_t red = 0xF800;
+  t.fillRect(0, 0, 1, 1, red);
+  const uint16_t v = ((uint16_t*)t.getBuffer())[0];
+  s_swap = (v != red);
+  Serial.printf("[renderer] band buffer byte order: %s (red reads 0x%04X)\n",
+                s_swap ? "SWAPPED" : "native", v);
+  t.deleteSprite();
+}
 int s_nLayers = 0;
 
 void pushTask(void*) {
@@ -38,6 +55,7 @@ void pushTask(void*) {
 namespace renderer {
 
 bool init() {
+  byteOrderSelfTest();
   for (auto& b : s_bands) {
     b.setColorDepth(16);
     b.setPsram(false);  // MUST be internal SRAM — PSRAM bandwidth is shared with panel DMA
@@ -60,6 +78,8 @@ bool addLayer(ComposeFn fn) {
 }
 
 void clearLayers() { s_nLayers = 0; }
+
+uint16_t raw(uint16_t c) { return s_swap ? (uint16_t)((c >> 8) | (c << 8)) : c; }
 
 void renderFrame() {
   for (int32_t bandY = 0; bandY < LCD_HEIGHT; bandY += BAND_HEIGHT) {

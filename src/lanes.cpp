@@ -4,6 +4,7 @@
 // Bend: centre x = 240 + curve * (1-s)^2, so the road bends near the horizon and
 // stays centred at the runner's feet.
 #include "lanes.h"
+#include "renderer.h"
 #include "config.h"
 #include "board_config.h"
 #include <Arduino.h>
@@ -11,14 +12,11 @@
 
 namespace {
 
-bool s_swap = false;                   // band buffer stores byte-swapped RGB565?
 
 inline uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
   return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 }
-inline uint16_t raw(uint16_t c) {      // convert a native RGB565 value to buffer order
-  return s_swap ? (uint16_t)((c >> 8) | (c << 8)) : c;
-}
+inline uint16_t raw(uint16_t c) { return renderer::raw(c); }   // buffer order (R1-BYTE)
 
 // Palette, pre-converted to buffer order at init.
 uint16_t s_sky[ROAD_HORIZON_Y];        // vertical sky gradient
@@ -44,26 +42,11 @@ inline void fill(uint16_t* row, int32_t x0, int32_t x1, uint16_t c) {
   for (int32_t x = x0; x < x1; ++x) row[x] = c;
 }
 
-void byteOrderSelfTest() {
-  lgfx::LGFX_Sprite t;
-  t.setColorDepth(16);
-  t.setPsram(false);
-  if (t.createSprite(1, 1) == nullptr) { Serial.println("[lanes] self-test alloc FAILED"); return; }
-  const uint16_t red = 0xF800;
-  t.fillRect(0, 0, 1, 1, red);          // library path: guaranteed-correct colour
-  uint16_t v = ((uint16_t*)t.getBuffer())[0];
-  s_swap = (v != red);
-  Serial.printf("[lanes] band buffer byte order: %s (red reads 0x%04X)\n",
-                s_swap ? "SWAPPED" : "native", v);
-  t.deleteSprite();
-}
-
 } // namespace
 
 namespace lanes {
 
 bool init() {
-  byteOrderSelfTest();
 
   for (int y = 0; y < ROAD_HORIZON_Y; ++y) {          // deep blue -> warm horizon
     float t = (float)y / (ROAD_HORIZON_Y - 1);

@@ -7,8 +7,8 @@
 
 namespace lanes {
 
-// Allocates nothing. Runs a byte-order self-test on a 1x1 scratch sprite (direct
-// buffer writes must match how LovyanGFX stores 16-bit pixels) and prints it.
+// Allocates nothing. Builds the palette in band-buffer order via renderer::raw()
+// (renderer::init must run first: it measures the byte order).
 bool init();
 
 // Latch this frame's road state. travel = metres run (interpolated). Computes the

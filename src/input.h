@@ -7,7 +7,8 @@
 namespace input {
 
 struct State {
-  float moveX;        // -1..1, dead-zoned, smoothed
+  float moveX;        // -1..1 horizontal drag from where the finger landed (dead-zoned)
+  float moveY;        // -1..1 vertical drag, + = down the screen (dead-zoned)
   bool  jumpPressed;  // edge: one tick per tap in the MIDDLE zone
   int8_t laneStep;    // edge: -1 / +1 for one tick per tap in the LEFT / RIGHT zone
   bool  pressed;      // edge: one tick per tap anywhere (menus, start, retry)

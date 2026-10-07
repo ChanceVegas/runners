@@ -16,4 +16,11 @@ bool addLayer(ComposeFn fn);       // register a layer; earlier = further back
 void clearLayers();                // drop all layers (mode switches: overworld <-> encounter)
 void renderFrame();                // compose + push every band through all layers
 
+// Band buffers store 16-bit pixels in LovyanGFX's internal order, which is
+// BYTE-SWAPPED RGB565 on this board (R1-BYTE). Code that writes band buffers
+// directly (lanes, overworld terrain) must convert colours with raw(). Library
+// draw calls (fillRect etc.) take native RGB565 and need no conversion.
+// Valid after init() (a boot self-test measures the order).
+uint16_t raw(uint16_t nativeRgb565);
+
 }

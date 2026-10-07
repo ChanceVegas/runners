@@ -68,13 +68,17 @@ PlatformIO, Arduino framework (espressif32@6.5.0 = core 2.0.14, pinned), C++, Lo
 7. Design problems are logged in PROGRESS "Known Issues" and raised — never silently
    worked around.
 
-## Transfer Protocol (the container cannot push — lessons from Cave Escape)
-- Code: ONE `git format-patch` per hand-off. User applies with `git am <file>` and
-  PASTES `git log --oneline -1` back before anything is stacked on top.
-- Docs-only changes: whole file + `shasum`. User verifies checksum before committing.
-- Never stack a patch on a hand-off that hasn't been confirmed applied — rebuild it
-  combined instead.
-- Stuck `git am` → `git am --abort` first.
+## Transfer Protocol (direct push — enabled 2026-10-07)
+The Claude GitHub App has write access to this repo, so Claude pushes directly.
+- Claude commits and pushes to `main` itself. Before pushing: `git fetch origin main`
+  and rebase onto it, and `pio run` must succeed (never push non-compiling code).
+- One logical change per commit, `type(scope): summary` (Session Workflow rule 6).
+- The user's side: `git pull` before every flash, then confirm the banner tag.
+  No more patches, `git am`, or checksums.
+- Hardware gates still need the user: Claude cannot reach the board. Nothing is
+  marked hw-verified without user-reported results (Session Workflow rule 4).
+- If a push is ever refused (403), fall back to the old way: one `git format-patch`
+  per hand-off, user applies with `git am` and pastes `git log --oneline -1`.
 
 ## Repo Map
 - CLAUDE.md — rules, hardware, toolchain, protocols

@@ -87,6 +87,8 @@ session doesn't know it happened.
 - R4-HW (open): player-to-player testing needs two boards + two GPS units.
 
 ## Decisions Made
+- 2026-10-07: Claude GitHub App installed by user → Claude pushes directly to main
+  (CLAUDE.md Transfer Protocol rewritten). User: `git pull` before flashing.
 - 2026-10-05: Cave Escape scrapped by user; archived at tag `cave-escape-final`.
 - 2026-10-05: New game "Runners": GPS overworld + pseudo-3D lane encounters.
   Encounters start only when stopped. Deterministic world from GPS cell hash.

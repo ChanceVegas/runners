@@ -43,6 +43,40 @@
 #define RUN_FEET_Y           250    // px; screen row of the runner's feet
 #define RUN_LANE_SPEED       10.0f  // lanes/s sideways; 100 ms per lane change (was 7)
 #define DEBUG_INPUT_LOG      1      // 1 = print each tap the encounter consumes + crash causes
+
+// --- Game flow / polish (R1 polish pass) ---
+#define RUN_COUNTDOWN_S      2.0f   // s of "3-2-1-GO" before a stage starts
+#define RUN_CRASH_S          0.9f   // s of crash freeze + flash before GAME OVER
+#define RUN_CRASH_FLASH_S    0.18f  // s the red screen border flashes on impact
+#define RUN_HINT_S           5.0f   // s the "<  JUMP  >" tap hints stay up into a run
+#define RUN_FIRST_ROW_M      80.0f  // m ahead of the start where the first row sits
+                                    // (R1 had 66 m: ~4 s, fine; a bit more room now
+                                    // that the countdown ends with the runner moving)
+// Stages: escaping (RUN_GOAL_M) advances the stage; each stage is faster and denser.
+#define STAGE_SPEED_STEP     3.0f   // m/s added to start and max speed per stage
+#define STAGE_SPEED_CAP      38.0f  // m/s absolute cap (~137 km/h)
+#define STAGE_WALL_STEP      5      // % more walls per stage
+#define STAGE_WALL_CAP       70     // % max wall share
+
+// --- Coins (R1 polish pass) ---
+#define COIN_POOL            40     // max live coins
+#define COIN_POINTS          10     // score per coin (1 m run = 1 point)
+#define COIN_TRAIL_CHANCE    60     // % of obstacle rows that get a coin trail
+#define COIN_TRAIL_N         5      // coins in a ground trail (in the open lane)
+#define COIN_TRAIL_STEP_M    3.0f   // m between trail coins
+#define COIN_ARC_CHANCE      40     // % of trails that are an arc over a barrier instead
+#define COIN_R_PX            22.0f  // px coin radius at scale 1
+#define COIN_LOW_PX          30.0f  // px coin centre height above road, ground coins
+#define COIN_HIGH_PX         95.0f  // px coin centre height, arc coins (need a jump)
+#define COIN_HIT_DEPTH_M     1.0f   // m collect window either side of the runner
+#define COIN_HIGH_MIN_JUMP   30.0f  // px of jump needed to grab an arc coin
+#define COIN_LOW_MAX_JUMP    55.0f  // px; jumping higher than this sails over ground coins
+
+// --- Roadside scenery (R1 polish pass) ---
+#define SCENERY_SPACING_M    11.0f  // m between props on one side (sides are offset by half)
+#define SCENERY_FAR_M        100.0f // m; props beyond this aren't drawn (specks anyway)
+#define SCENERY_LANE_OFFSET  2.3f   // lanes from centre; road edge is 1.5, so off the road
+#define SCENERY_LANE_JITTER  1.2f   // lanes of random extra offset per prop
 #define RUN_JUMP_VEL_PX_S    520.0f // px/s launch; apex = v^2/2g ≈ 90 px
 #define RUN_GRAVITY_PX_S2    1500.0f// px/s^2; airtime = 2v/g ≈ 0.69 s
 #define RUN_SPEED_START      14.0f  // m/s at the start of a run

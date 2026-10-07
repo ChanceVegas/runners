@@ -1,11 +1,13 @@
-// main.cpp — R1: the encounter mode as a standalone playable loop. Fixed-timestep
-// logic (60 Hz) + render paced to the panel refresh, with interpolation between
-// ticks. Layers, back to front: road (lanes) -> obstacles + runner -> HUD.
+// main.cpp — the encounter mode as a standalone game. Fixed-timestep logic (60 Hz)
+// + render paced to the panel refresh, with interpolation between ticks.
+// Layers, back to front: road (lanes) -> roadside scenery -> coins/obstacles/runner
+// -> HUD.
 #include <Arduino.h>
 #include "display.h"
 #include "renderer.h"
 #include "input.h"
 #include "lanes.h"
+#include "scenery.h"
 #include "encounter.h"
 #include "config.h"
 #include "board_config.h"
@@ -26,10 +28,12 @@ static uint32_t s_msMin = 0xFFFFFFFF, s_msMax = 0, s_msSum = 0;
 
 static const char* stateName(encounter::State s) {
   switch (s) {
-    case encounter::State::Ready: return "READY";
-    case encounter::State::Run:   return "RUN";
-    case encounter::State::Win:   return "WIN";
-    case encounter::State::Lose:  return "LOSE";
+    case encounter::State::Ready:      return "READY";
+    case encounter::State::Countdown:  return "COUNTDOWN";
+    case encounter::State::Run:        return "RUN";
+    case encounter::State::Crash:      return "CRASH";
+    case encounter::State::StageClear: return "CLEAR";
+    case encounter::State::GameOver:   return "GAMEOVER";
   }
   return "?";
 }
@@ -37,13 +41,14 @@ static const char* stateName(encounter::State s) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners R1-R3 ===");
+  Serial.println("\n=== Runners P1-R1 ===");
   if (!display::init())   { Serial.println("FATAL: display init failed");   for(;;) delay(1000); }
   if (!renderer::init())  { Serial.println("FATAL: renderer init failed");  for(;;) delay(1000); }
   if (!input::init())     { Serial.println("FATAL: input init failed");     for(;;) delay(1000); }
   if (!lanes::init())     { Serial.println("FATAL: lanes init failed");     for(;;) delay(1000); }
   if (!encounter::init()) { Serial.println("FATAL: encounter init failed"); for(;;) delay(1000); }
   renderer::addLayer(lanes::composeBand);
+  renderer::addLayer(scenery::composeBand);
   renderer::addLayer(encounter::composeObjects);
   renderer::addLayer(encounter::composeHud);
   Serial.printf("post-init heap free: %u | PSRAM free: %u\n",
@@ -85,12 +90,13 @@ void loop() {
 
   uint32_t nowMs = millis();
   if (nowMs - s_statT0 >= 1000) {
-    Serial.printf("fps: %.1f | render ms avg %.1f min %lu max %lu | heap %u | %s dist %d m speed %d km/h\n",
+    Serial.printf("fps: %.1f | render ms avg %.1f min %lu max %lu | heap %u | %s stage %u dist %d m speed %d km/h score %u\n",
                   s_frames * 1000.0f / (nowMs - s_statT0),
                   s_frames ? (float)s_msSum / s_frames : 0.0f,
                   (unsigned long)s_msMin, (unsigned long)s_msMax,
                   (unsigned)ESP.getFreeHeap(), stateName(encounter::state()),
-                  (int)encounter::distanceM(), (int)(encounter::speedMS() * 3.6f));
+                  (unsigned)encounter::stage(), (int)encounter::distanceM(),
+                  (int)(encounter::speedMS() * 3.6f), (unsigned)encounter::score());
     s_frames = 0; s_msSum = 0; s_msMin = 0xFFFFFFFF; s_msMax = 0;
     s_statT0 = nowMs;
   }

@@ -4,28 +4,42 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R1 COMPLETE ✅ (2026-10-07) — playable encounter with tap-zone controls,
-  hw-verified (tag R1-R3). Next: R2 GPS (breakdown for approval first).
-- Builds: yes (espressif32@6.5.0; RAM 7.7%, Flash 29.7% of 1.3 MB app partition)
+- Phase: P1 polish pass CODE DONE (tag P1-R1) — compiled, host-previewed; hw-verify
+  pending. R1 COMPLETE ✅ (2026-10-07). GPS (R2) + overworld (R3) ON HOLD (user).
+- Builds: yes (espressif32@6.5.0; RAM 8.2%, Flash 32.5% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
   281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. R2 — GPS (breakdown for user approval BEFORE code). Can start without the module:
-   gps module with a FAKE-GPS replay source first (desk development), real M10 on
-   UART1 when it arrives. Gate for the real part: outdoor walk test.
-2. R2 — GPS bring-up (breakdown for user approval BEFORE code; needs module).
-3. Purchase: 2× u-blox M10 GPS modules (patch antenna + backup cap), 2nd CrowPanel 4.3.
+1. P1 hardware gate (tag P1-R1): banner `=== Runners P1-R1 ===`, then
+   `[encounter] best score loaded: 0` on first boot.
+   a. Title: big RUNNERS, BEST, blinking TAP TO RUN, two instruction lines and
+      "< LANE  JUMP  LANE >" along the bottom — all readable, nothing clipped?
+   b. Tap → 3-2-1-GO → run. Coins: ground trails in the open lane, arcs over
+      barriers (jump to grab). Score / stage / coins in the top bar.
+   c. Crash → red flash, runner knocked flat → CAUGHT! with score, best / NEW BEST!,
+      stats line. Power-cycle: the title must show the saved best.
+   d. Reach 900 m → ESCAPED! STAGE 1 CLEAR → tap → STAGE 2 countdown, faster.
+   e. Pines / bushes / posts streaming past at the roadside.
+   f. Serial: fps ≈ 25.3, render ms (new content adds draw calls; budget 35 ms),
+      heap flat.
+2. ON HOLD (user, 2026-10-07): R2 GPS, R3 overworld — and the GPS module / 2nd
+   board purchases they need. Resume only when the user says so.
 
 ## Known Issues / Risks
 - TAP-1 (watch): R1-R3 test crash at 236 m — BARRIER in runner's lane, jumpY 0, no
   tap logged after 195 m. Either no jump was attempted or a middle tap was missed.
   If a "tapped but nothing happened" case is ever confirmed, check the one-sample
   bounce discard in input.cpp first (a very light/short tap may read as a bounce).
-- CLEAN-1 (minor): build warning "LGFX_USE_V1 redefined" — defined both in
-  platformio.ini build_flags and display.h. Harmless; remove one in the next code
-  commit.
+- CLEAN-1 (fixed P1): "LGFX_USE_V1 redefined" warning — display.h now guards it.
+- P1-NVS (accepted): best score is written to flash (Preferences/NVS) inside the
+  game loop, but only once per game over, and only on a new best. Can stall a frame
+  for a few ms when it happens; invisible on the game-over screen.
+- P1-AUDIO (open, not in P1): no sound yet. The board has an I2S speaker amp
+  (pins in board_config). Biggest remaining polish item; needs its own pass.
+- P1-ART (open): all art is still primitive shapes (rects/ellipses/triangles). Real
+  sprites need the pushImage read-back test first (CARRY-1).
 - R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
   (boot self-test: red 0xF800 reads 0x00F8). Any direct write into a band buffer
   must swap. lanes::init() detects it and converts; colours verified on hardware.
@@ -79,6 +93,37 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 2 (cont.) — P1 standalone polish pass
+- User: hold GPS + overworld; make the bottom instructions bigger; get as close to a
+  polished game as possible minus GPS in one pass.
+- Done (P1-R1):
+  - Fonts: LovyanGFX smooth FreeSansBold 9/12/18/24 pt replace the 8 px default.
+    Instructions 12 pt (was 8 px). text() auto-shrinks anything wider than the
+    screen; all strings measured against the real glyph widths (longest 459/480 px).
+  - Flow: Ready (title + saved best) → Countdown 3-2-1-GO → Run → Crash (red flash,
+    runner knocked flat, 0.9 s) → GameOver (score, NEW BEST!, stage/coins/metres) →
+    tap → new game. 900 m → StageClear → tap → next stage (+3 m/s start+max, +5%
+    walls, caps 38 m/s / 70%). Score = metres across stages + 10/coin.
+  - Coins: 60% of rows get a 5-coin ground trail into the open lane, or (40% of
+    those) a 3-coin arc over a barrier that needs a jump. Spinning gold ellipses.
+  - Best score saved in NVS (Preferences "runners"/"best"), loaded at boot.
+  - scenery.*: pines, tall pines, bushes, marker posts every 11 m per side (sides
+    offset), placed by hash of slot index — stateless, deterministic.
+  - Draw list: obstacles + coins + runner projected ONCE per frame and depth-sorted
+    in beginRender (R1 re-sorted per band).
+  - Runner redrawn (race bib, shoes, lean into lane changes, jogs in countdown).
+  - Tap hints show on title, countdown and the first 5 s of a run, then hide.
+  - CLEAN-1 fixed.
+- Host preview checked composition (scenery off-road, coin arc height, HUD fit).
+- Commit: feat(p1): standalone polish — fonts, coins, stages, best score, scenery
+
+### 2026-10-07 — Session 2 (cont.) — GPS on hold; bigger instruction text (R1-R4, superseded)
+- User: hold off on GPS and the overworld map.
+- An interrupted first attempt at the text request (built-in font size 1 → 2, tag
+  R1-R4) was left uncommitted in the container and never shipped. P1 replaced it
+  with smooth FreeSans fonts; R1-R4 never reached hardware.
+- Commit: feat(r1): larger instruction text; GPS + overworld on hold
+
 ### 2026-10-07 — Session 2 (cont.) — R1 COMPLETE
 - R1-R3 tap zones on hardware: user "feels much improved". Log: 7 taps in one run
   (LEFT/RIGHT/MIDDLE mix), each received immediately; fps 25.2–25.3, render ~21.3 ms,
@@ -158,5 +203,6 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
+- v0.2.0 — 2026-10-07 — P1: standalone polish (unverified on hardware).
 - v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).
 - v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

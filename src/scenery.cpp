@@ -49,7 +49,7 @@ void beginFrame(float travel) {
   // Slots from farthest to nearest so the list is already in painter's order.
   const int32_t kFar  = (int32_t)floorf((travel + SCENERY_FAR_M) / SCENERY_SPACING_M);
   const int32_t kNear = (int32_t)floorf((travel + 2.0f) / SCENERY_SPACING_M);
-  for (int32_t k = kFar; k >= kNear && s_n < MAX_PROPS - 1; --k) {
+  for (int32_t k = kFar; k >= kNear; --k) {
     for (int side = 0; side < 2; ++side) {
       const uint32_t h = hash((uint32_t)k * 2u + (uint32_t)side);
       if ((h & 7) == 0) continue;                       // ~1 in 8 slots left empty
@@ -67,6 +67,7 @@ void beginFrame(float travel) {
         case 5: case 6:         kind = Kind::Bush; break;
         default:                kind = Kind::Post; break;
       }
+      if (s_n >= MAX_PROPS) return;                     // bounds check per push
       s_props[s_n++] = { kind, (int16_t)sx, (int16_t)sy, s };
     }
   }

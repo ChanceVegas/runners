@@ -49,6 +49,7 @@ float s_speedMax = RUN_SPEED_MAX;          // this stage's cap
 int   s_wallChance = OBST_WALL_CHANCE;     // this stage's wall %
 float s_runStart = 0;                      // travel when this stage started
 float s_nextRowWz = 0;
+float s_prevRowWz = -1e9f;                 // last row spawned; trails must not reach back into it
 float s_finalRun = 0;                      // m run when the stage ended
 
 uint8_t  s_stage = 1;
@@ -60,6 +61,7 @@ Preferences s_prefs;
 
 // ---- Render-side (latched in beginRender) ---------------------------------------
 float d_travel = 0, d_laneX = 0, d_jumpY = 0, d_time = 0;
+bool  d_blink = false;                     // latched per frame: all bands agree
 
 // One depth-sorted list of everything on the road, built once per frame.
 enum class DrawKind : uint8_t { Obstacle, Coin, Runner };
@@ -124,9 +126,16 @@ void spawnRow(float wz) {
     for (int i = -1; i <= 1; ++i)                       // arc over the barrier
       spawnCoin(true, (int8_t)barrierLane, wz + i * 2.0f);
   } else {
-    for (int i = 0; i < COIN_TRAIL_N; ++i)              // trail leading into the gap
-      spawnCoin(false, (int8_t)open, wz - (COIN_TRAIL_N - i) * COIN_TRAIL_STEP_M);
+    // Trail leading into the gap. Never reach back past the previous row + margin:
+    // at the late-game 18 m gap a full 15 m trail would start 3 m past that row and
+    // steer the player into its blocked lane. Drop the far coins instead.
+    const float minWz = s_prevRowWz + COIN_TRAIL_MARGIN_M;
+    for (int i = 0; i < COIN_TRAIL_N; ++i) {
+      const float cz = wz - (COIN_TRAIL_N - i) * COIN_TRAIL_STEP_M;
+      if (cz >= minWz) spawnCoin(false, (int8_t)open, cz);
+    }
   }
+  s_prevRowWz = wz;
 }
 
 void setState(State st) { s_state = st; s_stateT = 0; }
@@ -155,6 +164,7 @@ void newGame() {
 void startRunning() {
   s_runStart = s_travel;
   s_nextRowWz = s_travel + RUN_FIRST_ROW_M;
+  s_prevRowWz = -1e9f;
   setState(State::Run);
 }
 
@@ -197,10 +207,12 @@ void text(lgfx::LGFX_Sprite& b, int32_t bandY, const char* str, int32_t x, int32
           const lgfx::IFont* font, float size, uint16_t color, int32_t maxW = LCD_WIDTH - 16) {
   b.setFont(font);
   b.setTextSize(size);
-  const int32_t w = b.textWidth(str);
-  if (w > maxW && w > 0) { size *= (float)maxW / w; b.setTextSize(size); }
+  // Band test first, from the font height alone: most bands miss each string, and
+  // this skips textWidth() (a per-glyph walk) for all of them.
   const int32_t half = b.fontHeight() / 2 + 3;
   if (!rowsHit(y - half, y + half, bandY, b.height())) return;
+  const int32_t w = b.textWidth(str);
+  if (w > maxW && w > 0) { size *= (float)maxW / w; b.setTextSize(size); }
   b.setTextDatum(lgfx::middle_center);
   b.setTextColor(rgb565(0, 0, 0));
   b.drawString(str, x + 2, y - bandY + 2);
@@ -336,6 +348,10 @@ void update(float dt) {
   switch (s_state) {
     case State::Ready:
       s_travel += RUN_ATTRACT_SPEED * dt;
+      // Keep float precision over long idles: wrap by a whole number of stripe (6 m,
+      // period 12) and curve (220 m) cycles so the road doesn't visibly jump. Only
+      // the hashed scenery re-rolls, once every few hours of attract mode.
+      if (s_travel > 100000.0f) { s_travel -= 660.0f; s_prevTravel -= 660.0f; }
       if (in.pressed) newGame();
       return;
 
@@ -438,6 +454,7 @@ void beginRender(float alpha) {
   d_laneX  = s_prevLaneX + (s_laneX - s_prevLaneX) * a;
   d_jumpY  = s_prevJumpY + (s_jumpY - s_prevJumpY) * a;
   d_time   = millis() * 0.001f;
+  d_blink  = ((millis() / 450) & 1) == 0;
   lanes::beginFrame(d_travel);
   scenery::beginFrame(d_travel);
 
@@ -490,7 +507,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   const lgfx::IFont* F18 = &fonts::FreeSansBold18pt7b;
   const lgfx::IFont* F24 = &fonts::FreeSansBold24pt7b;
   const int32_t cx = LCD_WIDTH / 2;
-  const bool blink = ((millis() / 450) & 1) == 0;
+  const bool blink = d_blink;
 
   // In-game HUD: escape progress bar, score, stage, coins.
   if (s_state == State::Run || s_state == State::Countdown || s_state == State::Crash) {

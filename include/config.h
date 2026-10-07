@@ -64,6 +64,7 @@
 #define COIN_TRAIL_CHANCE    60     // % of obstacle rows that get a coin trail
 #define COIN_TRAIL_N         5      // coins in a ground trail (in the open lane)
 #define COIN_TRAIL_STEP_M    3.0f   // m between trail coins
+#define COIN_TRAIL_MARGIN_M  6.0f   // m past the previous row before a trail may start
 #define COIN_ARC_CHANCE      40     // % of trails that are an arc over a barrier instead
 #define COIN_R_PX            22.0f  // px coin radius at scale 1
 #define COIN_LOW_PX          30.0f  // px coin centre height above road, ground coins

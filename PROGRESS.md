@@ -4,7 +4,7 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: P1 polish pass CODE DONE (tag P1-R1) — compiled, host-previewed; hw-verify
+- Phase: P1 polish pass CODE DONE + code-reviewed (tag P1-R2) — compiled; hw-verify
   pending. R1 COMPLETE ✅ (2026-10-07). GPS (R2) + overworld (R3) ON HOLD (user).
 - Builds: yes (espressif32@6.5.0; RAM 8.2%, Flash 32.5% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
@@ -12,7 +12,7 @@ session doesn't know it happened.
   281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. P1 hardware gate (tag P1-R1): banner `=== Runners P1-R1 ===`, then
+1. P1 hardware gate (tag P1-R2): banner `=== Runners P1-R2 ===`, then
    `[encounter] best score loaded: 0` on first boot.
    a. Title: big RUNNERS, BEST, blinking TAP TO RUN, two instruction lines and
       "< LANE  JUMP  LANE >" along the bottom — all readable, nothing clipped?
@@ -23,7 +23,11 @@ session doesn't know it happened.
    d. Reach 900 m → ESCAPED! STAGE 1 CLEAR → tap → STAGE 2 countdown, faster.
    e. Pines / bushes / posts streaming past at the roadside.
    f. Serial: fps ≈ 25.3, render ms (new content adds draw calls; budget 35 ms),
-      heap flat.
+      heap flat. Read render ms on the TITLE and GAME OVER screens too, not just
+      while running (text-heavy screens; review item 4).
+   g. Feel: arc coins over barriers — does grabbing the first coin ever still clip
+      the barrier? (Thresholds are both 30 px, so it should only happen on an early,
+      already-falling jump; review item 5.)
 2. ON HOLD (user, 2026-10-07): R2 GPS, R3 overworld — and the GPS module / 2nd
    board purchases they need. Resume only when the user says so.
 
@@ -93,6 +97,21 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 2 (cont.) — P1 code review fixes (P1-R2)
+- User code-reviewed the P1 patch; six findings, verified against the code:
+  1. Blink read from millis() per band → a string spanning a band seam could render
+     half-on on the flip frame. FIXED: d_blink latched in beginRender.
+  2. Coin trails (15 m) vs late-game row gap (18 m): first coin landed 3 m past the
+     previous row and led into that row's blocked lane. FIXED: trail clamped to
+     prevRow + COIN_TRAIL_MARGIN_M (6 m); far coins dropped when the gap is short.
+  3. Scenery MAX_PROPS guard load-bearing by one slot. FIXED: per-push bounds check.
+  4. text() measured every string in every band. FIXED: band-miss test (font height
+     only) now precedes textWidth(). Gate extended: read render ms on title/game-over.
+  5. Arc coin (30 px) vs barrier clear (30 px): equal → fair; feel-check on hardware.
+  6. s_travel unbounded in attract mode. FIXED: wrap by 660 m (whole stripe + curve
+     cycles) past 100 km.
+- Commit: fix(p1): review fixes — frame-latched blink, trail clamp, text band test
+
 ### 2026-10-07 — Session 2 (cont.) — P1 standalone polish pass
 - User: hold GPS + overworld; make the bottom instructions bigger; get as close to a
   polished game as possible minus GPS in one pass.

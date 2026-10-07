@@ -48,8 +48,8 @@ data (OpenStreetMap etc. — the map is fictional by design).
 | renderer | src/renderer.* | band compositor, layer callbacks, band byte-order test + raw() colour conversion | DONE (R0); raw() moved here R3 |
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
-| encounter | src/encounter.* | lane-chase game: runner, obstacles, coins, stages, score + saved best (NVS), title/countdown/crash/clear/game-over flow, HUD | P1 polish code done, hw-verify pending |
-| scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | P1 code done, hw-verify pending |
+| encounter | src/encounter.* | lane-chase game: runner, obstacles, coins, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Chase modes | P1 hw-verified; chase mode = R3 |
+| scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
 | locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | R3 code done, hw-verify pending |

@@ -5,7 +5,8 @@ session doesn't know it happened.
 
 ## Current State
 - Phase: R3 overworld CODE DONE (tag R3-R1) — compiled, host-previewed; hw-verify
-  pending. Includes P1 (also not yet hw-verified). R1 COMPLETE ✅. R2 GPS ON HOLD.
+  pending. P1 COMPLETE ✅ (user: "running smoothly" on hardware, 2026-10-07).
+  R1 COMPLETE ✅. R2 GPS ON HOLD.
 - Builds: yes (espressif32@6.5.0; RAM 8.8%, Flash 33.6% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
@@ -17,9 +18,9 @@ session doesn't know it happened.
    `[game] profile: ...` lines.
    a. MENU: RUNNERS title over the scrolling road, EXPLORE and ARCADE buttons, stats
       line (coins / escapes / best), walked metres.
-   b. ARCADE = the P1 game (P1 checklist still applies: text readable, countdown,
-      coins, crash flash, CAUGHT/NEW BEST, stage clear). Game over has a MENU button
-      (top-left) back to the menu.
+   b. ARCADE = the P1 game (hw-verified). New here: game over has a MENU button
+      (top-left) back to the menu. P1 render-ms numbers were never captured — grab
+      them in ARCADE during this gate.
    c. EXPLORE: top-down map (grass, forest canopies, lakes with shore, rock, trails).
       Drag from anywhere = walk (short drag) / run (long drag: RUN label, energy bar
       fills, speed streaks). Release = STILL. Map scrolls smoothly?
@@ -119,6 +120,10 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 3 (cont.) — P1 hardware result
+- User: P1 (P1-R2) running smoothly on the board. Logged P1 COMPLETE on that report;
+  no serial numbers captured for P1 — collect render ms in ARCADE at the R3 gate.
+
 ### 2026-10-07 — Session 3 — R3 overworld in one iteration (R3-R1)
 - User: attack the overworld map in one iteration. Built before GPS: position comes
   from a simulated source behind locator (drag = walk/run, 6x time scale, real-scale
@@ -277,6 +282,6 @@ session doesn't know it happened.
 
 ## Changelog
 - v0.3.0 — 2026-10-07 — R3: overworld + menu + chase mode (unverified on hardware).
-- v0.2.0 — 2026-10-07 — P1: standalone polish (unverified on hardware).
+- v0.2.0 — 2026-10-07 — P1: standalone polish (hw-verified by user report).
 - v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).
 - v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

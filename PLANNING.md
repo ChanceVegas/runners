@@ -29,6 +29,24 @@ companion app. Accepted limit: you only meet players who are physically nearby.
 Explicitly OUT of v1: global/online multiplayer, cellular, servers, audio, real-map
 data (OpenStreetMap etc. — the map is fictional by design).
 
+## Safety (requirement for R2 GPS — raised by user 2026-10-07)
+Players move through the real world while the map is FICTIONAL: on-screen water,
+rock or forest has no relation to real hazards (a map lake may be a parking lot; a
+real river may be map grass). Therefore:
+- In-game terrain blocking is a GAMEPLAY choice only and must never be presented as
+  a safety feature (it would teach false trust near real water/roads).
+- Safety comes from not demanding attention while moving. Proposed for R2:
+  1. Safety notice on startup (map is imaginary; real hazards are not shown).
+  2. No input ever required while moving (existing rule: chases start only when
+     still) — keep absolute.
+  3. Audio cue (I2S speaker amp) when an enemy is in range: "stop, then look".
+  4. Speed lockout above running pace (~7 m/s): "too fast — paused", nothing counts
+     (no play from bikes/cars; also anti-cheat).
+  5. Simplified map view while moving (less temptation to stare).
+- Future option: real map data (OpenStreetMap) to keep spawns away from real water and
+  roads — the only way the game can know real hazards; big step (storage/connectivity).
+  Status: proposals AWAITING user approval.
+
 ## Rendering Approach
 - Carried over: dual-core band compositor (SRAM bands → PSRAM framebuffer), now
   scene-agnostic via registered compose callbacks (renderer::addLayer).
@@ -115,6 +133,8 @@ data (OpenStreetMap etc. — the map is fictional by design).
    (2) blocked terrain = dead ground (crossable, but no energy/distance, no engaging);
    (3) hard-block in sim, (1)/(2) with GPS. Recommended: (1) for water + rock, and
    split forest into walkable forest + impassable "thicket". AWAITING user choice.
+   NOTE: blocking is gameplay only — see Safety section; user's underlying concern
+   (2026-10-07) is real-world safety, addressed there.
 8. **Run energy use:** DECIDED R3: shields in chases (50 energy each, max 2, unused
    refunded). The PLANNING "boost" idea is deferred — no free tap zone for it.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.

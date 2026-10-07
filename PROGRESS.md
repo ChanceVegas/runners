@@ -123,6 +123,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-07 — Session 3 (cont.) — real-world safety requirement
+- User clarified the blocking request is about safety: with GPS, players must stay
+  aware of real surroundings (e.g. real water). Pointed out the map is fictional, so
+  in-game blocking can't protect anyone and could create false trust. Logged a
+  Safety section in PLANNING (notice, no input while moving, audio cue, speed
+  lockout, simplified moving view; OSM as a future option). Awaiting approval.
+
 ### 2026-10-07 — Session 3 (cont.) — R3 flashed; impassable terrain request
 - User flashed R3. Request: dense woods, rock and water should block the player
   (fix with GPS). Logged as R3-BLOCK / PLANNING Open Decision 7 with options; asked

@@ -16,8 +16,10 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A1 ART GATE: PASSED visually 2026-10-08 (user: "love it!!!! first art iteration looks
-   wonderful!!"). STILL OPEN: render ms log from an ARCADE + BATTLE run (ART-PERF).
+1. A1 ART GATE: PASSED ✅ 2026-10-08 (user: "love it!!!! first art iteration looks
+   wonderful!!"; render log: ARCADE run 25-26 ms (was ~24.5), BATTLE run 26-29 ms, fps 25.2-25.4).
+   Next: A2 — breakdown proposed (3 enemies front/back + run frames, knocked-down runner,
+   HUD heart/shield/coin icons, 6 shop pictures), awaiting user approval.
    - [ ] Runner is pixel art: 4-step run cycle, tucked jump, crouch duck, arms-out
          stumble, shield blink still works. Crash pose is still shapes (A2).
    - [ ] Barrier (orange/white), duck bar (yellow/black + arrow), wall (concrete +
@@ -31,9 +33,10 @@ session doesn't know it happened.
    approved Safety items 1–5 (PLANNING) as mandatory scope.
 
 ## Known Issues / Risks
-- ART-PERF (open, blocks A1 sign-off): MENU and battle countdown already peak at
-  35–36 ms of the 39.6 ms budget (text-heavy frames). Bitmaps add cost; A1 must report
-  render ms and may need cheaper HUD text (pre-rendered labels) to make room.
+- ART-PERF (watch): A1 sprites cost ~0.5–1 ms (ARCADE run 25–26 ms vs ~24.5). The
+  peaks are still TEXT-heavy frames, not art: MENU and battle countdown hit 35–36 ms of
+  39.6. A2's big pursuer sprite must stay within its current footprint; if peaks
+  pass ~37 ms, cache the static HUD/menu text (pre-rendered labels).
 - VOL-CAP (closed): level 10 has "very very minimal distortion" on the salvaged
   speaker; caps kept (SFX 43%, music 23%).
 - DUCK-1 (closed 2026-10-08): RK logs show deliberate ducks at y236–241, jumps
@@ -140,6 +143,11 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A1 render log
+- Log (second half; first half was an older capture): ARCADE run 25.0–25.8 ms avg,
+  BATTLE run 26–29, countdown 34–35 (max 36), MENU max 36, EXPLORE 25–28; fps 25.0–25.4;
+  heap 269,196 flat. Rank 4 -> 5. A1 closed. A2 breakdown awaiting approval.
+
 ### 2026-10-08 — Session 3 (cont.) — A1 on hw
 - User: "love it!!!! first art iteration looks wonderful!!" Render ms not yet sent.
   Next: A2 breakdown for approval.

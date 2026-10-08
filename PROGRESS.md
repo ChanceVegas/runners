@@ -150,6 +150,21 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — GPS keeps restarting (power)
+- G0-R5 outdoors (photo of the detail panel + log): NO UBX at all (my UBX theory was
+  wrong); the module sends only RMC + GGA (~3 sentences/s, ~118 B/s), no GSV.
+  The 115200 request WORKED (link at 115200, first sentence $GNTXT) but ~12 s later the
+  module went silent and came back at 9600 = it RESTARTED (RAM settings lost). Every
+  ~40-60 s: 10-15 s of total silence (0 B/s), then RMC/GGA again with no time/fix.
+  UTC appeared once (23:31:11) just before the log ended = it can hear satellites when
+  it stays up long enough. Diagnosis: brown-out resets at 3.3 V supply (M10 FPV modules
+  regulate internally and are usually fed 5 V).
+- Also: the GPS detail panel costs ~12 ms render (39-40 ms, 24 fps while open) — debug
+  only; fine to leave, or trim later.
+- Done: G0-R6 — logs every silence + "module came back at N: it restarted", always
+  prints the module's $TXT lines. Asked the user to feed GPS VCC from 5 V.
+- Commit: diag(gps): log silences, restarts and module text (G0-R6)
+
 ### 2026-10-08 — Session 3 (cont.) — GPS: module streams UBX, 9600 too slow
 - User: outside, open sky, ~5 min, no fix; GPS blue LED on, red LED slowly flashing
   (red = PPS per a seller listing; may pulse without a fix). Log (G0-R2, likely indoors):

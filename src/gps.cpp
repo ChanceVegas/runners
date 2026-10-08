@@ -28,6 +28,9 @@ uint8_t  s_gsvView = 0, s_gsvHeard = 0, s_gsvSnrMax = 0;
 bool     s_echo = GPS_ECHO_DEFAULT;
 uint32_t s_lastEchoMs = 0;
 bool     s_echoing = false;        // echoing the current epoch (RMC to next RMC)
+uint32_t s_lastByteMs = 0;         // G0-R6: silence detection (module restart evidence)
+uint32_t s_prevLockBaud = 0;       // baud of the previous lock (revert = module restarted)
+uint16_t s_silences = 0;
 uint32_t s_lastStatusMs = 0;
 uint32_t s_bytes = 0;              // raw bytes received (wiring check: 0 = nothing on RX)
 uint32_t s_winSent = 0, s_winBytes = 0;   // rate window (since the last report)
@@ -220,6 +223,10 @@ void handleSentence() {
     s_locked = true;
     s_fix.baud = BAUDS[s_baudIdx];
     Serial.printf("[gps] LINK OK at %u baud (first sentence: $%.5s)\n", (unsigned)s_fix.baud, s_line);
+    if (s_prevLockBaud > s_fix.baud)
+      Serial.printf("[gps] module came back at %u after running at %u: IT RESTARTED (RAM settings "
+                    "lost) - likely a power brown-out\n", (unsigned)s_fix.baud, (unsigned)s_prevLockBaud);
+    s_prevLockBaud = s_fix.baud;
   }
   s_fix.link = true;
 
@@ -229,7 +236,9 @@ void handleSentence() {
     if (s_echoing) { s_echoing = false; s_lastEchoMs = millis(); }
     else if (s_echo && millis() - s_lastEchoMs >= GPS_ECHO_MS) s_echoing = true;
   }
-  if (s_echoing && (strstr(s_line, "GSV") || strstr(s_line, "GGA") || strstr(s_line, "TXT")))
+  if (strstr(s_line, "TXT"))                      // module text (boot banner, antenna status)
+    Serial.printf("[gps-txt] $%s\n", s_line);
+  else if (s_echoing && (strstr(s_line, "GSV") || strstr(s_line, "GGA")))
     Serial.printf("[nmea] $%s\n", s_line);
 
   char* f[24];
@@ -315,6 +324,14 @@ void update() {
   }
 
   int budget = 1200;                           // bytes per call; plenty at 115200 / 40 ms
+  if (U.available()) {
+    if (s_lastByteMs && now - s_lastByteMs > 3000) {
+      ++s_silences;
+      Serial.printf("[gps] data resumed after %.1f s of SILENCE (#%u) - the module stopped "
+                    "sending entirely\n", (now - s_lastByteMs) * 0.001f, s_silences);
+    }
+    s_lastByteMs = now;
+  }
   while (U.available() && budget--) {
     const char c = (char)U.read();
     ++s_bytes;

@@ -233,7 +233,13 @@
 #define BATTLE_ROW_GAP_MUL     1.35f  // Pursuit rows this much farther apart than arcade (fewer, harder-hitting)
 #define BATTLE_HEARTS          3      // hearts in the Hunt (sneakers may add)
 #define BATTLE_OVERTAKE_S      1.4f   // s of the overtake animation (no attacks)
-#define BATTLE_HUNT_Z_M        26.0f  // m the enemy runs ahead of you in the Hunt
+#define BATTLE_HUNT_Z_M        30.0f  // m the enemy is ahead at the start of the Hunt (full HP)
+#define BATTLE_HUNT_Z_LAST_M   11.0f  // m ahead at 1 HP: every orb hit pulls it closer (RK-R2,
+                                      // user: "can never catch the enemy")
+#define BATTLE_HUNT_CLOSE_MS   6.0f   // m/s the enemy slides to its new distance after a hit
+#define BATTLE_ATTACK_MIN_Z_M  18.0f  // m; attacks never land closer than this (reaction time
+                                      // ~0.7 s at 26 m/s), even when the enemy is nearer
+#define BATTLE_PASS_S          0.9f   // s of the "you run past it" animation on DEFEATED
 #define BATTLE_ENEMY_LANE_SPEED 3.0f  // lanes/s the enemy slides between lanes
 #define BATTLE_BANNER_S        1.3f   // s a battle banner ("STUMBLE!") stays up
 // Per enemy kind: HP, seconds between attacks, % of attacks that also drop an orb.
@@ -249,7 +255,8 @@
 #define BATTLE_ORB_HIT_DEPTH_M 1.0f   // m collect window for orbs
 // Hunt time limit = fastest possible kill (HP / orbs-per-second) x this slack. Out of
 // time = the enemy GETS AWAY: no bonus and the battle's coins are lost.
-#define BATTLE_HUNT_SLACK      1.6f   // x; 1.6 -> Shade ~14 s, Brute ~22 s, Phantom ~22 s
+#define BATTLE_HUNT_SLACK      2.4f   // x; was 1.6 (RK-R1: timer ran out before players got
+                                      // the orbs). 2.4 -> Shade ~20 s, Brute ~16 s, Phantom ~32 s
 #define BATTLE_HUNT_WARN_S     5.0f   // s left when the Hunt timer turns red
 #define DEFEAT_BONUS_COINS     60     // wallet bonus for defeating an enemy (x level)
 

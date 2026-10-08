@@ -17,7 +17,12 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-0. RANK + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners RK-R1 ===`.
+0. RANK + HUNT + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners RK-R2 ===`.
+   Hunt (RK-R2):
+   - [ ] Each orb hit pulls the enemy visibly closer ("HIT! CLOSING IN").
+   - [ ] Last orb -> "CAUGHT IT!", you run up level with it, then DEFEATED!.
+   - [ ] Timer feels fair now (Shade ~20 s, Brute ~16 s, Phantom ~32 s at rank 1).
+   - [ ] Serial `[battle] orb hit: HP a/b, t s left` per orb.
    Rank:
    - [ ] Menu shows RANK n. Countdown shows "RANK n" under "... IS CHASING YOU".
    - [ ] End screens: RANK UP / RANK DOWN / "RANK n (p / 3)". Serial `[game] rank a -> b`.
@@ -170,6 +175,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — RK-R2 Hunt "can't catch it"
+- User (RK-R1 on hw): "hunt feels like the player can never catch the enemy".
+- Causes found: (1) the enemy sat at a fixed 26 m — orb hits lowered HP but nothing
+  on screen ever got closer; (2) the timer assumed EVERY orb collected (x1.6 slack),
+  but orbs come only in free lanes while dodging, so it often ran out first.
+- Done: enemy distance follows HP (30 m -> 11 m), "CAUGHT IT!" pass animation then
+  DEFEATED (no collisions during it), attacks clamp to >= 18 m ahead, timer slack 2.4,
+  orb pity, orb-hit log line. Banner RK-R2.
+- Commit: fix(battle): Hunt closes in on each orb hit, fairer timer (RK-R2)
+
 ### 2026-10-08 — Session 3 (cont.) — runner rank (enemy scaling)
 - User: permanent sneakers need enemies that get progressively harder; drinks one
   battle each (confirmed: already the case, kept as-is).

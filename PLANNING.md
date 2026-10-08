@@ -73,7 +73,11 @@ Arcade mode stays the endless runner.
   - You have HEARTS (3 base). An attack hit = −1 heart + stumble.
   - Glowing energy ORBS appear in lanes; each one collected strikes the enemy (−1 HP).
     Enemy HP: Shade 4, Brute 6, Phantom 6 (B1-R2).
-  - TIME LIMIT (user, B1-R1): fastest possible kill x 1.6. Out of time -> the enemy
+  - CLOSING IN (RK-R2, user: "can never catch the enemy"): the enemy starts 30 m
+    ahead and every orb hit pulls it closer (11 m at 1 HP). HP 0 = "CAUGHT IT!" — you
+    run past it, then DEFEATED. Attacks never land closer than 18 m. Orb pity: never
+    two attacks in a row without an orb.
+  - TIME LIMIT (user, B1-R1): fastest possible kill x 2.4 (was 1.6 until RK-R2). Out of time -> the enemy
     GETS AWAY: no bonus, the battle's coins are lost (CAUGHT also loses them). Scoreboard tracks battles
     won / lost (caught) / got away.
   - Enemy HP 0 -> DEFEATED (big reward + chance of a drink drop). Hearts 0 -> CAUGHT.

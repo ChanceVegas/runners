@@ -580,7 +580,7 @@ void update(float dt) {
     if (!o.active) continue;
     const float z = o.wz - s_travel;
     if (z < 0.5f) { o.active = false; continue; }
-    if (s_invuln <= 0.0f && fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
+    if (s_invuln <= 0.0f && !(battleMode && battle::passing()) && fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
       const bool hit = o.kind == Kind::Wall ||
                        (o.kind == Kind::Barrier && s_jumpY < OBST_CLEAR_PX) ||
                        (o.kind == Kind::Overhead && s_duckT <= 0.0f);

@@ -55,6 +55,8 @@ float s_travel = 0.0f, s_playerZ = 6.0f;
 
 float s_overT = 0.0f;
 float s_zAhead = 0.0f;
+float s_passT = 0.0f;                // DEFEATED: s into the "run past it" animation
+bool  s_lastOrb = true;              // orb pity: never two attacks in a row without one
 float s_lane = 0.0f, s_laneTarget = 0.0f, s_laneT = 0.0f;
 float s_attackT = 0.0f;
 float s_huntT = 0.0f;                // s left on the Hunt timer
@@ -93,7 +95,9 @@ void beginOvertake() {
 
 void attack() {
   const int8_t el = (int8_t)lroundf(s_lane);
-  const float wz = s_travel + s_playerZ + s_zAhead - 1.5f;   // just behind the enemy
+  // Just behind the enemy, but never closer than BATTLE_ATTACK_MIN_Z_M (when the enemy
+  // is near, the attack lands just past it and the player still gets time to react).
+  const float wz = s_travel + s_playerZ + fmaxf(s_zAhead - 1.5f, BATTLE_ATTACK_MIN_Z_M);
   int8_t blocked[3] = {0, 0, 0};
   switch (s_k->attack) {
     case Attack::Barrier:                                   // Shade: barrier in its lane
@@ -124,7 +128,9 @@ void attack() {
     }
   }
   // Orb in a free lane of the same row, so it never sits inside an obstacle.
-  if ((int)(rnd() % 100) < s_orbPct) {
+  const bool orb = !s_lastOrb || (int)(rnd() % 100) < s_orbPct;
+  s_lastOrb = orb;
+  if (orb) {
     int8_t free[3]; int nf = 0;
     for (int8_t l = -1; l <= 1; ++l) if (!blocked[l + 1]) free[nf++] = l;
     if (nf) encounter::engine::spawnOrb(free[rnd() % nf], wz);
@@ -185,6 +191,8 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_
   if (s_orbPct < 35) s_orbPct = 35;
   s_huntT = 0.0f;
   s_zAhead = 0.0f;
+  s_passT = 0.0f;
+  s_lastOrb = true;
   s_flashT = s_blinkT = 0.0f;
   s_bannerT = 0.0f;
 }
@@ -196,6 +204,14 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
   if (s_flashT > 0) s_flashT -= dt;
   if (s_blinkT > 0) s_blinkT -= dt;
   if (s_outcome != Outcome::None) return;
+
+  if (s_passT > 0.0f) {                                    // caught it: run past, then win
+    s_passT += dt;
+    const float t = fminf(s_passT / BATTLE_PASS_S, 1.0f);
+    s_zAhead = BATTLE_HUNT_Z_LAST_M * 0.6f * (1.0f - t);   // to 0 = level with you
+    if (t >= 1.0f) s_outcome = Outcome::Defeated;
+    return;
+  }
 
   switch (s_phase) {
     case Phase::Pursuit:
@@ -224,6 +240,13 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
     }
 
     case Phase::Hunt: {
+      {                                                     // distance follows HP
+        const float hpF = s_hpMax > 1 ? (float)(s_hp - 1) / (float)(s_hpMax - 1) : 1.0f;
+        const float target = BATTLE_HUNT_Z_LAST_M + (BATTLE_HUNT_Z_M - BATTLE_HUNT_Z_LAST_M) * hpF;
+        const float step = BATTLE_HUNT_CLOSE_MS * dt;
+        if (s_zAhead > target) s_zAhead = fmaxf(s_zAhead - step, target);
+        else if (s_zAhead < target) s_zAhead = fminf(s_zAhead + step, target);
+      }
       s_huntT -= dt;
       if (s_huntT <= 0.0f) {
         s_huntT = 0.0f;
@@ -252,6 +275,7 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
 }
 
 void onObstacleHit(bool wall) {
+  if (s_passT > 0.0f) return;                 // already caught it: nothing can hurt now
   char buf[32];
   if (s_phase == Phase::Pursuit) {
     const float loss = (wall ? BATTLE_GAP_LOSS_WALL : BATTLE_GAP_LOSS_BARRIER) * s_stats.gapLossMul *
@@ -273,8 +297,14 @@ void onOrb() {
   if (s_phase != Phase::Hunt || s_outcome != Outcome::None) return;
   s_hp -= s_stats.orbPower;
   s_flashT = 0.2f;
-  banner(s_stats.orbPower > 1 ? "SURGE HIT!" : "HIT!", rgb565(120, 230, 255));
-  if (s_hp <= 0) { s_hp = 0; s_outcome = Outcome::Defeated; }
+  if (s_hp <= 0) {                                          // caught: run past it
+    s_hp = 0;
+    s_passT = 0.001f;
+    banner("CAUGHT IT!", rgb565(255, 220, 40));
+  } else {
+    banner(s_stats.orbPower > 1 ? "SURGE HIT! CLOSING IN" : "HIT! CLOSING IN", rgb565(120, 230, 255));
+  }
+  Serial.printf("[battle] orb hit: HP %d/%d, %.1f s left\n", s_hp, s_hpMax, s_huntT);
 }
 
 Phase   phase()   { return s_phase; }
@@ -284,7 +314,9 @@ float   stumbleSeconds(bool wall) {
 }
 float   huntSecondsLeft() { return s_huntT; }
 const char* enemyName() { return s_k->name; }
-bool  enemyOnRoad() { return s_phase != Phase::Pursuit; }
+bool  passing() { return s_passT > 0.0f; }
+// Hidden once you draw level during the pass (it's "behind" you from then on).
+bool  enemyOnRoad() { return s_phase != Phase::Pursuit && !(s_passT > 0.0f && s_zAhead < 1.5f); }
 float enemyZAhead() { return s_zAhead; }
 float enemyLane()   { return s_lane; }
 

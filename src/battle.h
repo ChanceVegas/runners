@@ -54,6 +54,7 @@ const char* enemyName();
 // Hunt/overtake: enemy depth ahead of the runner (m), its lane, and whether it should
 // be drawn in the road's depth-sorted list this frame.
 bool  enemyOnRoad();
+bool  passing();                   // HP hit 0: running past it (no collisions)
 float enemyZAhead();
 float enemyLane();
 

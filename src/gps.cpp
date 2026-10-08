@@ -148,11 +148,11 @@ bool init() {
   } else if (pr.edges >= 20) {
     Serial.printf("[gps] GPS data seen on IO%d (correct pin)\n", GPS_PIN_RX);
   } else if (pr.highPct > 90 || pt.highPct > 90) {
-    Serial.println("[gps] a line is held HIGH but silent: GPS powered but not sending yet, "
-                   "or that wire is on a 3V3 hole");
+    Serial.println("[gps] lines idle HIGH, no data during the probe: the GPS may still be "
+                   "starting up (normal after power-on); the baud search keeps listening");
   } else {
-    Serial.println("[gps] NO activity on IO18 or IO17: GPS unpowered, GND missing, or the "
-                   "data wires are on the wrong holes");
+    Serial.println("[gps] lines LOW and silent: GPS unpowered or GND missing (or still "
+                   "starting); the baud search keeps listening");
   }
   tryBaud(0);
   return true;
@@ -167,7 +167,7 @@ void update() {
     s_locked = false;
     s_fix.link = false;
     s_fix.baud = 0;
-    tryBaud(0);
+    tryBaud(s_baudIdx);                        // re-listen at the last good baud first
   }
 
   int budget = 1200;                           // bytes per call; plenty at 115200 / 40 ms

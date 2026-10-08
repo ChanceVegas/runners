@@ -16,7 +16,10 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. G0 GPS GATE (user): `git pull`, flash, confirm `=== Runners G0-R2 ===`.
+1. G0 GPS GATE (user): LINK OK ✅ 2026-10-08 (after swapping the data jumpers, as the
+   user suspected): NMEA at 9600 baud, $GN talkers (multi-GNSS), checksums all good.
+   Indoors: 0 sats, no fix, no time (expected). NEXT: outdoor / window fix test with
+   the map HUD + serial log (G0-R3 = longer link-loss timeout, softer probe text).
    G0-R1 result (2026-10-08): `raw bytes 0` at every baud for minutes = nothing on IO18.
    G0-R2 adds a boot pin probe on IO18/IO17 (auto-uses IO17 if TX/RX are swapped).
    Read the `[gps] pin probe:` line right after the banner (press RST with the monitor open).
@@ -144,6 +147,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — GPS link up
+- User swapped the two data jumpers ("I think the wires are just swapped" — correct).
+  G0-R2 log: LINK OK at 9600 ($GNRMC), ok 87 bad 0; indoors 0 sats / no fix. The boot
+  pin probe had shown no edges on either pin — it ran while the GPS was still booting,
+  so it is NOT a reliable wiring verdict (texts softened). One link loss after ~12 s
+  (~5 s pause) recovered at 9600.
+- Done: G0-R3 — GPS_LOST_MS 10 s, re-listen at the last good baud first, probe texts.
+- Commit: fix(gps): patient link-loss handling, softer probe verdicts (G0-R3)
+
 ### 2026-10-08 — Session 3 (cont.) — G0-R1 hw: no GPS data
 - User: "map art tiles look perfect" (A3 passed). G0-R1 log: link never found, raw
   bytes 0 across all 6 bauds for several minutes -> no signal reaches IO18 (wiring,

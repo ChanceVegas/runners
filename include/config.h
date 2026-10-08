@@ -164,7 +164,8 @@
 
 // --- GPS (G0 bring-up, 2026-10-08): HGLRC M100 Mini on UART1 (J4 IO18-RX1 / IO17-TX1) ---
 #define GPS_DETECT_MS        1500   // ms listening per candidate baud before trying the next
-#define GPS_LOST_MS          5000   // ms without a valid sentence = link lost, search again
+#define GPS_LOST_MS          10000  // ms without a valid sentence = link lost (G0-R2 saw a ~5 s
+                                    // pause on hw that then recovered at the same baud)
 #define GPS_REPORT_MS        2000   // ms between [gps] serial status lines / HUD refresh
 #define GPS_PROBE_MS         1200   // ms per pin of the boot-time wiring probe (NMEA comes
                                     // in ~1 s bursts, so >= 1.1 s catches one)

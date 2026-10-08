@@ -9,6 +9,7 @@
 #include "input.h"
 #include "hud.h"
 #include "sprite.h"
+#include "gps.h"
 #include "color.h"
 #include "config.h"
 #include "board_config.h"
@@ -303,6 +304,14 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   sprite::draw(band, bandY, ART_COIN, 392, 8, 16, 16);
   snprintf(buf, sizeof buf, "%u", (unsigned)s_wallet);
   text(band, bandY, buf, 440, 16, hud::F12, 1.0f, YELLOW, 70);
+
+  // G0: GPS status (bottom-left, above the banner) so it can be checked outdoors.
+  {
+    const gps::Fix& g = gps::fix();
+    const uint16_t gc = !g.link ? rgb565(235, 80, 70) : (g.quality ? rgb565(90, 230, 110) : rgb565(255, 200, 60));
+    rect(band, bandY, 4, LCD_HEIGHT - 58, 168, 20, rgb565(24, 28, 32));
+    text(band, bandY, gps::statusText(), 88, LCD_HEIGHT - 48, hud::F9, 1.0f, gc, 160);
+  }
 
   // Bottom banner: engage prompt, or the movement hint.
   const int32_t BY = LCD_HEIGHT - 34;

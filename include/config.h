@@ -162,6 +162,11 @@
 #define INPUT_UI_CORNER_W    56     // px
 #define INPUT_UI_CORNER_H    48     // px
 
+// --- GPS (G0 bring-up, 2026-10-08): HGLRC M100 Mini on UART1 (J4 IO18-RX1 / IO17-TX1) ---
+#define GPS_DETECT_MS        1500   // ms listening per candidate baud before trying the next
+#define GPS_LOST_MS          5000   // ms without a valid sentence = link lost, search again
+#define GPS_REPORT_MS        2000   // ms between [gps] serial status lines / HUD refresh
+
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black
 #define COLOR_TOUCH_DEBUG    0x07E0 // green — touch-point marker (debug)

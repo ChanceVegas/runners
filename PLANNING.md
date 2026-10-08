@@ -163,7 +163,7 @@ Arcade mode stays the endless runner.
 | world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
 | overworld | src/overworld.* | top-down map render (pixel-art tile rows, direct band writes; A3), avatar sprite, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
 | game_state | src/game_state.* | mode machine Menu/Explore/PreBattle/Battle/Arcade/Shop/Settings, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
-| gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
+| gps | src/gps.* | UART1 NMEA (GGA/RMC/GSV), baud autodetect, fix/sats/position, HUD status; feeds locator in R2 | G0 bring-up (awaiting hw) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
 
 ## Performance Budget

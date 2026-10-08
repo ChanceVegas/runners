@@ -11,6 +11,7 @@
 #include "game_state.h"
 #include "audio.h"
 #include "sprite.h"
+#include "gps.h"
 #include "locator.h"
 #include "config.h"
 #include "board_config.h"
@@ -44,7 +45,7 @@ static const char* encName(encounter::State s) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners A3-R1 ===");
+  Serial.println("\n=== Runners G0-R1 ===");
   if (!display::init())   { Serial.println("FATAL: display init failed");   for(;;) delay(1000); }
   if (!renderer::init())  { Serial.println("FATAL: renderer init failed");  for(;;) delay(1000); }
   if (!input::init())     { Serial.println("FATAL: input init failed");     for(;;) delay(1000); }
@@ -53,6 +54,7 @@ void setup() {
   if (!encounter::init()) { Serial.println("FATAL: encounter init failed"); for(;;) delay(1000); }
   if (!game_state::init()) { Serial.println("FATAL: game_state init failed"); for(;;) delay(1000); }
   if (audio::init()) audio::play(audio::Sfx::Boot);   // non-fatal: game runs silent
+  gps::init();                                        // G0: status on serial + map HUD
   Serial.printf("post-init heap free: %u | PSRAM free: %u\n",
                 (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getFreePsram());
   s_statT0 = millis();
@@ -67,6 +69,7 @@ void loop() {
   if (dt > 0.25f) dt = 0.25f;           // clamp after stalls (no spiral of death)
   acc += dt;
 
+  gps::update();                        // drain UART1 (non-blocking)
   while (acc >= UPDATE_DT) {
     input::update(UPDATE_DT);
     game_state::update(UPDATE_DT);      // consumes input::state() edges this tick

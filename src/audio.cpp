@@ -1,4 +1,4 @@
-// audio.cpp — see audio.h. Legacy ESP-IDF 4.4 I2S driver (Arduino core 2.0.14),
+// audio.cpp — see audio.h. SFX voices + M1 music sequencer, mixed in one task. Legacy ESP-IDF 4.4 I2S driver (Arduino core 2.0.14),
 // 16-bit stereo at AUDIO_SAMPLE_HZ. The synth task (core 0, below the push task's
 // work) renders 128-frame blocks; i2s_write blocks on DMA space, which paces it.
 // Each SFX is a short list of steps {Hz, ms, wave}; Hz 0 = rest. Two voices so a coin
@@ -8,6 +8,8 @@
 #include "board_config.h"
 #include <Arduino.h>
 #include <driver/i2s.h>
+#include <math.h>
+#include "music_data.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -76,16 +78,102 @@ int16_t sample(Voice& v) {
   return (int16_t)(v.phase < 0.5f ? a : -a);
 }
 
+// ---- Music (M1): row sequencer over SONGS (music_data.h) -------------------------
+// Three music channels under the SFX voices: lead (square, song duty, decaying),
+// bass (50% square, octave 3 so a tiny speaker can play it), drums (kick = falling
+// square, snare/hat = noise bursts). Quieter than SFX (MUSIC_VOLUME_PCT).
+constexpr float MAMP = 32767.0f * MUSIC_VOLUME_PCT / 100.0f;
+float s_midiHz[128];
+
+struct Music {
+  const SongDef* song = nullptr;   // nullptr = silent
+  uint16_t row = 0;
+  uint32_t rowLeft = 0, rowLen = 0;
+  float leadHz = 0, leadPh = 0, leadEnv = 0;
+  float bassHz = 0, bassPh = 0, bassEnv = 0;
+  uint8_t drum = 0; uint32_t drumLeft = 0, drumLen = 1;
+  float kickPh = 0;
+  uint32_t lfsr = 0x7A3Bu; float noisePh = 0; int8_t noiseBit = 1;
+};
+Music s_m;
+int8_t s_musicReq = -2;            // -2 none pending, -1 stop, >= 0 track
+
+void musicStart(int8_t t) {
+  s_m = Music();
+  if (t < 0 || t >= (int8_t)(sizeof SONGS / sizeof SONGS[0])) return;
+  s_m.song = &SONGS[t];
+  s_m.rowLen = (uint32_t)(AUDIO_SAMPLE_HZ * 60.0f / (s_m.song->bpm * 4.0f));
+  s_m.rowLeft = 0;                 // first sample loads row 0
+  s_m.row = (uint16_t)-1;
+}
+
+void musicRow() {
+  s_m.row = (uint16_t)((s_m.row + 1) % s_m.song->count);
+  const uint8_t* r = s_m.song->rows[s_m.row];
+  if (r[0] == 1) s_m.leadEnv = 0;
+  else if (r[0] >= 2) { s_m.leadHz = s_midiHz[r[0]]; s_m.leadEnv = 1.0f; }
+  if (r[1] == 1) s_m.bassEnv = 0;
+  else if (r[1] >= 2) { s_m.bassHz = s_midiHz[r[1]]; s_m.bassEnv = 1.0f; }
+  if (r[2]) {
+    s_m.drum = r[2];
+    s_m.drumLen = s_m.drumLeft = AUDIO_SAMPLE_HZ * (r[2] == 1 ? 70 : r[2] == 2 ? 110 : 25) / 1000;
+    s_m.kickPh = 0;
+  }
+  s_m.rowLeft = s_m.rowLen;
+}
+
+inline float squareWave(float& ph, float hz, float duty) {
+  ph += hz * (1.0f / AUDIO_SAMPLE_HZ);
+  if (ph >= 1.0f) ph -= 1.0f;
+  return ph < duty ? 1.0f : -1.0f;
+}
+
+int32_t musicSample() {
+  if (!s_m.song) return 0;
+  if (s_m.rowLeft == 0) musicRow();
+  --s_m.rowLeft;
+  float out = 0.0f;
+  if (s_m.leadEnv > 0.01f) {                    // lead: decays toward a 45% sustain
+    out += 0.42f * s_m.leadEnv * squareWave(s_m.leadPh, s_m.leadHz, 1.0f / s_m.song->duty);
+    if (s_m.leadEnv > 0.45f) s_m.leadEnv *= 0.99985f;
+  }
+  if (s_m.bassEnv > 0.01f) {
+    out += 0.34f * s_m.bassEnv * squareWave(s_m.bassPh, s_m.bassHz, 0.5f);
+    if (s_m.bassEnv > 0.6f) s_m.bassEnv *= 0.99990f;
+  }
+  if (s_m.drumLeft) {
+    const float k = (float)s_m.drumLeft / (float)s_m.drumLen;     // 1 -> 0
+    --s_m.drumLeft;
+    if (s_m.drum == 1) {                                          // kick: 160 -> 50 Hz
+      out += 0.45f * k * squareWave(s_m.kickPh, 50.0f + 110.0f * k, 0.5f);
+    } else {                                                      // snare / hat: noise
+      s_m.noisePh += (s_m.drum == 2 ? 6000.0f : 14000.0f) * (1.0f / AUDIO_SAMPLE_HZ);
+      if (s_m.noisePh >= 1.0f) {
+        s_m.noisePh -= 1.0f;
+        s_m.lfsr = (s_m.lfsr >> 1) ^ (-(int32_t)(s_m.lfsr & 1u) & 0xB400u);
+        s_m.noiseBit = (s_m.lfsr & 1u) ? 1 : -1;
+      }
+      out += (s_m.drum == 2 ? 0.30f : 0.16f) * k * s_m.noiseBit;
+    }
+  }
+  return (int32_t)(out * MAMP);
+}
+
 void synthTask(void*) {
   for (;;) {
     portENTER_CRITICAL(&s_mux);
     for (int i = 0; i < 2; ++i)
       if (s_req[i]) { s_v[i].step = s_req[i]; s_v[i].phase = 0; s_req[i] = nullptr; startStep(s_v[i]); }
+    const int8_t mreq = s_musicReq;
+    s_musicReq = -2;
     portEXIT_CRITICAL(&s_mux);
+    if (mreq != -2) musicStart(mreq);
     for (int f = 0; f < FRAMES; ++f) {
-      const int16_t m = (int16_t)(sample(s_v[0]) + sample(s_v[1]));
-      s_buf[f * 2] = m;
-      s_buf[f * 2 + 1] = m;
+      int32_t m = (int32_t)sample(s_v[0]) + sample(s_v[1]) + musicSample();
+      if (m > 32767) m = 32767;
+      if (m < -32768) m = -32768;
+      s_buf[f * 2] = (int16_t)m;
+      s_buf[f * 2 + 1] = (int16_t)m;
     }
     size_t written = 0;
     i2s_write(I2S_NUM_0, s_buf, sizeof s_buf, &written, portMAX_DELAY);
@@ -101,6 +189,7 @@ bool init() {
   Serial.println("[audio] disabled (AUDIO_ENABLED 0)");
   return true;
 #else
+  for (int n = 0; n < 128; ++n) s_midiHz[n] = 440.0f * powf(2.0f, (n - 69) / 12.0f);
   i2s_config_t cfg = {};
   cfg.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX);
   cfg.sample_rate = AUDIO_SAMPLE_HZ;
@@ -152,5 +241,14 @@ void play(Sfx s) {
 }
 
 bool ok() { return s_ok; }
+
+void music(Track t) {
+  static Track s_cur = Track::None;
+  if (!s_ok || t == s_cur) return;              // same track keeps playing (no restart)
+  s_cur = t;
+  portENTER_CRITICAL(&s_mux);
+  s_musicReq = (t == Track::None) ? -1 : (int8_t)t;
+  portEXIT_CRITICAL(&s_mux);
+}
 
 }

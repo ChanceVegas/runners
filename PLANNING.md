@@ -125,7 +125,9 @@ Arcade mode stays the endless runner.
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
-| audio | src/audio.* | 2-voice square/noise SFX synth on the onboard I2S amp, own task (core 0); play(Sfx) API; volume capped in config | AU0 hw-verified 2026-10-08 ("sounds great") |
+| audio | src/audio.* | square/noise synth on the onboard I2S amp, own task (core 0): 2 SFX voices + M1 music sequencer (lead/bass/drums); play(Sfx), music(Track); volumes in config | AU0 hw-verified 2026-10-08 ("sounds great") |
+| music_data | src/music_data.h | GENERATED song row tables (flash) — edit tools/music_gen.py, not this file | M1 |
+| music_gen | tools/music_gen.py | host tool: song notation -> src/music_data.h | M1 |
 | shop | src/shop.* | gear: sneaker tiers + drinks inventory (NVS), SHOP screen, PRE-BATTLE drink screen, gear -> battle::Stats, defeat drink drop | S1 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
@@ -171,7 +173,7 @@ Arcade mode stays the endless runner.
 - **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen.
   Built 2026-10-08, awaiting hardware gate. Arcade banks 50% of its coins (user).
 - **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
-  SFX (user, 2026-10-08). Next.
+  SFX (user, 2026-10-08). Built 2026-10-08 (8-bar loops), awaiting hardware gate.
 - **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.

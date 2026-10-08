@@ -151,6 +151,8 @@
 #define AUDIO_VOLUME_PCT     30     // % of full scale. CAPPED: small salvaged speaker of
                                     // unknown wattage; raise only if it sounds clean
 #define AUDIO_ENABLED        1      // 0 = never start I2S (silent build)
+#define MUSIC_VOLUME_PCT     16     // % of full scale for the music mix (lead+bass+drums
+                                    // peak ~1.2x this); kept under SFX so sounds cut through
 
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black

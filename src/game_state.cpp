@@ -185,6 +185,22 @@ void finishBattle() {
   enterExplore();
 }
 
+// Music follows the mode; during runs it stops on crash / clear / game over so the
+// win/lose jingles play alone. audio::music() ignores repeats of the current track.
+void updateMusic() {
+  using audio::Track;
+  const encounter::State es = encounter::state();
+  const bool running = es == encounter::State::Countdown || es == encounter::State::Run;
+  switch (s_mode) {
+    case Mode::Menu:
+    case Mode::Shop:      audio::music(Track::Title); break;
+    case Mode::Explore:   audio::music(Track::Explore); break;
+    case Mode::PreBattle: audio::music(Track::Battle); break;
+    case Mode::Battle:    audio::music(running ? Track::Battle : Track::None); break;
+    case Mode::Arcade:    audio::music(running ? Track::Arcade : Track::None); break;
+  }
+}
+
 bool tapIn(const input::State& in, int32_t x, int32_t y, int32_t w, int32_t h) {
   return in.pressed && in.pointX >= x && in.pointX < x + w && in.pointY >= y && in.pointY < y + h;
 }
@@ -274,6 +290,7 @@ void update(float dt) {
       break;
     }
   }
+  updateMusic();
 }
 
 void beginRender(float alpha) {

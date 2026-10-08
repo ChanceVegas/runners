@@ -17,7 +17,15 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-0. S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners S1-R1 ===`.
+0. M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners M1-R1 ===`.
+   Music:
+   - [ ] Title theme on MENU + SHOP; explore loop on the map; battle loop on the
+         pre-battle screen + during the run; arcade loop in arcade.
+   - [ ] Music stops on crash / ESCAPED / DEFEATED / CAUGHT so the jingle plays alone.
+   - [ ] SFX clearly audible over music? Music too loud/quiet (MUSIC_VOLUME_PCT 16)?
+   - [ ] Loops are 8 bars (~13-16 s): too repetitive? Any tune you dislike?
+   - [ ] fps still 25.3, no stutter or crackle.
+   Shop:
    - [ ] Menu shows EXPLORE | SHOP | ARCADE. SHOP: 6 cards, wallet top-right, BACK.
    - [ ] Buying: coins drop, tier pips / carry count rise, "BOUGHT ..." message;
          too poor -> "NEED n MORE COINS"; maxed -> "ALREADY MAXED". Survives reboot.
@@ -157,6 +165,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — M1 music
+- Done: tools/music_gen.py (8-bar song notation -> src/music_data.h, 4 x 128 rows),
+  audio.* music sequencer (lead square w/ song duty + decay, bass square oct 3, kick
+  sweep, noise snare/hat), music(Track) API, game_state::updateMusic() picks the
+  track per mode and silences it on run end. Tracks: TITLE C major 140 bpm, EXPLORE
+  G major 118, BATTLE A minor 160, ARCADE F major 150. MUSIC_VOLUME_PCT 16.
+  Built: SUCCESS (Flash 36.3%). Banner M1-R1. Tunes are unheard by Claude.
+- Commit: feat(audio): chiptune music — 4 loops + sequencer (M1)
+
 ### 2026-10-08 — Session 3 (cont.) — S1 shop
 - User: GPS not soldered yet (GPS check waits). Wants game music + the store; order
   shop first, then music. Music: upbeat chiptune, loops for menu, explore, battle,

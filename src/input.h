@@ -16,6 +16,8 @@ struct State {
   bool  touching;     // finger down (debug/HUD use only, not gameplay)
   int16_t pointX;     // smoothed screen-space touch point (debug/UI only, not
   int16_t pointY;     //   gameplay); valid while touching. Single touch read/tick.
+  int16_t tapX;       // where the most recent zone tap landed (debug log / tuning)
+  int16_t tapY;
 };
 
 bool init();                 // driver init + SD-CS guard; call after display::init

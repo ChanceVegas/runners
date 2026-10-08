@@ -35,10 +35,11 @@ uint32_t sh_jumps = 0, sh_ducks = 0, sh_presses = 0, sh_stepL = 0, sh_stepR = 0;
 float    sh_moveX = 0, sh_moveY = 0;
 bool     sh_touching = false;
 int16_t  sh_px = -1, sh_py = -1;
+int16_t  sh_tapX = -1, sh_tapY = -1;     // last confirmed tap position
 
 // ---- Game-loop side: edges already delivered ----
 uint32_t g_jumps = 0, g_ducks = 0, g_presses = 0, g_stepL = 0, g_stepR = 0;
-input::State s_state = {0.0f, 0.0f, false, false, 0, false, false, -1, -1};
+input::State s_state = {0.0f, 0.0f, false, false, 0, false, false, -1, -1, -1, -1};
 
 inline float clamp1(float v) { return v < -1.0f ? -1.0f : (v > 1.0f ? 1.0f : v); }
 
@@ -81,6 +82,7 @@ void sampleOnce() {
 
   portENTER_CRITICAL(&s_mux);
   sh_jumps += jumps; sh_ducks += ducks; sh_presses += presses; sh_stepL += stepL; sh_stepR += stepR;
+  if (presses) { sh_tapX = (int16_t)rx; sh_tapY = (int16_t)ry; }
   sh_moveX = moveX;
   sh_moveY = moveY;
   sh_touching = touching && t_heldSamples >= 2;
@@ -119,6 +121,8 @@ void update(float dt) {
   s_state.touching = sh_touching;
   s_state.pointX = sh_px;
   s_state.pointY = sh_py;
+  s_state.tapX = sh_tapX;
+  s_state.tapY = sh_tapY;
   portEXIT_CRITICAL(&s_mux);
 
   // Jumps, ducks and presses collapse (two between ticks = one action). Lane steps are

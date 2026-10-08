@@ -278,10 +278,15 @@ void drawObstacle(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
     rect(b, bandY, x, yb - top, post, top, rgb565(80, 80, 88));                  // posts
     rect(b, bandY, x + w - post, yb - top, post, top, rgb565(80, 80, 88));
     const int32_t bh = top - lo;                                                 // beam
-    rect(b, bandY, x, yb - top, w, bh, rgb565(200, 30, 40));
-    for (int i = 0; i < 4; ++i)                                                  // hazard stripes
-      rect(b, bandY, x + w / 16 + i * w / 4, yb - top + bh / 4, w / 8 + 1, bh / 2 + 1, C_WHITE);
-    rect(b, bandY, x, yb - top, w, bh / 10 + 1, rgb565(255, 120, 120));          // lit edge
+    // Yellow/black overhead-clearance beam (barriers are orange/white and low), with
+    // a white "duck" arrow pointing down, so the two read apart at a glance.
+    rect(b, bandY, x, yb - top, w, bh, rgb565(255, 210, 0));
+    for (int i = 0; i < 4; ++i)                                                  // black blocks
+      rect(b, bandY, x + i * w / 4, yb - top, w / 8 + 1, bh, rgb565(20, 20, 20));
+    if (rowsHit(yb - lo - bh / 2, yb - lo + 1, bandY, b.height()) && bh > 6) {
+      const int32_t aw = w / 6 + 2, ay = yb - lo - bandY;                        // arrow under the beam
+      b.fillTriangle(d.x - aw, ay - bh / 2, d.x + aw, ay - bh / 2, d.x, ay, C_WHITE);
+    }
   } else {
     const int32_t h = (int32_t)(OBST_WALL_H_PX * s) + 1;
     rect(b, bandY, x, yb - h, w, h, rgb565(50, 54, 62));                         // slab
@@ -468,14 +473,15 @@ void update(float dt) {
     else s_duckT = RUN_DUCK_S;
   }
 #if DEBUG_INPUT_LOG
-  if (in.laneStep) Serial.printf("[in] tap %s -> lane %d at %d m\n",
+  if (in.laneStep) Serial.printf("[in] tap %s -> lane %d at %d m (x%d y%d)\n",
                                  in.laneStep < 0 ? "LEFT" : "RIGHT", s_laneTarget,
-                                 (int)(s_travel - s_runStart));
-  if (in.jumpPressed) Serial.printf("[in] tap MIDDLE: jump%s at %d m\n",
+                                 (int)(s_travel - s_runStart), in.tapX, in.tapY);
+  if (in.jumpPressed) Serial.printf("[in] tap MIDDLE: jump%s at %d m (x%d y%d)\n",
                                     jumpOk ? "" : " (ignored: airborne)",
-                                    (int)(s_travel - s_runStart));
-  if (in.duckPressed) Serial.printf("[in] tap BOTTOM: duck%s at %d m\n",
-                                    airborne ? " (fast fall)" : "", (int)(s_travel - s_runStart));
+                                    (int)(s_travel - s_runStart), in.tapX, in.tapY);
+  if (in.duckPressed) Serial.printf("[in] tap BOTTOM: duck%s at %d m (x%d y%d)\n",
+                                    airborne ? " (fast fall)" : "", (int)(s_travel - s_runStart),
+                                    in.tapX, in.tapY);
 #endif
 
   const float step = RUN_LANE_SPEED * dt;
@@ -705,6 +711,15 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     rect(band, bandY, 0, LCD_HEIGHT - t, LCD_WIDTH, t, C_RED);
     rect(band, bandY, 0, 0, t, LCD_HEIGHT, C_RED);
     rect(band, bandY, LCD_WIDTH - t, 0, t, LCD_HEIGHT, C_RED);
+  }
+
+  // Always-on (during a run) marks where the jump/duck split is: short ticks on the
+  // middle zone's edges at INPUT_ZONE_DUCK_Y. Four rects, no text.
+  if (s_state == State::Run) {
+    rect(band, bandY, INPUT_ZONE_LEFT_X, INPUT_ZONE_DUCK_Y - 1, 14, 3, C_GREY);
+    rect(band, bandY, INPUT_ZONE_RIGHT_X - 14, INPUT_ZONE_DUCK_Y - 1, 14, 3, C_GREY);
+    rect(band, bandY, INPUT_ZONE_LEFT_X, INPUT_ZONE_DUCK_Y - 1, 2, LCD_HEIGHT - INPUT_ZONE_DUCK_Y + 1, C_GREY);
+    rect(band, bandY, INPUT_ZONE_RIGHT_X, INPUT_ZONE_DUCK_Y - 1, 2, LCD_HEIGHT - INPUT_ZONE_DUCK_Y + 1, C_GREY);
   }
 
   // Tap-zone hints: on the title, through the countdown and the first seconds of a run.

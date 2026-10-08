@@ -4,8 +4,9 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning + B1-R3
-  duck controls built, awaiting hardware gate (banner `B1-R3`).
+- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning, B1-R3
+  duck controls (hw: "a little sketchy"), B1-R4 duck tuning built, awaiting hardware
+  gate (banner `B1-R4`).
   R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
   scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
 - Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.3% of 1.3 MB app partition)
@@ -16,7 +17,11 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-1. B1-R3 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R3 ===`.
+1. B1-R4 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R4 ===`.
+   - [ ] Duck strip is now only the bottom 67 px (y >= 205); grey ticks mark it all run.
+   - [ ] Duck bar is now yellow/black with a white down-arrow; barrier stays orange/white.
+   - [ ] Jump/duck feel less sketchy? Send the log: every tap now prints (x.. y..).
+   Carried from B1-R3:
    - [ ] DUCK: tap the bottom of the middle zone (below the line in the hints) ->
          runner crouches ~0.6 s. Mid-air tap = fast fall, then duck on landing.
    - [ ] Duck bars (red/white beam on posts) in Arcade + Pursuit: duck under = pass;
@@ -45,8 +50,9 @@ session doesn't know it happened.
   (wallet untouched).
 - B1-WALLS (closed B1-R3): user — walls replaced by duck-under bars (new DUCK control);
   walls kept rare (arcade 15%, Pursuit 8%, Phantom 1-in-3).
-- DUCK-1 (watch): duck/jump split is by touch Y (INPUT_ZONE_DUCK_Y 170). Resistive
-  Y readings near the split may misclassify; tune the row from the [in] log.
+- DUCK-1 (open): B1-R3 log — both duck taps were meant as jumps (user: old habit of
+  tapping low); they hit barriers. B1-R4 moved the split to y 205, added always-on
+  ticks + distinct duck-bar look, and logs tap x/y. Tune from the next log.
 - B1-ART (by design): enemies are placeholder shapes until A2.
 - R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
   spawn windows use a boot-relative clock, so two devices won't share windows yet.
@@ -134,6 +140,14 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — B1-R3 hw result -> B1-R4 duck tuning
+- User: jump/duck "a little sketchy". Log: duck taps at 103 m and 495 m each followed
+  by a BARRIER hit (meant as jumps — user confirmed old habit of tapping low); two
+  other barrier hits had no tap. 25.3 fps, render 25–28 ms in battle.
+- User chose: keep the split, tune it. Done: split y 170 -> 205, always-on split ticks
+  during a run, duck bar restyled yellow/black + down-arrow, taps log x/y. Banner B1-R4.
+- Commit: fix(input): lower duck strip, visible split, distinct duck bar (B1-R4)
+
 ### 2026-10-08 — Session 3 (cont.) — B1-R3 duck controls + coin loss
 - User: CAUGHT loses the battle's coins too (wallet untouched). Replace walls with
   tall bars the player DUCKS under — everywhere (Arcade, Pursuit, Brute). Duck input =

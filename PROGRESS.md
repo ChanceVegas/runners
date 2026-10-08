@@ -4,86 +4,33 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: AU0 audio hw-verified ✅. B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning, B1-R3
-  duck controls (hw: "a little sketchy"), B1-R4/R5 duck-split tuning built, awaiting hardware
-  gate (banner `B1-R5`).
-  R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
-  scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
-- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.3% of 1.3 MB app partition)
-- Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
-- Measured (B1-R1, 2026-10-08): fps 25.2–25.4 in every mode. render ms avg: MENU ~29.6,
-  EXPLORE 24–28 (max 32), BATTLE run 26–28 (max 32), ARCADE run ~24.5, game-over ~30.
-  Under the 39.6 ms panel period but only ~7 ms spare at peak — art (A1) must be
-  measured against this. Heap flat 277,468.
+- Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
+  VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
+  minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
+  R2 GPS: module in hand, NOT yet soldered (user). Next: A1 art foundation.
+- Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
+- Runs on hardware: yes — fps 25.0–25.4 in every mode.
+- Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
+  (max 33), BATTLE run 26–29 (max 35, countdown 32–36), PREBATTLE ~24. Budget 39.6 ms:
+  peaks leave only ~4 ms. A1 art MUST be measured against this (see ART-PERF).
+  Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-0. RANK + HUNT + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm the latest banner.
-   Volume (VOL-R1):
-   - [ ] Menu SETTINGS (top-right): MUSIC and SOUND - / + (0-10, default 7 = old level),
-         MUTE ALL. Each change previews a sound. Survives reboot.
-   - [ ] During runs: speaker icon top-right; tap it = mute/unmute; tapping there
-         never moves the runner. Coins readout moved left of it.
-   - [ ] Level 10 not distorting the speaker? (caps: SFX 43%, music 23%)
-   Pass (RK-R3):
-   - [ ] Last orb -> "CAUGHT IT!" -> "YOU PASSED THE <NAME>!" + jingle, the chase meter
-         restarts at 25 m with the enemy behind, goal bar restarts (300 m).
-   - [ ] Escaping afterwards -> DEFEATED! screen + bonus. If it catches you again, a
-         Hunt at half HP; losing then shows "defeat bonus kept".
-   Hunt (RK-R2):
-   - [ ] Each orb hit pulls the enemy visibly closer ("HIT! CLOSING IN").
-   - [ ] Last orb -> "CAUGHT IT!", you run up level with it, then DEFEATED!.
-   - [ ] Timer feels fair now (Shade ~20 s, Brute ~16 s, Phantom ~32 s at rank 1).
-   - [ ] Serial `[battle] orb hit: HP a/b, t s left` per orb.
-   Rank:
-   - [ ] Menu shows RANK n. Countdown shows "RANK n" under "... IS CHASING YOU".
-   - [ ] End screens: RANK UP / RANK DOWN / "RANK n (p / 3)". Serial `[game] rank a -> b`.
-   - [ ] Higher rank feels harder (faster road, enemy closes faster, more HP).
-   - [ ] Rank survives reboot. Existing saves start at rank 1.
-   Music:
-   - [ ] Title theme on MENU + SHOP; explore loop on the map; battle loop on the
-         pre-battle screen + during the run; arcade loop in arcade.
-   - [ ] Music stops on crash / ESCAPED / DEFEATED / CAUGHT so the jingle plays alone.
-   - [ ] SFX clearly audible over music? Music too loud/quiet (MUSIC_VOLUME_PCT 16)?
-   - [ ] Loops are 8 bars (~13-16 s): too repetitive? Any tune you dislike?
-   - [ ] fps still 25.3, no stutter or crackle.
-   Shop:
-   - [ ] Menu shows EXPLORE | SHOP | ARCADE. SHOP: 6 cards, wallet top-right, BACK.
-   - [ ] Buying: coins drop, tier pips / carry count rise, "BOUGHT ..." message;
-         too poor -> "NEED n MORE COINS"; maxed -> "ALREADY MAXED". Survives reboot.
-   - [ ] Engage an enemy while carrying a drink -> PRE-BATTLE screen: tap drinks to
-         toggle USING, RUN! starts, LEAVE returns to the map (must move to re-engage).
-   - [ ] Serial `[game] battle: ... gain+ jump x grip x orb rush` shows the gear.
-   - [ ] RUSH: gap starts 45 m. GUARD: one extra shield pip. SURGE: orbs take 2 HP.
-         SPRING: visibly higher jump. GRIP: shorter stumble.
-   - [ ] DEFEATED sometimes says "It dropped a ... drink!" and it appears in the shop.
-   - [ ] ARCADE game over shows "+n coins to wallet" (half the coins); wallet grows.
-1. B1-R5 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R5 ===`.
-   - [ ] Duck strip is now only the bottom 44 px (y >= 228); grey ticks mark it all run.
-   - [ ] Deliberately duck a few times (duck bars) so the log shows where ducks land.
-   - [ ] Duck bar is now yellow/black with a white down-arrow; barrier stays orange/white.
-   - [ ] Jump/duck feel less sketchy? Send the log: every tap now prints (x.. y..).
-   Carried from B1-R3:
-   - [ ] DUCK: tap the bottom of the middle zone (below the line in the hints) ->
-         runner crouches ~0.6 s. Mid-air tap = fast fall, then duck on landing.
-   - [ ] Duck bars (red/white beam on posts) in Arcade + Pursuit: duck under = pass;
-         standing or jumping into one = hit. Walls now rare everywhere.
-   - [ ] Brute Hunt attack = duck bars (2 lanes, or all 3 = must duck; orb just before).
-         Phantom drops a random barrier / duck bar / wall.
-   - [ ] CAUGHT screen says "coins lost"; wallet does not grow after a lost battle.
-   - [ ] Does the jump/duck split row (y 170) feel right? Mis-taps between them?
-   - [ ] Pursuit: fewer obstacle rows, walls rare -> feels fair, not too hard.
-   - [ ] A hit feels big: camera shake, thick red border, runner trips, pursuer
-         lunges closer at once; wall hits recover slower (1.6 s) than barriers (1.0 s).
-   - [ ] Hunt: timer top-right (Shade ~14 s, Brute/Phantom ~22 s), blinks red in
-         the last 5 s; HP is lower (4/6/6) so it shouldn't drag.
-   - [ ] Timer out -> GOT AWAY! screen, "coins lost", no bonus.
-   - [ ] Menu bottom line: Battles won / Lost / Got away counts, persist after reboot.
-   - [ ] Shields still absorb hits (no shake/flash then).
-2. S1 shop (approved spec in PLANNING) — starts after the B1 gate.
-3. A1 art foundation (CARRY-1 pushImage read-back test first), then A2.
-4. R2 GPS: ON HOLD (user). Approved Safety items 1–5 (PLANNING) are mandatory R2 scope.
+1. A1 ART FOUNDATION (approved spec, PLANNING "Art"): short breakdown approved by the
+   user before code (Session Workflow rule 3). CARRY-1 pushImage read-back test first;
+   report render ms (ART-PERF). Then A2.
+2. GPS bring-up check as soon as the user solders the M100 Mini (UART1, baud
+   autodetect, NMEA sats/fix over serial; window or outdoors). Then R2 proper, with
+   approved Safety items 1–5 (PLANNING) as mandatory scope.
 
 ## Known Issues / Risks
+- ART-PERF (open, blocks A1 sign-off): MENU and battle countdown already peak at
+  35–36 ms of the 39.6 ms budget (text-heavy frames). Bitmaps add cost; A1 must report
+  render ms and may need cheaper HUD text (pre-rendered labels) to make room.
+- VOL-CAP (closed): level 10 has "very very minimal distortion" on the salvaged
+  speaker; caps kept (SFX 43%, music 23%).
+- DUCK-1 (closed 2026-10-08): RK logs show deliberate ducks at y236–241, jumps
+  y181–201; split 228 works.
 - B1-TUNE (open): battle numbers are guesses, all in config.h. B1-R2 values: Pursuit
   walls 12%, rows 1.35x farther apart; Hunt HP 4/6/6, attack 1.6/1.8/1.4 s, orb
   75/80/60%, timer = fastest kill x 1.6.
@@ -186,6 +133,11 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — VOL-R1 hw result: milestone wrap
+- User (VOL-R1 on hw): "everything seems to be working great"; level 10 "very very
+  minimal distortion". B1/S1/M1/rank/pass/volume marked complete. Next: A1 (needs
+  breakdown approval), GPS check when soldered.
+
 ### 2026-10-08 — Session 3 (cont.) — VOL-R1 volume control
 - User: need a way to control volume. Chose: settings screen + in-game mute.
 - Done: audio levels 0-10 (live gains, mute), settings.* (screen, NVS vmus/vsfx/mute,
@@ -489,6 +441,8 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
+- v0.4.0 — 2026-10-08 — B1 battles (pursuit/hunt/pass), duck control, S1 shop, runner rank,
+  audio (SFX + M1 music), volume settings (hw-verified by user report).
 - v0.3.0 — 2026-10-08 — R3: overworld + menu + chase mode (hw-verified by user report).
 - v0.2.0 — 2026-10-07 — P1: standalone polish (hw-verified by user report).
 - v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).

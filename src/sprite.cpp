@@ -17,7 +17,7 @@ bool init() {
 }
 
 void draw(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t x, int32_t y,
-          int32_t dw, int32_t dh, bool flipX) {
+          int32_t dw, int32_t dh, bool flipX, uint16_t solid) {
   if (dw <= 0 || dh <= 0) return;
   const int32_t bh = band.height();
   int32_t y0 = y < bandY ? bandY : y;
@@ -30,6 +30,13 @@ void draw(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t x,
   if (x0 >= x1) return;
 
   uint16_t* buf = (uint16_t*)band.getBuffer();
+  uint16_t pal[ART_PALETTE_N];                       // solid: every index -> one colour
+  const uint16_t* P = s_pal;
+  if (solid) {
+    const uint16_t c = renderer::raw(solid);
+    for (int i = 0; i < ART_PALETTE_N; ++i) pal[i] = c;
+    P = pal;
+  }
   const uint32_t stepX = ((uint32_t)s.w << 16) / (uint32_t)dw;
   const uint32_t startFx = (uint32_t)(x0 - x) * stepX + (stepX >> 1);   // sample pixel centres
   for (int32_t sy = y0; sy < y1; ++sy) {
@@ -40,13 +47,13 @@ void draw(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t x,
     if (!flipX) {
       for (int32_t dx = x0; dx < x1; ++dx, fx += stepX) {
         const uint8_t idx = src[fx >> 16];
-        if (idx) dst[dx] = s_pal[idx];
+        if (idx) dst[dx] = P[idx];
       }
     } else {
       const int32_t last = s.w - 1;
       for (int32_t dx = x0; dx < x1; ++dx, fx += stepX) {
         const uint8_t idx = src[last - (int32_t)(fx >> 16)];
-        if (idx) dst[dx] = s_pal[idx];
+        if (idx) dst[dx] = P[idx];
       }
     }
   }

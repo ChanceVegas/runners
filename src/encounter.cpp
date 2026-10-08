@@ -321,13 +321,8 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const bool stumbling = s_stumbleT > 0.0f;
   if (!stumbling && s_invuln > 0.0f && ((int32_t)(d_time * 12.0f) & 1)) return;   // shield blink
 
-  if (down) {                                           // knocked flat (shapes; A2 may add art)
-    const uint16_t JERSEY = rgb565(30, 170, 80), SKIN = rgb565(240, 196, 150);
-    const uint16_t HAIR = rgb565(110, 60, 20), SHORTS = rgb565(40, 50, 90);
-    rect(b, bandY, cx - 34, RUN_FEET_Y - 16, 50, 14, JERSEY);
-    rect(b, bandY, cx + 16, RUN_FEET_Y - 18, 16, 16, SKIN);
-    rect(b, bandY, cx + 28, RUN_FEET_Y - 18, 6, 16, HAIR);
-    rect(b, bandY, cx - 48, RUN_FEET_Y - 12, 16, 8, SHORTS);
+  if (down) {                                           // knocked flat (A2 art, 72x20)
+    sprite::drawBottom(b, bandY, ART_DOWN, cx - 6, RUN_FEET_Y + 2, RUN_SPRITE_SCALE);
     return;
   }
 
@@ -366,9 +361,7 @@ void rankNote(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t y) {
 }
 
 void drawCoinIcon(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y) {
-  if (!rowsHit(y - 9, y + 9, bandY, b.height())) return;
-  b.fillEllipse(x, y - bandY, 8, 9, C_GOLD);
-  b.fillEllipse(x - 2, y - 3 - bandY, 4, 4, C_GOLD_HI);
+  sprite::draw(b, bandY, ART_COIN, x - 9, y - 9, 18, 18);
 }
 
 } // namespace
@@ -670,8 +663,8 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     text(band, bandY, buf, 70, 34, F12, 1.0f, C_WHITE, 130);
     if (chase) {
       battle::composeHud(band, bandY, d_time);
-      for (uint8_t i = 0; i < s_shields; ++i)            // shield pips, top right
-        hud::rect(band, bandY, LCD_WIDTH - 40 - i * 16, 56, 12, 8, rgb565(90, 200, 255));
+      for (uint8_t i = 0; i < s_shields; ++i)            // shield icons, top right (A2)
+        sprite::draw(band, bandY, ART_SHIELD, LCD_WIDTH - 32 - i * 24, 52, 20, 22);
     } else {
       snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
       text(band, bandY, buf, cx, 34, F9, 1.0f, C_GREY);

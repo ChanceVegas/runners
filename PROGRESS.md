@@ -16,18 +16,14 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A1 ART GATE: PASSED ✅ 2026-10-08 (user: "love it!!!! first art iteration looks
-   wonderful!!"; render log: ARCADE run 25-26 ms (was ~24.5), BATTLE run 26-29 ms, fps 25.2-25.4).
-   Next: A2 — breakdown proposed (3 enemies front/back + run frames, knocked-down runner,
-   HUD heart/shield/coin icons, 6 shop pictures), awaiting user approval.
-   - [ ] Runner is pixel art: 4-step run cycle, tucked jump, crouch duck, arms-out
-         stumble, shield blink still works. Crash pose is still shapes (A2).
-   - [ ] Barrier (orange/white), duck bar (yellow/black + arrow), wall (concrete +
-         warning band), spinning gold coin, pulsing blue orb — all scale with distance.
-   - [ ] Colours right (no magenta / swapped colours).
-   - [ ] Hitboxes still match: duck under bars, jump barriers, as before.
-   - [ ] Serial render ms in ARCADE run + BATTLE run (ART-PERF; was 26–29 ms).
-   Then A2 (enemies front/back, HUD icons, shop art) — needs its own breakdown.
+1. A2 ART GATE (user): `git pull`, flash, confirm `=== Runners A2-R1 ===`.
+   - [ ] Chase: the enemy behind you is its FRONT view (Shade purple ghost, Brute red
+         horned beast, Phantom cyan wisp), growing as it closes in.
+   - [ ] Hunt: enemy ahead is its BACK view with a 2-frame run; flashes white on an orb hit.
+   - [ ] Crash: knocked-down runner sprite. Hearts, shield and coin icons are pixel art.
+   - [ ] Shop + pre-battle cards: sneaker / can pictures top-left; text still readable.
+   - [ ] Render ms in a battle while the pursuer is big (gap near 0) — ART-PERF.
+   (A1 PASSED 2026-10-08: "love it"; art cost ~1 ms.)
 2. GPS bring-up check as soon as the user solders the M100 Mini (UART1, baud
    autodetect, NMEA sats/fix over serial; window or outdoors). Then R2 proper, with
    approved Safety items 1–5 (PLANNING) as mandatory scope.
@@ -143,6 +139,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A2 art
+- User approved A2 ("works for me. let's work!").
+- Done: art_gen A2 — shape helpers + auto-outline; 10 new palette colours; Shade /
+  Brute / Phantom back (2 frames) + front, knocked-down runner, heart (full/empty),
+  shield, 3 sneakers, 3 cans (29 sprites, 13.8 KB). sprite::draw gains a solid-colour
+  mode (hit flash). battle draws enemies with sprites (same footprints as B1 shapes),
+  encounter down pose / shield / coin icons, shop + pre-battle card pictures.
+  Flash 37.6%. Banner A2-R1.
+- Commit: feat(art): A2 enemies, knocked-down runner, HUD icons, shop pictures
+
 ### 2026-10-08 — Session 3 (cont.) — A1 render log
 - Log (second half; first half was an older capture): ARCADE run 25.0–25.8 ms avg,
   BATTLE run 26–29, countdown 34–35 (max 36), MENU max 36, EXPLORE 25–28; fps 25.0–25.4;

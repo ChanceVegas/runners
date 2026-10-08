@@ -3,6 +3,7 @@
 #include "shop.h"
 #include "hud.h"
 #include "audio.h"
+#include "sprite.h"
 #include "color.h"
 #include "config.h"
 #include "board_config.h"
@@ -30,6 +31,17 @@ constexpr const char* DESC[shop::ItemCount]  = {
 constexpr const char* ROMAN[4] = { "", "I", "II", "III" };
 constexpr uint16_t TIER_PRICE[3] = { SHOP_TIER1_COINS, SHOP_TIER2_COINS, SHOP_TIER3_COINS };
 constexpr uint16_t DRINK_PRICE[3] = { DRINK_RUSH_COINS, DRINK_GUARD_COINS, DRINK_SURGE_COINS };
+const ArtSprite* const ICON[shop::ItemCount] = {      // A2 card pictures
+  &ART_SNEAK_SPRINT, &ART_SNEAK_SPRING, &ART_SNEAK_GRIP, &ART_CAN_RUSH, &ART_CAN_GUARD, &ART_CAN_SURGE };
+
+// Card picture in the top-left corner: sneakers 32x24, cans 21x28 (ends by y+32, above
+// the description line).
+void cardIcon(lgfx::LGFX_Sprite& b, int32_t bandY, int i, int32_t x, int32_t y, bool dim) {
+  const ArtSprite& a = *ICON[i];
+  const float sc = (a.h > a.w) ? 1.75f : 2.0f;
+  const int32_t w = (int32_t)(a.w * sc), h = (int32_t)(a.h * sc);
+  sprite::draw(b, bandY, a, x + 6, y + 4, w, h, false, dim ? rgb565(80, 80, 92) : 0);
+}
 
 // Layout (screen px).
 constexpr int32_t CARD_W = 144, CARD_H = 96, CARD_X0 = 12, CARD_DX = 156;
@@ -70,7 +82,7 @@ void message(const char* m, uint16_t c) {
 void walletReadout(lgfx::LGFX_Sprite& b, int32_t bandY) {
   if (!s_walletView || !hud::rowsHit(10, 44, bandY, b.height())) return;
   char buf[16];
-  b.fillEllipse(LCD_WIDTH - 104, 27 - bandY, 8, 9, rgb565(240, 180, 20));
+  sprite::draw(b, bandY, ART_COIN, LCD_WIDTH - 113, 18, 18, 18);
   snprintf(buf, sizeof buf, "%u", (unsigned)*s_walletView);
   hud::text(b, bandY, buf, LCD_WIDTH - 52, 27, hud::F12, 1.0f, C_YELLOW, 84);
 }
@@ -159,14 +171,15 @@ void composeShop(lgfx::LGFX_Sprite& b, int32_t bandY) {
     const int32_t cx = x + CARD_W / 2;
     hud::rect(b, bandY, x, y, CARD_W, CARD_H, C_CARD);
     hud::frame(b, bandY, x, y, CARD_W, CARD_H, afford ? C_WHITE : C_GREY);
-    hud::text(b, bandY, NAMES[i], cx, y + 15, hud::F12, 1.0f, isSneaker(i) ? C_WHITE : C_CYAN);
-    hud::text(b, bandY, DESC[i], cx, y + 35, hud::F9, 1.0f, rgb565(200, 200, 210), CARD_W - 8);
+    cardIcon(b, bandY, i, x, y, false);
+    hud::text(b, bandY, NAMES[i], cx + 18, y + 18, hud::F12, 1.0f, isSneaker(i) ? C_WHITE : C_CYAN, CARD_W - 44);
+    hud::text(b, bandY, DESC[i], cx, y + 42, hud::F9, 1.0f, rgb565(200, 200, 210), CARD_W - 8);
     if (isSneaker(i)) {                                         // tier pips
       for (int t = 0; t < SNEAKER_TIERS; ++t)
-        hud::rect(b, bandY, cx - 33 + t * 24, y + 50, 18, 8, t < s_owned[i] ? C_GREEN : rgb565(70, 70, 84));
+        hud::rect(b, bandY, cx - 33 + t * 24, y + 55, 18, 8, t < s_owned[i] ? C_GREEN : rgb565(70, 70, 84));
     } else {
       snprintf(buf, sizeof buf, "carry %u / %u", s_owned[i], (unsigned)DRINK_MAX);
-      hud::text(b, bandY, buf, cx, y + 55, hud::F9, 1.0f, C_WHITE);
+      hud::text(b, bandY, buf, cx, y + 59, hud::F9, 1.0f, C_WHITE);
     }
     if (price == 0) hud::text(b, bandY, "MAX", cx, y + 78, hud::F12, 1.0f, C_GREY);
     else {
@@ -211,11 +224,12 @@ void composePreBattle(lgfx::LGFX_Sprite& b, int32_t bandY) {
     const uint8_t have = s_owned[Rush + d];
     hud::rect(b, bandY, x, y, CARD_W, PB_CARD_H, s_use[d] ? rgb565(30, 90, 50) : C_CARD);
     hud::frame(b, bandY, x, y, CARD_W, PB_CARD_H, s_use[d] ? C_GREEN : (have ? C_WHITE : C_GREY));
-    hud::text(b, bandY, NAMES[Rush + d], cx, y + 16, hud::F12, 1.0f, have ? C_CYAN : C_GREY);
-    hud::text(b, bandY, DESC[Rush + d], cx, y + 38, hud::F9, 1.0f, rgb565(200, 200, 210), CARD_W - 8);
+    cardIcon(b, bandY, Rush + d, x, y, have == 0);
+    hud::text(b, bandY, NAMES[Rush + d], cx + 18, y + 18, hud::F12, 1.0f, have ? C_CYAN : C_GREY, CARD_W - 44);
+    hud::text(b, bandY, DESC[Rush + d], cx, y + 44, hud::F9, 1.0f, rgb565(200, 200, 210), CARD_W - 8);
     snprintf(buf, sizeof buf, "x%u carried", have);
-    hud::text(b, bandY, buf, cx, y + 60, hud::F9, 1.0f, have ? C_WHITE : C_GREY);
-    if (s_use[d]) hud::text(b, bandY, "USING", cx, y + 84, hud::F12, 1.0f, C_GREEN);
+    hud::text(b, bandY, buf, cx, y + 64, hud::F9, 1.0f, have ? C_WHITE : C_GREY);
+    if (s_use[d]) hud::text(b, bandY, "USING", cx, y + 87, hud::F12, 1.0f, C_GREEN);
   }
   button(b, bandY, LEAVE_X, LEAVE_Y, LEAVE_W, LEAVE_H, "LEAVE", rgb565(60, 60, 72), hud::F12);
   button(b, bandY, FIGHT_X, FIGHT_Y, FIGHT_W, FIGHT_H, "RUN!", rgb565(170, 40, 40), hud::F18);

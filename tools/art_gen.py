@@ -40,6 +40,17 @@ PALETTE = [
     ('a', 'orb',         40, 140, 225),
     ('A', 'orb_lt',      150, 230, 255),
     ('i', 'orb_dk',      22, 76, 160),
+    # A2
+    ('p', 'shade',       122, 62, 176),
+    ('P', 'shade_lt',    176, 118, 226),
+    ('q', 'shade_dk',    70, 32, 112),
+    ('R', 'brute',       186, 42, 40),
+    ('L', 'brute_lt',    234, 96, 82),
+    ('D', 'brute_dk',    112, 20, 22),
+    ('B', 'bone',        240, 222, 182),
+    ('z', 'phantom',     64, 192, 224),
+    ('Z', 'phantom_lt',  176, 242, 255),
+    ('j', 'phantom_dk',  28, 108, 150),
 ]
 KEY = {k: i + 1 for i, (k, *_rest) in enumerate(PALETTE)}   # 0 = transparent
 
@@ -235,6 +246,190 @@ def orb():                         # 13x13
     for (x, y) in ((4, 4), (5, 4), (4, 5)): g[y][x] = 'w'
     return rows(g)
 
+# ---- A2: shape helpers (draw filled shapes, then auto-outline in 'k') -----------
+def fill_circle(g, cx, cy, r, ch):
+    for y in range(len(g)):
+        for x in range(len(g[0])):
+            if (x - cx) ** 2 + (y - cy) ** 2 <= r * r: g[y][x] = ch
+
+def fill_ellipse(g, cx, cy, rx, ry, ch):
+    for y in range(len(g)):
+        for x in range(len(g[0])):
+            if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.0: g[y][x] = ch
+
+def fill_rect(g, x0, y0, x1, y1, ch):          # inclusive
+    for y in range(max(0, y0), min(len(g), y1 + 1)):
+        for x in range(max(0, x0), min(len(g[0]), x1 + 1)):
+            g[y][x] = ch
+
+def recolor(g, frm, to, pred):
+    for y in range(len(g)):
+        for x in range(len(g[0])):
+            if g[y][x] == frm and pred(x, y): g[y][x] = to
+
+def put(g, pts, ch):
+    for (x, y) in pts:
+        if 0 <= y < len(g) and 0 <= x < len(g[0]): g[y][x] = ch
+
+def outline(g):
+    h, w = len(g), len(g[0])
+    src = [r[:] for r in g]
+    for y in range(h):
+        for x in range(w):
+            if src[y][x] != '.': continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < w and 0 <= ny < h and src[ny][nx] not in '.k':
+                    g[y][x] = 'k'; break
+    return g
+
+# Enemies: BACK view (ahead of you in the Hunt, 2 run frames) and FRONT view (looming
+# behind you in the Pursuit). Back 22x28, front 28x32.
+def shade_back(frame):
+    g = blank(22, 28)
+    fill_circle(g, 10.5, 9, 8.5, 'p')
+    fill_rect(g, 2, 9, 19, 22, 'p')
+    for x in range(2, 20):                         # wavy tail, phase by frame
+        if ((x + frame * 3) // 3) % 2 == 0: fill_rect(g, x, 23, x, 25, 'p')
+    recolor(g, 'p', 'q', lambda x, y: x >= 15)     # shadow side
+    recolor(g, 'p', 'q', lambda x, y: y >= 20 and (x + y) % 5 == 0)
+    put(g, [(6, 4), (7, 3), (5, 5), (6, 5), (8, 3)], 'P')   # rim light
+    fill_rect(g, 9, 6, 12, 18, 'q')                # hood seam down the back
+    return rows(outline(g))
+
+def shade_front():
+    g = blank(28, 32)
+    fill_circle(g, 13.5, 11, 10, 'p')
+    fill_rect(g, 4, 11, 23, 26, 'p')
+    for x in range(4, 24):
+        if (x // 3) % 2 == 0: fill_rect(g, x, 27, x, 29, 'p')
+    fill_rect(g, 0, 15, 4, 17, 'p'); fill_rect(g, 23, 15, 27, 17, 'p')   # arms out
+    put(g, [(0, 14), (1, 13), (27, 14), (26, 13)], 'P')                  # claws
+    recolor(g, 'p', 'q', lambda x, y: x >= 19 and y > 6)
+    put(g, [(7, 4), (8, 3), (6, 5), (9, 3)], 'P')
+    fill_ellipse(g, 9.5, 12, 2.6, 3.4, 'w'); fill_ellipse(g, 17.5, 12, 2.6, 3.4, 'w')
+    put(g, [(10, 13), (10, 12), (17, 13), (17, 12)], 'x')                # pupils
+    put(g, [(6, 7), (7, 8), (8, 8), (12, 9), (15, 9), (19, 8), (20, 8), (21, 7)], 'k')   # angry brows
+    for x in range(8, 20):                                               # jagged grin
+        g[19 + (x % 2)][x] = 'k'
+    put(g, [(9, 19), (11, 19), (13, 19), (15, 19), (17, 19)], 'w')
+    return rows(outline(g))
+
+def brute_back(frame):
+    g = blank(22, 28)
+    fill_rect(g, 2, 7, 19, 18, 'R')                # hulking back
+    fill_circle(g, 10.5, 5, 4, 'R')                # head
+    put(g, [(4, 2), (3, 1), (3, 0), (5, 3), (17, 2), (18, 1), (18, 0), (16, 3)], 'B')   # horns
+    fill_rect(g, 0, 9, 1, 18, 'R'); fill_rect(g, 20, 9, 21, 18, 'R')     # arms
+    fill_rect(g, 0, 19, 2, 20, 'D'); fill_rect(g, 19, 19, 21, 20, 'D')   # fists
+    la, lb = (25, 22) if frame == 0 else (22, 25)                        # stride
+    fill_rect(g, 5, 19, 9, la, 'D'); fill_rect(g, 12, 19, 16, lb, 'D')
+    fill_rect(g, 4, la + 1, 9, la + 2, 'k'); fill_rect(g, 12, lb + 1, 17, lb + 2, 'k')
+    fill_rect(g, 10, 8, 11, 17, 'D')               # spine
+    recolor(g, 'R', 'D', lambda x, y: x >= 17 and y >= 8)
+    put(g, [(4, 8), (5, 8), (6, 8), (4, 9)], 'L')
+    return rows(outline(g))
+
+def brute_front():
+    g = blank(28, 32)
+    fill_rect(g, 3, 10, 24, 26, 'R')
+    fill_circle(g, 13.5, 8, 6, 'R')
+    put(g, [(7, 4), (6, 3), (5, 2), (5, 1), (20, 4), (21, 3), (22, 2), (22, 1)], 'B')
+    fill_rect(g, 0, 8, 3, 16, 'R'); fill_rect(g, 24, 8, 27, 16, 'R')     # raised arms
+    fill_rect(g, 0, 4, 3, 8, 'D'); fill_rect(g, 24, 4, 27, 8, 'D')       # fists up
+    fill_rect(g, 8, 13, 19, 22, 'L')               # chest
+    recolor(g, 'R', 'D', lambda x, y: x >= 21 and y > 9)
+    put(g, [(10, 7), (11, 7), (16, 7), (17, 7)], 'y')                     # eyes
+    put(g, [(9, 5), (10, 6), (12, 6), (15, 6), (17, 6), (18, 5)], 'k')    # brow
+    fill_rect(g, 10, 10, 17, 11, 'D')              # mouth
+    put(g, [(10, 9), (17, 9), (10, 8), (17, 8)], 'B')                     # tusks
+    fill_rect(g, 6, 27, 11, 30, 'D'); fill_rect(g, 16, 27, 21, 30, 'D')   # legs
+    return rows(outline(g))
+
+def phantom_back(frame):
+    g = blank(22, 28)
+    fill_circle(g, 10.5, 9, 8, 'z')
+    fill_circle(g, 10.5, 9, 4.5, 'Z')
+    for i, tx in enumerate((5, 10, 15)):           # trailing wisps
+        for y in range(16, 27):
+            x = tx + int(1.5 * ((((y + frame * 2 + i) // 3) % 2) * 2 - 1))
+            fill_rect(g, x, y, x + (2 if y < 22 else 1), y, 'z')
+    recolor(g, 'z', 'j', lambda x, y: x >= 15 or y >= 22)
+    put(g, [(7, 5), (8, 4), (7, 6)], 'w')
+    return rows(outline(g))
+
+def phantom_front():
+    g = blank(28, 32)
+    fill_circle(g, 13.5, 12, 11, 'z')
+    for i, tx in enumerate((6, 12, 18)):
+        for y in range(21, 31):
+            x = tx + (1 if ((y + i) // 3) % 2 else -1)
+            fill_rect(g, x, y, x + 3, y, 'z')
+    fill_circle(g, 13.5, 12, 6, 'Z')
+    recolor(g, 'z', 'j', lambda x, y: x >= 21 or y >= 25)
+    fill_ellipse(g, 9.5, 11, 2.2, 3.2, 'j'); fill_ellipse(g, 17.5, 11, 2.2, 3.2, 'j')   # hollow eyes
+    put(g, [(9, 10), (17, 10)], 'w')
+    fill_ellipse(g, 13.5, 17, 2.5, 1.6, 'j')       # "oo" mouth
+    return rows(outline(g))
+
+def runner_down():                 # 36x10 -> x2 = 72x20 (lying on the road)
+    g = blank(36, 10)
+    fill_rect(g, 1, 5, 4, 8, 'w')                  # shoes
+    fill_rect(g, 5, 5, 11, 8, 's')                 # legs
+    fill_rect(g, 12, 4, 16, 8, 'b')                # shorts
+    fill_rect(g, 17, 2, 27, 8, 'g')                # jersey
+    fill_rect(g, 20, 4, 23, 6, 'w'); put(g, [(21, 5), (22, 5)], 'n')
+    fill_rect(g, 18, 9, 25, 9, 'S')                # arm
+    fill_rect(g, 28, 1, 34, 8, 'h')                # head (hair)
+    fill_rect(g, 28, 5, 29, 7, 's')
+    put(g, [(30, 2), (31, 2)], 'H')
+    return rows(outline(g))
+
+def heart(full):                   # 9x8
+    g = blank(9, 8)
+    c = 'n' if full else 'm'
+    fill_circle(g, 2.5, 2.5, 2.2, c); fill_circle(g, 5.5, 2.5, 2.2, c)
+    for i, y in enumerate(range(3, 8)):
+        fill_rect(g, i, y, 8 - i, y, c)
+    if full: put(g, [(2, 1), (1, 2)], 'L')
+    return rows(outline(g))
+
+def shield():                      # 10x11
+    g = blank(10, 11)
+    fill_rect(g, 1, 1, 8, 5, 'a')
+    for i, y in enumerate(range(6, 10)):
+        fill_rect(g, 1 + i, y, 8 - i, y, 'a')
+    fill_rect(g, 4, 2, 5, 7, 'A')                  # emblem bar
+    fill_rect(g, 2, 3, 7, 4, 'A')
+    recolor(g, 'a', 'i', lambda x, y: x >= 7)
+    return rows(outline(g))
+
+def sneaker(main, light):          # 16x12 side view
+    g = blank(16, 12)
+    fill_rect(g, 1, 9, 14, 10, 'w')                # sole
+    fill_rect(g, 1, 5, 6, 8, main)                 # heel
+    for i, y in enumerate(range(5, 9)):            # toe slope
+        fill_rect(g, 6, y, 14 - (3 - i) * 2, y, main)
+    fill_rect(g, 2, 2, 6, 4, main)                 # collar
+    put(g, [(7, 5), (8, 6), (9, 5), (10, 6)], 'w')     # laces
+    put(g, [(3, 6), (4, 7), (5, 6), (11, 8), (12, 8)], light)   # swoosh-ish stripe
+    return rows(outline(g))
+
+def can(main, light, mark):        # 12x16 drink can
+    g = blank(12, 16)
+    fill_rect(g, 2, 2, 9, 14, main)
+    fill_rect(g, 2, 1, 9, 1, 'M'); fill_rect(g, 2, 15, 9, 15, 'M')
+    fill_rect(g, 3, 2, 3, 13, light)               # shine
+    fill_rect(g, 2, 6, 9, 10, 'w')                 # label
+    put(g, mark, main)
+    put(g, [(6, 0)], 'm')                          # tab
+    return rows(outline(g))
+
+# drink label marks (inside the label rows 6-10)
+MARK_RUSH  = [(4, 8), (5, 7), (6, 8), (7, 7), (5, 9), (6, 9)]         # chevrons
+MARK_GUARD = [(5, 7), (6, 7), (5, 8), (6, 8), (4, 7), (7, 7), (5, 9), (6, 9)]   # shield blob
+MARK_SURGE = [(6, 6), (5, 7), (6, 8), (5, 9), (4, 10), (7, 7)]        # bolt
+
 SPRITES = [
     ('RUN_A',   UPPER + RUN_A_LEGS),
     ('RUN_B',   UPPER + RUN_B_LEGS),
@@ -246,6 +441,26 @@ SPRITES = [
     ('WALL',    wall()),
     ('COIN',    coin()),
     ('ORB',     orb()),
+    # A2
+    ('SHADE_B0',   shade_back(0)),
+    ('SHADE_B1',   shade_back(1)),
+    ('SHADE_F',    shade_front()),
+    ('BRUTE_B0',   brute_back(0)),
+    ('BRUTE_B1',   brute_back(1)),
+    ('BRUTE_F',    brute_front()),
+    ('PHANTOM_B0', phantom_back(0)),
+    ('PHANTOM_B1', phantom_back(1)),
+    ('PHANTOM_F',  phantom_front()),
+    ('DOWN',       runner_down()),
+    ('HEART',      heart(True)),
+    ('HEART_EMPTY', heart(False)),
+    ('SHIELD',     shield()),
+    ('SNEAK_SPRINT', sneaker('R', 'L')),
+    ('SNEAK_SPRING', sneaker('g', 'G')),
+    ('SNEAK_GRIP',   sneaker('a', 'A')),
+    ('CAN_RUSH',  can('o', 'O', MARK_RUSH)),
+    ('CAN_GUARD', can('a', 'A', MARK_GUARD)),
+    ('CAN_SURGE', can('y', 'U', MARK_SURGE)),
 ]
 
 def check(name, g):

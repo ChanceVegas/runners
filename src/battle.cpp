@@ -3,6 +3,7 @@
 #include "battle.h"
 #include "encounter.h"
 #include "audio.h"
+#include "sprite.h"
 #include "hud.h"
 #include "color.h"
 #include "config.h"
@@ -144,12 +145,21 @@ void attack() {
 }
 
 // Heart icon at (x, y) top-left, ~16x14.
+// Heart icon at (x, y) top-left, 18x16 (A2 art at 2x).
 void heart(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, bool full) {
-  if (!hud::rowsHit(y, y + 15, bandY, b.height())) return;
-  const uint16_t c = full ? rgb565(235, 50, 60) : rgb565(70, 40, 44);
-  b.fillCircle(x + 4, y + 4 - bandY, 4, c);
-  b.fillCircle(x + 11, y + 4 - bandY, 4, c);
-  b.fillTriangle(x, y + 6 - bandY, x + 15, y + 6 - bandY, x + 7, y + 14 - bandY, c);
+  sprite::draw(b, bandY, full ? ART_HEART : ART_HEART_EMPTY, x, y, 18, 16);
+}
+
+// Per-kind art (A2): back views (2 run frames) and the front view.
+const ArtSprite& backArt(Attack a, bool stride) {
+  switch (a) {
+    case Attack::Barrier: return stride ? ART_SHADE_B1 : ART_SHADE_B0;
+    case Attack::Smash:   return stride ? ART_BRUTE_B1 : ART_BRUTE_B0;
+    default:              return stride ? ART_PHANTOM_B1 : ART_PHANTOM_B0;
+  }
+}
+const ArtSprite& frontArt(Attack a) {
+  return a == Attack::Barrier ? ART_SHADE_F : a == Attack::Smash ? ART_BRUTE_F : ART_PHANTOM_F;
 }
 
 } // namespace
@@ -350,43 +360,13 @@ float enemyLane()   { return s_lane; }
 void drawEnemyOnRoad(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, float s,
                      float time) {
   if (s_blinkT > 0.0f && ((int32_t)(time * 30.0f) & 1)) return;     // phantom flicker
-  const int32_t w = (int32_t)(110.0f * s) + 4, h = (int32_t)(140.0f * s) + 4;
-  if (!hud::rowsHit(y - h - 20, y + 8, bandY, b.height())) return;
-  const bool flash = s_flashT > 0.0f;
-  const uint16_t body = flash ? rgb565(255, 255, 255) : s_k->body;
-  const int32_t by = y - bandY;
-  const bool stride = ((int32_t)(time * 8.0f) & 1) != 0;
-
-  b.fillEllipse(x, by, w / 2, w / 8 + 1, rgb565(30, 30, 34));        // shadow
-  switch (s_k->attack) {
-    case Attack::Barrier: {                                          // Shade: ghost from behind
-      b.fillCircle(x, by - h + w / 2, w / 2, body);
-      b.fillRect(x - w / 2, by - h + w / 2, w, h - w / 2 - h / 8, body);
-      for (int i = 0; i < 3; ++i) {                                  // wavy tail
-        const int32_t tx = x - w / 2 + i * w / 3;
-        b.fillTriangle(tx, by - h / 8, tx + w / 3, by - h / 8, tx + w / 6, by - (stride ? 0 : h / 16), body);
-      }
-      break;
-    }
-    case Attack::Smash: {                                         // Brute: hulking back + horns
-      b.fillRect(x - w / 3, by - h / 4, w / 5, h / 4, stride ? body : rgb565(120, 25, 25));   // legs
-      b.fillRect(x + w / 8, by - h / 4, w / 5, h / 4, stride ? rgb565(120, 25, 25) : body);
-      b.fillRoundRect(x - w / 2, by - h, w, h * 3 / 4, w / 6 + 1, body);
-      b.fillTriangle(x - w / 2, by - h + h / 10, x - w / 3, by - h, x - w / 2 - w / 6, by - h - h / 6,
-                     rgb565(240, 220, 180));
-      b.fillTriangle(x + w / 2, by - h + h / 10, x + w / 3, by - h, x + w / 2 + w / 6, by - h - h / 6,
-                     rgb565(240, 220, 180));
-      break;
-    }
-    case Attack::Phase: {                                        // Phantom: glowing wisp
-      b.fillCircle(x, by - h / 2, w / 2, body);
-      b.fillCircle(x - w / 6, by - h / 2 - w / 6, w / 5 + 1, s_k->accent);
-      const int32_t sp = ((int32_t)(time * 10.0f)) % 6;
-      b.fillRect(x + w / 2 + sp, by - h + sp * 3, 3, 3, rgb565(255, 255, 255));
-      b.fillRect(x - w / 2 - sp, by - h / 3 - sp * 2, 3, 3, rgb565(255, 255, 255));
-      break;
-    }
-  }
+  const ArtSprite& a = backArt(s_k->attack, ((int32_t)(time * 8.0f) & 1) != 0);
+  const int32_t w = (int32_t)(110.0f * s) + 4, h = w * a.h / a.w;
+  if (!hud::rowsHit(y - h, y + 8, bandY, b.height())) return;
+  if (hud::rowsHit(y - w / 8 - 1, y + w / 8 + 2, bandY, b.height()))
+    b.fillEllipse(x, y - bandY, w / 2, w / 8 + 1, rgb565(30, 30, 34));   // shadow
+  sprite::draw(b, bandY, a, x - w / 2, y - h, w, h, false,
+               s_flashT > 0.0f ? rgb565(255, 255, 255) : 0);             // white on a hit
 }
 
 void drawPursuer(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t runnerX, float time) {
@@ -394,7 +374,7 @@ void drawPursuer(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t runnerX, float tim
   float c = 1.0f - s_gapShown / BATTLE_GAP_VIS_M;
   if (c < 0.0f) c = 0.0f;
   if (c > 1.0f) c = 1.0f;
-  const int32_t h = 26 + (int32_t)(92.0f * c);
+  const int32_t h = 26 + (int32_t)(92.0f * c);        // visible height above the bottom edge
   const int32_t w = 70 + (int32_t)(70.0f * c);
   const int32_t bob = (int32_t)(sinf(time * 9.0f) * 3.0f);
   // Beside the runner, on the side with more room, rising from the bottom edge.
@@ -407,31 +387,10 @@ void drawPursuer(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t runnerX, float tim
     hud::rect(b, bandY, 0, 0, 6, LCD_HEIGHT, rgb565(200, 30, 30));
     hud::rect(b, bandY, LCD_WIDTH - 6, 0, 6, LCD_HEIGHT, rgb565(200, 30, 30));
   }
-  if (!hud::rowsHit(top - 20, LCD_HEIGHT, bandY, b.height())) return;
-  const int32_t ty = top - bandY;
-  const uint16_t body = s_k->body;
-  switch (s_k->attack) {
-    case Attack::Barrier:                                            // Shade: dome + eyes + claws
-      b.fillCircle(x, ty + w / 2, w / 2, body);
-      b.fillRect(x - w / 2, ty + w / 2, w, LCD_HEIGHT - top, body);
-      b.fillRect(x - w / 5 - w / 12, ty + w / 3, w / 8 + 1, w / 6 + 1, s_k->accent);
-      b.fillRect(x + w / 5 - w / 24, ty + w / 3, w / 8 + 1, w / 6 + 1, s_k->accent);
-      b.fillTriangle(x - w / 2, ty + w / 2, x - w / 2 - w / 4, ty + w / 3, x - w / 2, ty + w / 2 + w / 6, body);
-      b.fillTriangle(x + w / 2, ty + w / 2, x + w / 2 + w / 4, ty + w / 3, x + w / 2, ty + w / 2 + w / 6, body);
-      break;
-    case Attack::Smash:                                           // Brute: horned head
-      b.fillRoundRect(x - w / 2, ty, w, LCD_HEIGHT - top + 10, w / 6 + 1, body);
-      b.fillTriangle(x - w / 2, ty + w / 6, x - w / 3, ty, x - w / 2 - w / 5, ty - w / 4, rgb565(240, 220, 180));
-      b.fillTriangle(x + w / 2, ty + w / 6, x + w / 3, ty, x + w / 2 + w / 5, ty - w / 4, rgb565(240, 220, 180));
-      b.fillRect(x - w / 4, ty + w / 4, w / 7 + 1, w / 10 + 1, s_k->accent);
-      b.fillRect(x + w / 4 - w / 7, ty + w / 4, w / 7 + 1, w / 10 + 1, s_k->accent);
-      break;
-    case Attack::Phase:                                          // Phantom: big wisp
-      b.fillCircle(x, ty + w / 2, w / 2, body);
-      b.fillCircle(x - w / 6, ty + w / 3, w / 5 + 1, s_k->accent);
-      b.fillRect(x - w / 2, ty + w / 2, w, LCD_HEIGHT - top, body);
-      break;
-  }
+  // Front view (A2), full sprite drawn from `top`; the part below the screen is clipped,
+  // so the on-screen footprint is the same w x h as the B1 shapes.
+  const ArtSprite& a = frontArt(s_k->attack);
+  sprite::draw(b, bandY, a, x - w / 2, top, w, w * a.h / a.w, runnerX >= LCD_WIDTH / 2);
 }
 
 void composeHud(lgfx::LGFX_Sprite& b, int32_t bandY, float time) {

@@ -118,6 +118,8 @@ Arcade mode stays the endless runner.
   (tools/art_gen.py; PNG import can be added if the user draws art), and a scaled,
   transparent-index blit (sprite.*; no pushImage, so CARRY-1 can't bite) 
   that writes the band buffer directly (sprites shrink with depth on the road).
+- A1 DONE (runner, obstacles, coin, orb). A2 built 2026-10-08 (enemies front/back, down
+  pose, HUD icons, shop pictures). Map tiles remain.
 - Content: runner (run cycle, jump, stumble), 3 enemies (front + back views, run
   cycle), obstacles, coin, orb, hearts/HUD icons, shop items; map tiles later.
 - Risk: flash use (33.6% of the 1.3 MB app slot now) — repartition if needed.

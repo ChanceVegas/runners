@@ -14,8 +14,10 @@ bool init();   // after renderer::init (needs renderer::raw)
 
 // Draw `s` into the band, scaled to dw x dh screen px with its top-left at (x, y)
 // in screen coordinates. Clipped to the band and the screen.
+// solid != 0: every opaque pixel is drawn in that NATIVE RGB565 colour instead (hit
+// flashes / silhouettes).
 void draw(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t x, int32_t y,
-          int32_t dw, int32_t dh, bool flipX = false);
+          int32_t dw, int32_t dh, bool flipX = false, uint16_t solid = 0);
 
 // Same, positioned by bottom-centre (cx, bottomY) at a uniform integer-ish scale.
 inline void drawBottom(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t cx,

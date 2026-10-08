@@ -5,8 +5,8 @@ session doesn't know it happened.
 
 ## Current State
 - Phase: AU0 audio hw-verified ✅. B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning, B1-R3
-  duck controls (hw: "a little sketchy"), B1-R4 duck tuning built, awaiting hardware
-  gate (banner `B1-R4`).
+  duck controls (hw: "a little sketchy"), B1-R4/R5 duck-split tuning built, awaiting hardware
+  gate (banner `B1-R5`).
   R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
   scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
 - Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.3% of 1.3 MB app partition)

@@ -16,6 +16,8 @@ bool init() {
   return true;
 }
 
+const uint16_t* rawPalette() { return s_pal; }
+
 void draw(lgfx::LGFX_Sprite& band, int32_t bandY, const ArtSprite& s, int32_t x, int32_t y,
           int32_t dw, int32_t dh, bool flipX, uint16_t solid) {
   if (dw <= 0 || dh <= 0) return;

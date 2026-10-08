@@ -119,7 +119,7 @@ Arcade mode stays the endless runner.
   transparent-index blit (sprite.*; no pushImage, so CARRY-1 can't bite) 
   that writes the band buffer directly (sprites shrink with depth on the road).
 - A1 DONE (runner, obstacles, coin, orb). A2 DONE 2026-10-08 (enemies front/back, down
-  pose, HUD icons, shop pictures; hw-verified). Map tiles remain.
+  pose, HUD icons, shop pictures; hw-verified). A3 built 2026-10-08: map tiles, avatar, map enemies.
 - Content: runner (run cycle, jump, stumble), 3 enemies (front + back views, run
   cycle), obstacles, coin, orb, hearts/HUD icons, shop items; map tiles later.
 - Risk: flash use (33.6% of the 1.3 MB app slot now) — repartition if needed.
@@ -161,7 +161,7 @@ Arcade mode stays the endless runner.
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
 | locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | DONE (R3, hw-verified) |
 | world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
-| overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
+| overworld | src/overworld.* | top-down map render (pixel-art tile rows, direct band writes; A3), avatar sprite, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
 | game_state | src/game_state.* | mode machine Menu/Explore/PreBattle/Battle/Arcade/Shop/Settings, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
 | gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |

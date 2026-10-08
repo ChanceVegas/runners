@@ -16,9 +16,13 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A2 ART GATE: PASSED ✅ 2026-10-08 (user: "shop text looks excellent"; log: BATTLE run
-   26–31 ms with the pursuer close, countdown 34 avg / 37 max, MENU 34 avg / 35 max).
-   Next milestone: user to choose (map art A3 / text-cache perf / GPS when soldered).
+1. A3 MAP ART GATE (user): `git pull`, flash, confirm `=== Runners A3-R1 ===`.
+   - [ ] EXPLORE: grass (plain / flowers / tufts), sand, shimmering water, forest trees,
+         rock + boulders, dirt trails — all pixel tiles; no gaps or seams while scrolling.
+   - [ ] Avatar faces the way you move (down / up / left / right), steps while moving.
+   - [ ] Map enemies use their front-view art; target ring + name tag still right.
+   - [ ] Top bar coin + shield icons. Render ms in EXPLORE while moving (was 25–28).
+   (A2 PASSED 2026-10-08.)
 2. GPS bring-up check as soon as the user solders the M100 Mini (UART1, baud
    autodetect, NMEA sats/fix over serial; window or outdoors). Then R2 proper, with
    approved Safety items 1–5 (PLANNING) as mandatory scope.
@@ -135,6 +139,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A3 map art
+- User chose map art next (and was hitting obstacles on purpose in the A2 log).
+- Done: art_gen A3 — 22 terrain colours, 13 tiles (grass x3, sand x2, water x2 frames,
+  forest x2, rock x2, trail x2; seeded, opaque 24x24) + avatar down/up/side x 2 walk
+  frames. overworld: tile rows copied through sprite::rawPalette() (old fill/canopy
+  code and its palette removed), avatar sprite by heading, map enemies = front art at
+  0.9x, top-bar coin/shield icons. art_data 22.4 KB; Flash 38.3%. Banner A3-R1.
+- Commit: feat(art): A3 overworld tiles, map avatar and enemies
+
 ### 2026-10-08 — Session 3 (cont.) — A2 on hw
 - User: "shop text looks excellent". Log: Brute L2 at rank 5 (HP 8, 38.7 s timer): 3 orb
   hits, then CAUGHT by duck-bar hits (one duck tapped 1 m late, one mid lane change).

@@ -12,6 +12,10 @@ namespace sprite {
 
 bool init();   // after renderer::init (needs renderer::raw)
 
+// The shared palette in band-buffer order (index 0 unused). For code that copies
+// opaque tile rows itself (overworld terrain).
+const uint16_t* rawPalette();
+
 // Draw `s` into the band, scaled to dw x dh screen px with its top-left at (x, y)
 // in screen coordinates. Clipped to the band and the screen.
 // solid != 0: every opaque pixel is drawn in that NATIVE RGB565 colour instead (hit

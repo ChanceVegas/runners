@@ -51,6 +51,29 @@ PALETTE = [
     ('z', 'phantom',     64, 192, 224),
     ('Z', 'phantom_lt',  176, 242, 255),
     ('j', 'phantom_dk',  28, 108, 150),
+    # A3: overworld terrain
+    ('1', 'grass',       80, 160, 70),
+    ('2', 'grass_dk',    62, 138, 56),
+    ('3', 'grass_lt',    104, 184, 84),
+    ('4', 'tuft',        44, 112, 42),
+    ('5', 'flower_pk',   250, 140, 170),
+    ('6', 'sand',        220, 200, 140),
+    ('7', 'sand_dk',     194, 172, 116),
+    ('8', 'sand_lt',     240, 226, 176),
+    ('9', 'water',       40, 92, 172),
+    ('0', 'water_dk',    30, 72, 150),
+    ('!', 'water_lt',    150, 202, 242),
+    ('@', 'forest_gnd',  50, 108, 48),
+    ('#', 'canopy',      30, 88, 42),
+    ('$', 'canopy_lt',   70, 142, 66),
+    ('%', 'canopy_dk',   18, 60, 30),
+    ('^', 'trunk',       96, 64, 36),
+    ('&', 'rock',        132, 130, 126),
+    ('*', 'rock_dk',     98, 96, 94),
+    ('(', 'rock_lt',     172, 170, 164),
+    (')', 'trail',       178, 142, 98),
+    ('-', 'trail_dk',    148, 114, 76),
+    ('+', 'trail_lt',    204, 170, 124),
 ]
 KEY = {k: i + 1 for i, (k, *_rest) in enumerate(PALETTE)}   # 0 = transparent
 
@@ -430,6 +453,146 @@ MARK_RUSH  = [(4, 8), (5, 7), (6, 8), (7, 7), (5, 9), (6, 9)]         # chevrons
 MARK_GUARD = [(5, 7), (6, 7), (5, 8), (6, 8), (4, 7), (7, 7), (5, 9), (6, 9)]   # shield blob
 MARK_SURGE = [(6, 6), (5, 7), (6, 8), (5, 9), (4, 10), (7, 7)]        # bolt
 
+# ---- A3: overworld tiles (24x24, fully opaque) and the map avatar ---------------
+import random
+
+def tile(base, speck, seed, density=0.08):
+    rnd = random.Random(seed)
+    g = [[base] * 24 for _ in range(24)]
+    for y in range(24):
+        for x in range(24):
+            r = rnd.random()
+            if r < density: g[y][x] = speck[0]
+            elif r < density * 2: g[y][x] = speck[1]
+    return g, rnd
+
+def grass_tile(v):
+    g, rnd = tile('1', '23', 10 + v)
+    if v == 1:                                     # flowers
+        for (fx, fy, c) in ((5, 6, 'y'), (16, 14, '5'), (10, 18, 'w')):
+            put(g, [(fx, fy), (fx + 1, fy), (fx, fy + 1), (fx + 1, fy + 1)], c)
+            put(g, [(fx, fy + 2)], '4')
+    if v == 2:                                     # grass tufts
+        for (tx, ty) in ((4, 15), (14, 7), (17, 19)):
+            put(g, [(tx, ty), (tx + 2, ty), (tx + 4, ty), (tx + 1, ty + 1), (tx + 3, ty + 1),
+                    (tx + 2, ty + 2)], '4')
+    return rows(g)
+
+def sand_tile(v):
+    g, rnd = tile('6', '78', 20 + v, 0.07)
+    if v == 1:
+        fill_ellipse(g, 15, 15, 2.2, 1.6, '7'); put(g, [(14, 14)], '8')   # pebble
+    return rows(g)
+
+def water_tile(frame):
+    g = [['9'] * 24 for _ in range(24)]
+    rnd = random.Random(30)
+    for _ in range(9):                             # dark swells
+        x, y = rnd.randrange(24), rnd.randrange(24)
+        for i in range(5): g[y][(x + i) % 24] = '0'
+    for i in range(4):                             # wave crests drift with the frame
+        x, y = rnd.randrange(24), rnd.randrange(24)
+        x = (x + frame * 3) % 24
+        for k in range(4): g[y][(x + k) % 24] = '!'
+        g[(y + 1) % 24][(x + 4) % 24] = '!'
+    return rows(g)
+
+def forest_tile(v):
+    g, rnd = tile('@', '24', 40 + v, 0.05)
+    cx = 12 + (2 if v else -1)
+    fill_ellipse(g, cx + 1, 20, 7, 2.4, '%')       # ground shadow
+    fill_rect(g, cx - 1, 15, cx + 1, 20, '^')      # trunk
+    fill_circle(g, cx, 9, 8.4, '#')                # canopy
+    recolor(g, '#', '%', lambda x, y: (x - cx) + (y - 9) > 7)
+    fill_circle(g, cx - 3, 6, 3.2, '$')
+    put(g, [(cx + 3, 4), (cx + 4, 8), (cx - 5, 11)], '$')
+    return rows(g)
+
+def rock_tile(v):
+    g, rnd = tile('&', '*(', 50 + v, 0.06)
+    if v == 1:                                     # boulder
+        fill_ellipse(g, 12, 13, 8, 6, '*')
+        fill_ellipse(g, 11, 12, 7, 5, '&')
+        fill_ellipse(g, 9, 10, 3, 2, '(')
+    else:                                          # cracks
+        put(g, [(4, 6), (5, 7), (6, 7), (7, 8), (17, 15), (18, 16), (18, 17), (19, 18)], '*')
+    return rows(g)
+
+def trail_tile(v):
+    g, rnd = tile(')', '-+', 60 + v, 0.09)
+    for (px, py) in ((6 + v * 5, 7), (15, 16 - v * 6)):
+        put(g, [(px, py), (px + 1, py)], '-')
+    return rows(g)
+
+# Map avatar, 3/4 view, 12x15 (drawn 2x): down / up / side (flip for left), 2 walk frames.
+AV_HEAD_DOWN = [
+    "....kkkk....",
+    "...khhhhk...",
+    "..khhHhhhk..",
+    "..khsssshk..",
+    "..ksxssxsk..",
+    "...kssssk...",
+]
+AV_HEAD_UP = [
+    "....kkkk....",
+    "...khhhhk...",
+    "..khhHhhhk..",
+    "..khhhhhhk..",
+    "..khhhhhhk..",
+    "...kshhsk...",
+]
+AV_HEAD_SIDE = [
+    "....kkkk....",
+    "...khhhhk...",
+    "..khhHhhhk..",
+    "..khhhsssk..",
+    "..khhssxsk..",
+    "...kkssssk..",
+]
+AV_BODY_FRONT = [
+    "..kkggggkk..",
+    ".ksgwnnwgsk.",
+    ".ksgwwwwgsk.",
+    ".kkggggggkk.",
+    "..kbbbbbbk..",
+]
+AV_BODY_BACK = [
+    "..kkggggkk..",
+    ".ksggggggsk.",
+    ".ksgGGGGgsk.",
+    ".kkggggggkk.",
+    "..kbbbbbbk..",
+]
+AV_BODY_SIDE = [
+    "...kggggk...",
+    "...kggggsk..",
+    "...kgnngsk..",
+    "...kggggkk..",
+    "...kbbbbk...",
+]
+AV_FEET = [[  # frame 0 / 1, front & back
+    "..kbbkkbbk..",
+    "..kwk..kwk..",
+    "...k....k...",
+    "............",
+], [
+    "..kbbkkbbk..",
+    "..kwk...kk..",
+    "...k...kwk..",
+    "........k...",
+]]
+AV_FEET_SIDE = [[
+    "...kbbbbk...",
+    "...kwkkwk...",
+    "....k..k....",
+    "............",
+], [
+    "...kbbbbk...",
+    "..kwk..kwk..",
+    "...k....k...",
+    "............",
+]]
+
 SPRITES = [
     ('RUN_A',   UPPER + RUN_A_LEGS),
     ('RUN_B',   UPPER + RUN_B_LEGS),
@@ -461,6 +624,20 @@ SPRITES = [
     ('CAN_RUSH',  can('o', 'O', MARK_RUSH)),
     ('CAN_GUARD', can('a', 'A', MARK_GUARD)),
     ('CAN_SURGE', can('y', 'U', MARK_SURGE)),
+    # A3 map tiles (24x24, opaque) — order matters: overworld indexes them
+    ('T_GRASS0', grass_tile(0)), ('T_GRASS1', grass_tile(1)), ('T_GRASS2', grass_tile(2)),
+    ('T_SAND0', sand_tile(0)),   ('T_SAND1', sand_tile(1)),
+    ('T_WATER0', water_tile(0)), ('T_WATER1', water_tile(1)),
+    ('T_FOREST0', forest_tile(0)), ('T_FOREST1', forest_tile(1)),
+    ('T_ROCK0', rock_tile(0)),   ('T_ROCK1', rock_tile(1)),
+    ('T_TRAIL0', trail_tile(0)), ('T_TRAIL1', trail_tile(1)),
+    # A3 map avatar
+    ('AV_DOWN0', AV_HEAD_DOWN + AV_BODY_FRONT + AV_FEET[0]),
+    ('AV_DOWN1', AV_HEAD_DOWN + AV_BODY_FRONT + AV_FEET[1]),
+    ('AV_UP0',   AV_HEAD_UP + AV_BODY_BACK + AV_FEET[0]),
+    ('AV_UP1',   AV_HEAD_UP + AV_BODY_BACK + AV_FEET[1]),
+    ('AV_SIDE0', AV_HEAD_SIDE + AV_BODY_SIDE + AV_FEET_SIDE[0]),
+    ('AV_SIDE1', AV_HEAD_SIDE + AV_BODY_SIDE + AV_FEET_SIDE[1]),
 ]
 
 def check(name, g):

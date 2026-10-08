@@ -20,9 +20,11 @@
 #define INPUT_EMA_ALPHA      0.6f   // x/y smoothing per sample 0..1 (drag axis/UI point)
 #define INPUT_ZONE_LEFT_X    160    // px; taps left of this = lane left (left third)
 #define INPUT_ZONE_RIGHT_X   320    // px; taps at/right of this = lane right; between = jump/duck
-#define INPUT_ZONE_DUCK_Y    205    // px; middle-zone taps at/below this row = duck, above = jump.
-                                    // B1-R3 had 170: user kept tapping low to jump (old habit),
-                                    // so the duck strip is now the bottom 67 px (~13 mm)
+#define INPUT_ZONE_DUCK_Y    228    // px; middle-zone taps at/below this row = duck, above = jump.
+                                    // History: 170 (B1-R3) -> 205 (B1-R4) -> 228 (B1-R5). The
+                                    // AU0-R1 log put the user's jump taps at y189-206, so one
+                                    // landed at 206 and ducked. Strip is now the bottom 44 px
+                                    // (~8 mm), against the bezel: "tap the very bottom" to duck
 
 // --- Encounter road: pseudo-3D projection (R1) ---
 // Screen row y below the horizon has d = y - HORIZON rows of depth; world depth

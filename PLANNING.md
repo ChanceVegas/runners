@@ -120,7 +120,7 @@ Arcade mode stays the endless runner.
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
-| audio | src/audio.* | 2-voice square/noise SFX synth on the onboard I2S amp, own task (core 0); play(Sfx) API; volume capped in config | AU0 (awaiting hw) |
+| audio | src/audio.* | 2-voice square/noise SFX synth on the onboard I2S amp, own task (core 0); play(Sfx) API; volume capped in config | AU0 hw-verified 2026-10-08 ("sounds great") |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |

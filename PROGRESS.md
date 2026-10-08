@@ -4,7 +4,7 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning, B1-R3
+- Phase: AU0 audio hw-verified ✅. B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning, B1-R3
   duck controls (hw: "a little sketchy"), B1-R4 duck tuning built, awaiting hardware
   gate (banner `B1-R4`).
   R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
@@ -17,16 +17,9 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-0. AU0 AUDIO GATE (user): `git pull`, flash, confirm `=== Runners AU0-R1 ===`.
-   - [ ] Serial shows `[audio] I2S ok: 16000 Hz, BCLK 35 LRCK 19 DOUT 20, volume 30%`.
-   - [ ] Rising 3-note chime at boot. No hum/hiss when idle.
-   - [ ] SFX: menu tap, jump, duck, coin, orb, hit (thud + noise), win, lose.
-   - [ ] Clean or harsh? Too quiet/loud? Any clicks or stutter? fps still 25.3?
-   - If silent: report the [audio] line; next suspects are the pin map (19/20 swap)
-     or an amp-enable pin.
-   B1-R4 duck-tuning gate (below) can be tested in the same flash.
-1. B1-R4 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R4 ===`.
-   - [ ] Duck strip is now only the bottom 67 px (y >= 205); grey ticks mark it all run.
+1. B1-R5 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R5 ===`.
+   - [ ] Duck strip is now only the bottom 44 px (y >= 228); grey ticks mark it all run.
+   - [ ] Deliberately duck a few times (duck bars) so the log shows where ducks land.
    - [ ] Duck bar is now yellow/black with a white down-arrow; barrier stays orange/white.
    - [ ] Jump/duck feel less sketchy? Send the log: every tap now prints (x.. y..).
    Carried from B1-R3:
@@ -58,7 +51,8 @@ session doesn't know it happened.
   (wallet untouched).
 - B1-WALLS (closed B1-R3): user — walls replaced by duck-under bars (new DUCK control);
   walls kept rare (arcade 15%, Pursuit 8%, Phantom 1-in-3).
-- DUCK-1 (open): B1-R3 log — both duck taps were meant as jumps (user: old habit of
+- DUCK-1 (open): AU0-R1 log — jump taps at y189-206; the one at y206 ducked into a
+  barrier (split was 205). No deliberate duck in the log. B1-R5: split 228. B1-R3 log — both duck taps were meant as jumps (user: old habit of
   tapping low); they hit barriers. B1-R4 moved the split to y 205, added always-on
   ticks + distinct duck-bar look, and logs tap x/y. Tune from the next log.
 - B1-ART (by design): enemies are placeholder shapes until A2.
@@ -82,7 +76,8 @@ session doesn't know it happened.
 - P1-NVS (accepted): best score is written to flash (Preferences/NVS) inside the
   game loop, but only once per game over, and only on a new best. Can stall a frame
   for a few ms when it happens; invisible on the game-over screen.
-- P1-AUDIO (in progress, AU0): speaker fitted by user 2026-10-08 (salvaged LilyGO
+- P1-AUDIO (closed 2026-10-08, AU0 hw-verified: "audio sounds great"; fps 25.3,
+  render unchanged, heap −7 KB for I2S driver + task, stable): speaker fitted by user 2026-10-08 (salvaged LilyGO
   T-Deck Pro speaker, 7.2 ohm DC = 8 ohm nominal) on the board's amp output. I2S pins
   BCLK 35 / LRCK 19 / DOUT 20 are from an Elecrow forum reply, NOT official docs.
   Amp chip unidentified. Volume capped at 30% (AUDIO_VOLUME_PCT) until the user
@@ -151,6 +146,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — AU0 verified; B1-R5 duck split
+- User (AU0-R1 + B1-R4 on hw): "game feels good. audio sounds great actually."
+  Log: fps 25.2-25.4, render 26-28 ms in battle, heap 270,164 flat (−7 KB audio).
+- Tap y: jumps 189-206, lanes 215-246. Duck at y206 was a jump -> barrier hit.
+  Split moved 205 -> 228. Banner B1-R5.
+- Commit: fix(input): duck split to y 228 from tap log (B1-R5)
+
 ### 2026-10-08 — Session 3 (cont.) — AU0 audio bring-up
 - User has an HGL M100 Mini GPS module and a small speaker; speaker soldered to the
   board's amp output (from a LilyGO T-Deck Pro; reads 7.2 ohm = normal for 8 ohm).

@@ -16,7 +16,8 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A1 ART GATE (user): `git pull`, flash, confirm `=== Runners A1-R1 ===`.
+1. A1 ART GATE: PASSED visually 2026-10-08 (user: "love it!!!! first art iteration looks
+   wonderful!!"). STILL OPEN: render ms log from an ARCADE + BATTLE run (ART-PERF).
    - [ ] Runner is pixel art: 4-step run cycle, tucked jump, crouch duck, arms-out
          stumble, shield blink still works. Crash pose is still shapes (A2).
    - [ ] Barrier (orange/white), duck bar (yellow/black + arrow), wall (concrete +
@@ -139,6 +140,10 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A1 on hw
+- User: "love it!!!! first art iteration looks wonderful!!" Render ms not yet sent.
+  Next: A2 breakdown for approval.
+
 ### 2026-10-08 — Session 3 (cont.) — A1 art foundation
 - User approved A1 ("Let's Grind!").
 - Done: tools/art_gen.py (text-grid + generated pixel art -> src/art_data.h, one shared

@@ -56,6 +56,10 @@ int8_t s_laneTarget = 0;
 float s_jumpY = 0, s_prevJumpY = 0;        // px above the ground
 float s_jumpV = 0;                         // px/s, + = up
 float s_duckT = 0;                         // s of duck left (0 = standing)
+float s_jumpMul = 1.0f;                    // battle: SPRING sneakers (arcade: 1)
+const char* s_dropName = nullptr;          // battle: drink dropped on DEFEATED (display)
+uint32_t s_arcadeBank = 0;                 // arcade: coins to bank to the wallet (taken by game_state)
+uint32_t s_arcadeBanked = 0;               // arcade: shown on the game-over screen
 bool  s_duckQueued = false;                // DUCK tapped mid-air: duck on landing
 float s_speed = 0;                         // m/s
 float s_speedMax = RUN_SPEED_MAX;          // this stage's cap
@@ -224,6 +228,10 @@ void crash() {
 
 void gameOver() {
   const uint32_t sc = currentScore();
+  if (s_mode == encounter::Mode::Arcade) {          // bank a share of the run's coins
+    s_arcadeBanked = s_coins * ARCADE_WALLET_PCT / 100;
+    s_arcadeBank += s_arcadeBanked;
+  }
   if (s_mode == encounter::Mode::Arcade && sc > s_best) {
     s_best = sc;
     s_newBest = true;
@@ -473,7 +481,7 @@ void update(float dt) {
   const bool airborne = s_jumpY > 0.0f || s_jumpV > 0.0f;
   const bool jumpOk = in.jumpPressed && !airborne;
   if (jumpOk) {                                                                   // jump cancels a duck
-    s_jumpV = RUN_JUMP_VEL_PX_S; s_duckT = 0; s_duckQueued = false;
+    s_jumpV = RUN_JUMP_VEL_PX_S * s_jumpMul; s_duckT = 0; s_duckQueued = false;
     audio::play(audio::Sfx::Jump);
   }
   if (in.duckPressed && !jumpOk) {
@@ -781,8 +789,12 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
         text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
+        if (s_dropName) {
+          snprintf(buf, sizeof buf, "It dropped a %s drink!", s_dropName);
+          text(band, bandY, buf, cx, 186, F12, 1.0f, rgb565(120, 230, 255));
+        }
         if (s_stateT > RUN_END_LOCKOUT_S && blink)
-          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 220, F12, 1.0f, C_WHITE);
         break;
       }
       text(band, bandY, "ESCAPED!", cx, 70, F24, 1.3f, C_GREEN);
@@ -835,8 +847,8 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         snprintf(buf, sizeof buf, "BEST %u", (unsigned)s_best);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_GREY);
       }
-      snprintf(buf, sizeof buf, "Stage %u   %u coins   %u m", (unsigned)s_stage,
-               (unsigned)s_coins, (unsigned)(s_bankedM + (uint32_t)s_finalRun));
+      snprintf(buf, sizeof buf, "Stage %u   %u m   +%u coins to wallet", (unsigned)s_stage,
+               (unsigned)(s_bankedM + (uint32_t)s_finalRun), (unsigned)s_arcadeBanked);
       text(band, bandY, buf, cx, 186, F12, 1.0f, C_WHITE);
       if (s_stateT > RUN_END_LOCKOUT_S) text(band, bandY, "TAP TO RUN AGAIN", cx, 226, F12, 1.0f, C_WHITE);
       break;
@@ -846,8 +858,14 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   }
 }
 
+void setDefeatDrop(const char* drinkName) { s_dropName = drinkName; }
+
+uint32_t takeArcadeCoins() { const uint32_t c = s_arcadeBank; s_arcadeBank = 0; return c; }
+
 void startArcade() {
   s_mode = Mode::Arcade;
+  s_dropName = nullptr;
+  s_jumpMul = 1.0f;                        // sneakers are battle stats; arcade stays fair
   s_goalM = RUN_GOAL_M;
   s_shields = s_shieldsUsed = 0;
   s_invuln = 0;
@@ -859,6 +877,8 @@ void startArcade() {
 void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
                  const battle::Stats& stats) {
   s_mode = Mode::Battle;
+  s_jumpMul = stats.jumpMul;
+  // s_dropName is set by setDefeatDrop() just before this call; keep it.
   s_goalM = goalM;
   s_shields = shields;
   s_shieldsUsed = 0;

@@ -17,6 +17,17 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
+0. S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners S1-R1 ===`.
+   - [ ] Menu shows EXPLORE | SHOP | ARCADE. SHOP: 6 cards, wallet top-right, BACK.
+   - [ ] Buying: coins drop, tier pips / carry count rise, "BOUGHT ..." message;
+         too poor -> "NEED n MORE COINS"; maxed -> "ALREADY MAXED". Survives reboot.
+   - [ ] Engage an enemy while carrying a drink -> PRE-BATTLE screen: tap drinks to
+         toggle USING, RUN! starts, LEAVE returns to the map (must move to re-engage).
+   - [ ] Serial `[game] battle: ... gain+ jump x grip x orb rush` shows the gear.
+   - [ ] RUSH: gap starts 45 m. GUARD: one extra shield pip. SURGE: orbs take 2 HP.
+         SPRING: visibly higher jump. GRIP: shorter stumble.
+   - [ ] DEFEATED sometimes says "It dropped a ... drink!" and it appears in the shop.
+   - [ ] ARCADE game over shows "+n coins to wallet" (half the coins); wallet grows.
 1. B1-R5 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R5 ===`.
    - [ ] Duck strip is now only the bottom 44 px (y >= 228); grey ticks mark it all run.
    - [ ] Deliberately duck a few times (duck bars) so the log shows where ducks land.
@@ -146,6 +157,19 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — S1 shop
+- User: GPS not soldered yet (GPS check waits). Wants game music + the store; order
+  shop first, then music. Music: upbeat chiptune, loops for menu, explore, battle,
+  arcade. Arcade coins: "yes, but reduced" -> 50% banked.
+- Found uncommitted S1 edits (config tunables, jumpMul, drop display) from an
+  interrupted attempt in this same session (no other session running); they matched
+  the plan and were kept.
+- Done: shop.* (inventory in NVS g0..g5, SHOP + PRE-BATTLE screens, takeBattleStats,
+  defeat drop pre-rolled + granted on DEFEATED), game_state modes PreBattle/Shop,
+  3-button menu, GUARD shield not refunded as energy, arcade coin banking.
+  Built: SUCCESS (Flash 35.9%). Banner S1-R1.
+- Commit: feat(shop): sneakers + drinks shop, pre-battle drink screen (S1)
+
 ### 2026-10-08 — Session 3 (cont.) — AU0 verified; B1-R5 duck split
 - User (AU0-R1 + B1-R4 on hw): "game feels good. audio sounds great actually."
   Log: fps 25.2-25.4, render 26-28 ms in battle, heap 270,164 flat (−7 KB audio).

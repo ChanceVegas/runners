@@ -32,6 +32,12 @@ bool init();                    // seed RNG, load best score from flash, enter R
 void startArcade();
 void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
                  const battle::Stats& stats);
+// Battle: name of a drink the enemy drops if DEFEATED (shown on that screen), or
+// nullptr. Call right before every startBattle (startArcade clears it).
+void setDefeatDrop(const char* drinkName);
+// Arcade: coins banked to the wallet (ARCADE_WALLET_PCT of each game's coins) since
+// the last call. game_state adds them to the wallet.
+uint32_t takeArcadeCoins();
 bool finished();                // chase over, or arcade MENU tapped — read result()
 Result result();
 void idle();                    // back to Ready (attract road), clears the road

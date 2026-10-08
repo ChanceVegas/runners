@@ -26,8 +26,8 @@ together see the same map and the same enemy, no internet involved.
 no pairing, ~100–200 m line-of-sight, low latency). BLE kept in reserve for a phone
 companion app. Accepted limit: you only meet players who are physically nearby.
 
-Explicitly OUT of v1: global/online multiplayer, cellular, servers, music, real-map
-data (OpenStreetMap etc. — the map is fictional by design). Sound effects ARE in
+Explicitly OUT of v1: global/online multiplayer, cellular, servers, real-map
+data (OpenStreetMap etc. — the map is fictional by design). Sound effects and chiptune music ARE in
 (speaker fitted 2026-10-08; also needed for Safety item 3).
 
 ## Safety (requirement for R2 GPS — raised by user 2026-10-07)
@@ -87,6 +87,11 @@ Arcade mode stays the endless runner.
 - ENERGY DRINKS — one-use, carried (max 3 each), offered on a pre-battle screen
   (player is standing still: safe): RUSH (start +15 m gap), GUARD (+1 shield),
   SURGE (orbs strike for 2 in the Hunt).
+- S1 numbers (config.h): tiers 100/250/500; SPRINT +0.12/0.24/0.36 m/s gap gain;
+  SPRING jump x1.06/1.12/1.18; GRIP x0.85/0.70/0.60 stumble time + gap loss, +1 heart
+  at III. Drinks RUSH 50 / GUARD 60 / SURGE 80, max 3 each; 25% drop on DEFEATED.
+  Sneakers are battle-only (arcade stays fair for the best score). Arcade banks
+  ARCADE_WALLET_PCT (50%) of its coins at game over (user: "yes, but reduced").
 
 **Art** — bright chunky pixel art (user: the hardware dictates it).
 - Foundation: PNG -> RGB565 + transparency pipeline (host tool), with the pushImage
@@ -121,13 +126,14 @@ Arcade mode stays the endless runner.
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
 | audio | src/audio.* | 2-voice square/noise SFX synth on the onboard I2S amp, own task (core 0); play(Sfx) API; volume capped in config | AU0 hw-verified 2026-10-08 ("sounds great") |
+| shop | src/shop.* | gear: sneaker tiers + drinks inventory (NVS), SHOP screen, PRE-BATTLE drink screen, gear -> battle::Stats, defeat drink drop | S1 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
 | locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | DONE (R3, hw-verified) |
 | world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
 | overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
-| game_state | src/game_state.* | mode machine Menu/Explore/Battle/Arcade, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
+| game_state | src/game_state.* | mode machine Menu/Explore/PreBattle/Battle/Arcade/Shop, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
 | gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
 
@@ -162,7 +168,10 @@ Arcade mode stays the endless runner.
   follows real movement, enemy spawns, encounter trigger on stop.
 - **B1 — Battle system:** Pursuit -> Overtake -> Hunt, replaces chase mode
   (placeholder shapes). Built 2026-10-08, awaiting hardware gate.
-- **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen. Next.
+- **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen.
+  Built 2026-10-08, awaiting hardware gate. Arcade banks 50% of its coins (user).
+- **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
+  SFX (user, 2026-10-08). Next.
 - **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.

@@ -10,6 +10,7 @@
 #include "scenery.h"
 #include "encounter.h"
 #include "audio.h"
+#include "shop.h"
 #include "hud.h"
 #include "color.h"
 #include "config.h"
@@ -24,9 +25,9 @@ using game_state::Mode;
 
 constexpr float PROFILE_SAVE_S = 120.0f;   // periodic save while exploring
 
-// Menu buttons (screen rects).
-constexpr int32_t BTN_Y = 128, BTN_H = 62, BTN_W = 190;
-constexpr int32_t BTN_EXPLORE_X = 30, BTN_ARCADE_X = LCD_WIDTH - 30 - BTN_W;
+// Menu buttons (screen rects): EXPLORE | SHOP | ARCADE.
+constexpr int32_t BTN_Y = 118, BTN_H = 70, BTN_W = 144;
+constexpr int32_t BTN_EXPLORE_X = 12, BTN_SHOP_X = 168, BTN_ARCADE_X = 324;
 
 Mode s_mode = Mode::Menu;
 Preferences s_prefs;
@@ -37,6 +38,8 @@ float s_menuT = 0.0f;                      // ignore taps right after entering t
 
 world::Enemy s_battleEnemy;
 uint8_t s_battleShields = 0;
+uint8_t s_energyShields = 0;              // of s_battleShields, bought with Run energy (refundable)
+int8_t  s_dropItem = -1;                  // drink the enemy drops if DEFEATED (pre-rolled)
 
 void layersEncounter() {
   renderer::clearLayers();
@@ -49,6 +52,16 @@ void layersEncounter() {
 void layersMenu() {
   layersEncounter();                       // attract road behind the menu
   renderer::addLayer(game_state::composeMenu);
+}
+
+void layersShop() {
+  renderer::clearLayers();
+  renderer::addLayer(shop::composeShop);   // full-screen panel
+}
+
+void layersPreBattle() {
+  renderer::clearLayers();
+  renderer::addLayer(shop::composePreBattle);
 }
 
 void layersExplore() {
@@ -68,6 +81,7 @@ void saveProfile() {
   s_prefs.putFloat("walked", overworld::walkedM());
   s_prefs.putInt("tx", p.tx);
   s_prefs.putInt("ty", p.ty);
+  shop::save(s_prefs);
   s_saveT = 0.0f;
 }
 
@@ -105,25 +119,49 @@ void enterExplore() {
 void enterBattle(const world::Enemy& e) {
   s_battleEnemy = e;
   // Shields: one per ENERGY_PER_SHIELD of Run energy, max 2, paid up front; unused
-  // ones are refunded after the battle.
+  // ones are refunded after the battle. A GUARD drink adds one more (not refunded).
   int sh = (int)(overworld::energy() / ENERGY_PER_SHIELD);
   if (sh > 2) sh = 2;
-  s_battleShields = (uint8_t)sh;
+  s_energyShields = (uint8_t)sh;
   overworld::setEnergy(overworld::energy() - sh * ENERGY_PER_SHIELD);
-  saveProfile();
+  uint8_t guard = 0;
+  const battle::Stats stats = shop::takeBattleStats(guard);   // sneakers + chosen drinks
+  s_battleShields = s_energyShields + guard;
+  s_dropItem = shop::rollDefeatDrop();
+  saveProfile();                              // drinks used are gone even if power drops
   locator::setEnabled(false);
   layersEncounter();
-  battle::Stats stats;                        // shop upgrades plug in here (S1)
+  encounter::setDefeatDrop(s_dropItem >= 0 ? shop::name((shop::Item)s_dropItem) : nullptr);
   encounter::startBattle((uint8_t)e.kind, world::level(e.kind), world::goalM(e.kind),
                          s_battleShields, stats);
-  Serial.printf("[game] battle: %s level %u goal %d m shields %u\n", world::name(e.kind),
-                (unsigned)world::level(e.kind), (int)world::goalM(e.kind), (unsigned)s_battleShields);
+  Serial.printf("[game] battle: %s level %u goal %d m shields %u (guard %u) gain+%.2f jump x%.2f "
+                "grip x%.2f orb %u rush %d\n", world::name(e.kind), (unsigned)world::level(e.kind),
+                (int)world::goalM(e.kind), (unsigned)s_battleShields, (unsigned)guard,
+                stats.gapGainBonus, stats.jumpMul, stats.gapLossMul, (unsigned)stats.orbPower,
+                (int)stats.startGapBonus);
   s_mode = Mode::Battle;
+}
+
+// Engaged on the map: drink screen first if the player carries any, else straight in.
+void engage(const world::Enemy& e) {
+  if (!shop::hasDrinks()) { enterBattle(e); return; }
+  s_battleEnemy = e;
+  locator::setEnabled(false);
+  shop::openPreBattle(world::name(e.kind), world::level(e.kind));
+  layersPreBattle();
+  s_mode = Mode::PreBattle;
+}
+
+void enterShop() {
+  shop::openShop();
+  layersShop();
+  s_mode = Mode::Shop;
 }
 
 void finishBattle() {
   const encounter::Result r = encounter::result();
-  const uint8_t unused = (r.shieldsUsed < s_battleShields) ? s_battleShields - r.shieldsUsed : 0;
+  uint8_t unused = (r.shieldsUsed < s_battleShields) ? s_battleShields - r.shieldsUsed : 0;
+  if (unused > s_energyShields) unused = s_energyShields;   // the GUARD shield isn't energy
   overworld::setEnergy(overworld::energy() + unused * ENERGY_PER_SHIELD);
   if (r.won) s_wallet += r.coins;              // lost (caught / got away): the battle's coins are lost
   if (r.gotAway) ++s_gotAway;
@@ -133,6 +171,10 @@ void finishBattle() {
     s_wallet += (r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv;
     ++s_escapes;
     world::markEscaped(s_battleEnemy);
+    if (r.defeated && s_dropItem >= 0) {
+      shop::grantDrink(s_dropItem);
+      Serial.printf("[game] drop: %s drink\n", shop::name((shop::Item)s_dropItem));
+    }
   }
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
@@ -165,6 +207,8 @@ bool init() {
   } else {
     start = findLand(0, 0);
   }
+  shop::load(s_prefs);
+  shop::setWalletView(&s_wallet);
   locator::init(start);
   overworld::init();
   Serial.printf("[game] profile: wallet %u escapes %u energy %d start tile %d,%d\n",
@@ -182,6 +226,7 @@ void update(float dt) {
       s_menuT += dt;
       if (s_menuT < 0.4f) break;
       if (tapIn(in, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H)) { audio::play(audio::Sfx::Tap); enterExplore(); }
+      else if (tapIn(in, BTN_SHOP_X, BTN_Y, BTN_W, BTN_H)) { audio::play(audio::Sfx::Tap); enterShop(); }
       else if (tapIn(in, BTN_ARCADE_X, BTN_Y, BTN_W, BTN_H)) {
         audio::play(audio::Sfx::Tap);
         layersEncounter();
@@ -197,19 +242,37 @@ void update(float dt) {
       if (s_saveT >= PROFILE_SAVE_S) saveProfile();
       world::Enemy e;
       if (overworld::takeMenuRequest()) { saveProfile(); enterMenu(); }
-      else if (overworld::takeEngagement(e)) enterBattle(e);
+      else if (overworld::takeEngagement(e)) engage(e);
       break;
     }
+
+    case Mode::PreBattle: {
+      const int r = shop::updatePreBattle(in, dt);
+      if (r == 1) enterBattle(s_battleEnemy);
+      else if (r == 2) { overworld::requireMoveBeforeEngage(); enterExplore(); }
+      break;
+    }
+
+    case Mode::Shop:
+      if (shop::updateShop(in, s_wallet, dt)) { saveProfile(); enterMenu(); }
+      break;
 
     case Mode::Battle:
       encounter::update(dt);
       if (encounter::finished()) finishBattle();
       break;
 
-    case Mode::Arcade:
+    case Mode::Arcade: {
       encounter::update(dt);
+      const uint32_t banked = encounter::takeArcadeCoins();
+      if (banked) {
+        s_wallet += banked;
+        Serial.printf("[game] arcade: +%u coins to wallet (%u)\n", (unsigned)banked, (unsigned)s_wallet);
+        saveProfile();                        // once per game over
+      }
       if (encounter::finished() && encounter::result().exitToMenu) enterMenu();
       break;
+    }
   }
 }
 
@@ -224,7 +287,9 @@ const char* modeName() {
   switch (s_mode) {
     case Mode::Menu:    return "MENU";
     case Mode::Explore: return "EXPLORE";
-    case Mode::Battle:   return "BATTLE";
+    case Mode::PreBattle: return "PREBATTLE";
+    case Mode::Battle:  return "BATTLE";
+    case Mode::Shop:    return "SHOP";
     case Mode::Arcade:  return "ARCADE";
   }
   return "?";
@@ -238,15 +303,18 @@ void composeMenu(lgfx::LGFX_Sprite& b, int32_t bandY) {
 
   text(b, bandY, "RUNNERS", cx, 50, hud::F24, 1.4f, YELLOW);
 
-  rect(b, bandY, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H, rgb565(30, 110, 60));
-  frame(b, bandY, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H, WHITE);
-  text(b, bandY, "EXPLORE", BTN_EXPLORE_X + BTN_W / 2, BTN_Y + 22, hud::F18, 1.0f, WHITE, BTN_W - 12);
-  text(b, bandY, "map + chases", BTN_EXPLORE_X + BTN_W / 2, BTN_Y + 48, hud::F9, 1.0f, WHITE);
-
-  rect(b, bandY, BTN_ARCADE_X, BTN_Y, BTN_W, BTN_H, rgb565(150, 70, 20));
-  frame(b, bandY, BTN_ARCADE_X, BTN_Y, BTN_W, BTN_H, WHITE);
-  text(b, bandY, "ARCADE", BTN_ARCADE_X + BTN_W / 2, BTN_Y + 22, hud::F18, 1.0f, WHITE, BTN_W - 12);
-  text(b, bandY, "endless run", BTN_ARCADE_X + BTN_W / 2, BTN_Y + 48, hud::F9, 1.0f, WHITE);
+  struct Btn { int32_t x; const char* label; const char* sub; uint16_t fill; };
+  const Btn btns[3] = {
+    { BTN_EXPLORE_X, "EXPLORE", "map + battles", rgb565(30, 110, 60) },
+    { BTN_SHOP_X,    "SHOP",    "sneakers + drinks", rgb565(40, 70, 150) },
+    { BTN_ARCADE_X,  "ARCADE",  "endless run", rgb565(150, 70, 20) },
+  };
+  for (const Btn& k : btns) {
+    rect(b, bandY, k.x, BTN_Y, BTN_W, BTN_H, k.fill);
+    frame(b, bandY, k.x, BTN_Y, BTN_W, BTN_H, WHITE);
+    text(b, bandY, k.label, k.x + BTN_W / 2, BTN_Y + 26, hud::F18, 1.0f, WHITE, BTN_W - 12);
+    text(b, bandY, k.sub, k.x + BTN_W / 2, BTN_Y + 52, hud::F9, 1.0f, WHITE, BTN_W - 8);
+  }
 
   snprintf(buf, sizeof buf, "Coins %u   Best %u   Walked %d m", (unsigned)s_wallet,
            (unsigned)encounter::bestScore(), (int)overworld::walkedM());

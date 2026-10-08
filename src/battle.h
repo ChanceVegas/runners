@@ -21,6 +21,7 @@ struct Stats {
   uint8_t extraHearts = 0;     // hearts added in the Hunt (GRIP tier 3)
   uint8_t orbPower   = 1;      // HP removed per orb (SURGE drink: 2)
   float startGapBonus = 0.0f;  // m added to the starting gap (RUSH drink)
+  float jumpMul      = 1.0f;   // jump launch speed multiplier (SPRING); used by encounter
 };
 
 // kind: 0 Shade, 1 Brute, 2 Phantom (world::EnemyKind order). level 1..3.

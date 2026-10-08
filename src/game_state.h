@@ -1,5 +1,6 @@
 // game_state.h — top-level mode machine: Menu -> Explore (overworld) <-> Battle
-// (encounter vs an enemy), or Menu -> Arcade (endless encounter). Owns the render
+// (encounter vs an enemy; PreBattle drink screen first if carrying drinks), Menu ->
+// Arcade (endless encounter), Menu -> Shop. Owns the render
 // layer stack for each mode, the battle handshake (shields from Run energy, rewards
 // back), and the player profile saved in flash (coins, escapes, energy, position).
 #pragma once
@@ -8,7 +9,7 @@
 
 namespace game_state {
 
-enum class Mode : uint8_t { Menu, Explore, Battle, Arcade };
+enum class Mode : uint8_t { Menu, Explore, PreBattle, Battle, Arcade, Shop };
 
 bool init();                     // load profile, place the player, enter Menu
 void update(float dt);           // one logic tick (after input::update)

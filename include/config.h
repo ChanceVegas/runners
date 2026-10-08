@@ -118,6 +118,34 @@
 #define OBST_DUCK_LOW_PX     56.0f  // px at scale 1; beam bottom above the road
 #define OBST_DUCK_TOP_PX     150.0f // px at scale 1; beam top
 
+// --- Shop (S1): sneakers = permanent battle stat tiers, drinks = one-use boosts ---
+// Sneaker prices per tier (same for all three lines).
+#define SHOP_TIER1_COINS     100
+#define SHOP_TIER2_COINS     250
+#define SHOP_TIER3_COINS     500
+// SPRINT: m/s added to clean-running gap gain, per tier (base L1 0.80 m/s).
+#define SNEAK_SPRINT_T1      0.12f
+#define SNEAK_SPRINT_T2      0.24f
+#define SNEAK_SPRINT_T3      0.36f
+// SPRING: jump launch speed multiplier per tier (apex grows with the square:
+// 1.06 -> ~101 px, 1.12 -> ~113 px, 1.18 -> ~126 px; airtime +6/12/18%).
+#define SNEAK_SPRING_T1      1.06f
+#define SNEAK_SPRING_T2      1.12f
+#define SNEAK_SPRING_T3      1.18f
+// GRIP: multiplier on stumble time AND stumble gap loss per tier; tier 3 also +1 heart.
+#define SNEAK_GRIP_T1        0.85f
+#define SNEAK_GRIP_T2        0.70f
+#define SNEAK_GRIP_T3        0.60f
+// Drinks: price each, max carried of each kind.
+#define DRINK_RUSH_COINS     50     // +RUSH_GAP_M starting gap
+#define DRINK_GUARD_COINS    60     // +1 shield for that battle (not refunded as energy)
+#define DRINK_SURGE_COINS    80     // orbs strike for 2 in the Hunt
+#define DRINK_MAX            3
+#define DRINK_RUSH_GAP_M     15.0f  // m
+#define DRINK_DROP_PCT       25     // % chance a DEFEATED enemy drops a random drink
+#define ARCADE_WALLET_PCT    50     // % of arcade coins banked to the wallet at game over
+                                    // (user: "yes, but reduced" — battles stay the main income)
+
 // --- Audio (AU0 bring-up, 2026-10-08): onboard I2S amp + ~8 ohm speaker ---
 #define AUDIO_SAMPLE_HZ      16000  // Hz; square/noise SFX need no more, keeps the task cheap
 #define AUDIO_VOLUME_PCT     30     // % of full scale. CAPPED: small salvaged speaker of

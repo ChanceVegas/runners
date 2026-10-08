@@ -148,6 +148,7 @@ Arcade mode stays the endless runner.
 | audio | src/audio.* | square/noise synth on the onboard I2S amp, own task (core 0): 2 SFX voices + M1 music sequencer (lead/bass/drums); play(Sfx), music(Track); volumes in config | AU0 hw-verified 2026-10-08 ("sounds great") |
 | music_data | src/music_data.h | GENERATED song row tables (flash) — edit tools/music_gen.py, not this file | M1 |
 | music_gen | tools/music_gen.py | host tool: song notation -> src/music_data.h | M1 |
+| settings | src/settings.* | SETTINGS screen (Music / Sound levels 0-10, mute), NVS vmus/vsfx/mute, in-run mute corner icon | VOL-R1 (awaiting hw) |
 | shop | src/shop.* | gear: sneaker tiers + drinks inventory (NVS), SHOP screen, PRE-BATTLE drink screen, gear -> battle::Stats, defeat drink drop | S1 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
@@ -155,7 +156,7 @@ Arcade mode stays the endless runner.
 | locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | DONE (R3, hw-verified) |
 | world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
 | overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
-| game_state | src/game_state.* | mode machine Menu/Explore/PreBattle/Battle/Arcade/Shop, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
+| game_state | src/game_state.* | mode machine Menu/Explore/PreBattle/Battle/Arcade/Shop/Settings, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
 | gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
 

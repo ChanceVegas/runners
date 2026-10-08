@@ -20,6 +20,7 @@
 #include "hud.h"
 #include "battle.h"
 #include "audio.h"
+#include "settings.h"
 #include "input.h"
 #include "config.h"
 #include "color.h"
@@ -469,6 +470,7 @@ void update(float dt) {
       return;                              // game_state's menu starts a mode
 
     case State::Countdown:
+      if (settings::muteCornerTapped(in)) audio::setMuted(!audio::muted());
       s_travel += RUN_ATTRACT_SPEED * dt;
       if (s_stateT >= RUN_COUNTDOWN_S) startRunning();
       return;
@@ -494,6 +496,9 @@ void update(float dt) {
     case State::Run:
       break;
   }
+
+  // Mute corner (top-right): input never turns these taps into lane steps.
+  if (settings::muteCornerTapped(in)) audio::setMuted(!audio::muted());
 
   // Controls.
   if (in.laneStep < 0 && s_laneTarget > -1) --s_laneTarget;
@@ -738,9 +743,10 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
       text(band, bandY, buf, cx, 34, F9, 1.0f, C_GREY);
     }
-    drawCoinIcon(band, bandY, LCD_WIDTH - 90, 34);
+    drawCoinIcon(band, bandY, LCD_WIDTH - 130, 34);   // left of the mute corner
     snprintf(buf, sizeof buf, "%u", (unsigned)s_coins);
-    text(band, bandY, buf, LCD_WIDTH - 50, 34, F12, 1.0f, C_YELLOW, 70);
+    text(band, bandY, buf, LCD_WIDTH - 90, 34, F12, 1.0f, C_YELLOW, 70);
+    settings::drawMuteIcon(band, bandY);
   }
 
   // Battle hit: red impact border (thicker than the crash one, fades by thinning).

@@ -59,7 +59,8 @@ void sampleOnce() {
       t_anchorX = t_emaX = (float)rx;                // 2nd sample, not the touch-down one
       t_anchorY = t_emaY = (float)ry;
       presses = 1;
-      if (rx < INPUT_ZONE_LEFT_X)       stepL = 1;
+      if (ry < INPUT_UI_CORNER_H && rx >= LCD_WIDTH - INPUT_UI_CORNER_W) { /* UI corner: press only */ }
+      else if (rx < INPUT_ZONE_LEFT_X)  stepL = 1;
       else if (rx >= INPUT_ZONE_RIGHT_X) stepR = 1;
       else if (ry >= INPUT_ZONE_DUCK_Y)  ducks = 1;
       else                               jumps = 1;

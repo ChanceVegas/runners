@@ -11,6 +11,7 @@
 #include "encounter.h"
 #include "audio.h"
 #include "shop.h"
+#include "settings.h"
 #include "hud.h"
 #include "color.h"
 #include "config.h"
@@ -28,6 +29,7 @@ constexpr float PROFILE_SAVE_S = 120.0f;   // periodic save while exploring
 // Menu buttons (screen rects): EXPLORE | SHOP | ARCADE.
 constexpr int32_t BTN_Y = 118, BTN_H = 70, BTN_W = 144;
 constexpr int32_t BTN_EXPLORE_X = 12, BTN_SHOP_X = 168, BTN_ARCADE_X = 324;
+constexpr int32_t BTN_SET_X = 360, BTN_SET_Y = 8, BTN_SET_W = 112, BTN_SET_H = 40;   // SETTINGS
 
 Mode s_mode = Mode::Menu;
 Preferences s_prefs;
@@ -60,6 +62,11 @@ void layersShop() {
   renderer::addLayer(shop::composeShop);   // full-screen panel
 }
 
+void layersSettings() {
+  renderer::clearLayers();
+  renderer::addLayer(settings::compose);
+}
+
 void layersPreBattle() {
   renderer::clearLayers();
   renderer::addLayer(shop::composePreBattle);
@@ -84,6 +91,7 @@ void saveProfile() {
   s_prefs.putInt("tx", p.tx);
   s_prefs.putInt("ty", p.ty);
   shop::save(s_prefs);
+  settings::save(s_prefs);
   s_saveT = 0.0f;
 }
 
@@ -202,6 +210,7 @@ void updateMusic() {
   const bool running = es == encounter::State::Countdown || es == encounter::State::Run;
   switch (s_mode) {
     case Mode::Menu:
+    case Mode::Settings:
     case Mode::Shop:      audio::music(Track::Title); break;
     case Mode::Explore:   audio::music(Track::Explore); break;
     case Mode::PreBattle: audio::music(Track::Battle); break;
@@ -234,6 +243,7 @@ bool init() {
     start = findLand(0, 0);
   }
   shop::load(s_prefs);
+  settings::load(s_prefs);
   shop::setWalletView(&s_wallet);
   locator::init(start);
   overworld::init();
@@ -253,6 +263,12 @@ void update(float dt) {
       if (s_menuT < 0.4f) break;
       if (tapIn(in, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H)) { audio::play(audio::Sfx::Tap); enterExplore(); }
       else if (tapIn(in, BTN_SHOP_X, BTN_Y, BTN_W, BTN_H)) { audio::play(audio::Sfx::Tap); enterShop(); }
+      else if (tapIn(in, BTN_SET_X, BTN_SET_Y, BTN_SET_W, BTN_SET_H)) {
+        audio::play(audio::Sfx::Tap);
+        settings::open();
+        layersSettings();
+        s_mode = Mode::Settings;
+      }
       else if (tapIn(in, BTN_ARCADE_X, BTN_Y, BTN_W, BTN_H)) {
         audio::play(audio::Sfx::Tap);
         layersEncounter();
@@ -281,6 +297,10 @@ void update(float dt) {
 
     case Mode::Shop:
       if (shop::updateShop(in, s_wallet, dt)) { saveProfile(); enterMenu(); }
+      break;
+
+    case Mode::Settings:
+      if (settings::update(in, dt)) { saveProfile(); enterMenu(); }
       break;
 
     case Mode::Battle:
@@ -317,6 +337,7 @@ const char* modeName() {
     case Mode::PreBattle: return "PREBATTLE";
     case Mode::Battle:  return "BATTLE";
     case Mode::Shop:    return "SHOP";
+    case Mode::Settings: return "SETTINGS";
     case Mode::Arcade:  return "ARCADE";
   }
   return "?";
@@ -328,7 +349,11 @@ void composeMenu(lgfx::LGFX_Sprite& b, int32_t bandY) {
   const int32_t cx = LCD_WIDTH / 2;
   const uint16_t WHITE = rgb565(255, 255, 255), YELLOW = rgb565(255, 220, 40);
 
-  text(b, bandY, "RUNNERS", cx, 50, hud::F24, 1.4f, YELLOW);
+  text(b, bandY, "RUNNERS", cx, 72, hud::F24, 1.4f, YELLOW);
+  rect(b, bandY, BTN_SET_X, BTN_SET_Y, BTN_SET_W, BTN_SET_H, rgb565(50, 50, 64));
+  frame(b, bandY, BTN_SET_X, BTN_SET_Y, BTN_SET_W, BTN_SET_H, WHITE);
+  text(b, bandY, "SETTINGS", BTN_SET_X + BTN_SET_W / 2, BTN_SET_Y + BTN_SET_H / 2, hud::F12, 1.0f, WHITE,
+       BTN_SET_W - 8);
 
   struct Btn { int32_t x; const char* label; const char* sub; uint16_t fill; };
   const Btn btns[3] = {

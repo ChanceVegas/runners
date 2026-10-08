@@ -23,4 +23,11 @@ bool ok();            // driver started
 enum class Track : int8_t { None = -1, Title = 0, Explore = 1, Battle = 2, Arcade = 3 };
 void music(Track t);  // switch track (restarts from the top); same track = no-op
 
+// Volume: levels 0..AUDIO_LEVELS (0 = off). Mute silences both without losing levels.
+void    setLevels(uint8_t musicLevel, uint8_t sfxLevel);
+uint8_t musicLevel();
+uint8_t sfxLevel();
+void    setMuted(bool m);
+bool    muted();
+
 }

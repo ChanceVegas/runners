@@ -9,7 +9,7 @@
 
 namespace game_state {
 
-enum class Mode : uint8_t { Menu, Explore, PreBattle, Battle, Arcade, Shop };
+enum class Mode : uint8_t { Menu, Explore, PreBattle, Battle, Arcade, Shop, Settings };
 
 bool init();                     // load profile, place the player, enter Menu
 void update(float dt);           // one logic tick (after input::update)

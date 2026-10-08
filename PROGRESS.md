@@ -18,6 +18,12 @@ session doesn't know it happened.
 
 ## Next Up (in order)
 0. RANK + HUNT + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm the latest banner.
+   Volume (VOL-R1):
+   - [ ] Menu SETTINGS (top-right): MUSIC and SOUND - / + (0-10, default 7 = old level),
+         MUTE ALL. Each change previews a sound. Survives reboot.
+   - [ ] During runs: speaker icon top-right; tap it = mute/unmute; tapping there
+         never moves the runner. Coins readout moved left of it.
+   - [ ] Level 10 not distorting the speaker? (caps: SFX 43%, music 23%)
    Pass (RK-R3):
    - [ ] Last orb -> "CAUGHT IT!" -> "YOU PASSED THE <NAME>!" + jingle, the chase meter
          restarts at 25 m with the enemy behind, goal bar restarts (300 m).
@@ -180,6 +186,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — VOL-R1 volume control
+- User: need a way to control volume. Chose: settings screen + in-game mute.
+- Done: audio levels 0-10 (live gains, mute), settings.* (screen, NVS vmus/vsfx/mute,
+  mute icon + corner hit test), input reserves the top-right corner (no lane-right),
+  menu SETTINGS button, Mode::Settings. Banner VOL-R1.
+- Commit: feat(settings): music/sound volume + in-run mute (VOL-R1)
+
 ### 2026-10-08 — Session 3 (cont.) — RK-R3 pass the enemy, race restarts
 - User (RK-R2 on hw): "feels better". Log: rank 2 Shade, 4 orb hits in ~8 s, defeated
   with 8.7 s left; rank 2 -> 3; RUSH drop. fps 25.2-25.4, render 26-35 ms (MENU 33).

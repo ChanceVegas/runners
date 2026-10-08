@@ -47,7 +47,19 @@ bool s_ok = false;
 
 constexpr int FRAMES = 128;
 int16_t s_buf[FRAMES * 2];
-const int16_t AMP = (int16_t)(32767 * AUDIO_VOLUME_PCT / 100 / 2);   // /2: two voices summed
+// Live gains, set by applyGains() from the levels + mute. Read by the synth task;
+// a torn read of one 16-bit / 32-bit value is harmless (one block at the old level).
+volatile int16_t AMP = 0;          // per SFX voice (/2: two voices summed)
+volatile float   MAMP = 0.0f;      // music master
+uint8_t s_musicLv = AUDIO_DEFAULT_LEVEL, s_sfxLv = AUDIO_DEFAULT_LEVEL;
+bool s_muted = false;
+
+void applyGains() {
+  const float sfx = s_muted ? 0.0f : (float)s_sfxLv / AUDIO_LEVELS;
+  const float mus = s_muted ? 0.0f : (float)s_musicLv / AUDIO_LEVELS;
+  AMP = (int16_t)(32767.0f * AUDIO_SFX_MAX_PCT / 100.0f / 2.0f * sfx);
+  MAMP = 32767.0f * AUDIO_MUSIC_MAX_PCT / 100.0f * mus;
+}
 
 void startStep(Voice& v) {
   if (!v.step || v.step->ms == 0) { v.step = nullptr; return; }
@@ -74,15 +86,15 @@ int16_t sample(Voice& v) {
   if (v.phase >= 1.0f) v.phase -= 1.0f;
   // Short fade-out over the last 3 ms of a step to avoid clicks between notes.
   const uint32_t fade = AUDIO_SAMPLE_HZ * 3 / 1000;
-  const int32_t a = (v.left < fade) ? (int32_t)AMP * (int32_t)v.left / (int32_t)fade : AMP;
+  const int32_t amp = AMP;
+  const int32_t a = (v.left < fade) ? amp * (int32_t)v.left / (int32_t)fade : amp;
   return (int16_t)(v.phase < 0.5f ? a : -a);
 }
 
 // ---- Music (M1): row sequencer over SONGS (music_data.h) -------------------------
 // Three music channels under the SFX voices: lead (square, song duty, decaying),
 // bass (50% square, octave 3 so a tiny speaker can play it), drums (kick = falling
-// square, snare/hat = noise bursts). Quieter than SFX (MUSIC_VOLUME_PCT).
-constexpr float MAMP = 32767.0f * MUSIC_VOLUME_PCT / 100.0f;
+// square, snare/hat = noise bursts). Quieter than SFX (AUDIO_MUSIC_MAX_PCT, MAMP).
 float s_midiHz[128];
 
 struct Music {
@@ -190,6 +202,7 @@ bool init() {
   return true;
 #else
   for (int n = 0; n < 128; ++n) s_midiHz[n] = 440.0f * powf(2.0f, (n - 69) / 12.0f);
+  applyGains();
   i2s_config_t cfg = {};
   cfg.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX);
   cfg.sample_rate = AUDIO_SAMPLE_HZ;
@@ -224,8 +237,9 @@ bool init() {
     return false;
   }
   s_ok = true;
-  Serial.printf("[audio] I2S ok: %d Hz, BCLK %d LRCK %d DOUT %d, volume %d%%\n", AUDIO_SAMPLE_HZ,
-                I2S_PIN_BCLK, I2S_PIN_LRCK, I2S_PIN_DOUT, AUDIO_VOLUME_PCT);
+  Serial.printf("[audio] I2S ok: %d Hz, BCLK %d LRCK %d DOUT %d, music %u sound %u%s\n",
+                AUDIO_SAMPLE_HZ, I2S_PIN_BCLK, I2S_PIN_LRCK, I2S_PIN_DOUT, s_musicLv, s_sfxLv,
+                s_muted ? " (muted)" : "");
   return true;
 #endif
 }
@@ -241,6 +255,16 @@ void play(Sfx s) {
 }
 
 bool ok() { return s_ok; }
+
+void setLevels(uint8_t m, uint8_t s) {
+  s_musicLv = m > AUDIO_LEVELS ? AUDIO_LEVELS : m;
+  s_sfxLv = s > AUDIO_LEVELS ? AUDIO_LEVELS : s;
+  applyGains();
+}
+uint8_t musicLevel() { return s_musicLv; }
+uint8_t sfxLevel() { return s_sfxLv; }
+void setMuted(bool m) { s_muted = m; applyGains(); }
+bool muted() { return s_muted; }
 
 void music(Track t) {
   static Track s_cur = Track::None;

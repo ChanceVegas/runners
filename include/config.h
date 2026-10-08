@@ -148,11 +148,18 @@
 
 // --- Audio (AU0 bring-up, 2026-10-08): onboard I2S amp + ~8 ohm speaker ---
 #define AUDIO_SAMPLE_HZ      16000  // Hz; square/noise SFX need no more, keeps the task cheap
-#define AUDIO_VOLUME_PCT     30     // % of full scale. CAPPED: small salvaged speaker of
-                                    // unknown wattage; raise only if it sounds clean
 #define AUDIO_ENABLED        1      // 0 = never start I2S (silent build)
-#define MUSIC_VOLUME_PCT     16     // % of full scale for the music mix (lead+bass+drums
-                                    // peak ~1.2x this); kept under SFX so sounds cut through
+// Volume (VOL-1, user): Music and Sound levels 0..AUDIO_LEVELS on the SETTINGS screen.
+// The level scales up to these CAPS (% of full scale). Small salvaged speaker of
+// unknown wattage: caps chosen so the default level matches the AU0 levels the user
+// called "sounds great" (SFX 30%, music 16%).
+#define AUDIO_LEVELS         10
+#define AUDIO_DEFAULT_LEVEL  7
+#define AUDIO_SFX_MAX_PCT    43     // % at level 10 (7 -> ~30%)
+#define AUDIO_MUSIC_MAX_PCT  23     // % at level 10 (7 -> ~16%); music peaks ~1.2x this
+// In-run mute button: top-right corner. Taps there only toggle mute (never lane-right).
+#define INPUT_UI_CORNER_W    56     // px
+#define INPUT_UI_CORNER_H    48     // px
 
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black

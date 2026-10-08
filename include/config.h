@@ -157,3 +157,36 @@
 #define ENEMY_BRUTE_GOAL_M   900.0f // tougher: stage-2 speed
 #define ENEMY_PHANTOM_GOAL_M 1200.0f// rare: stage-3 speed, long chase
 #define ESCAPE_BONUS_COINS   25     // wallet bonus for escaping (x level)
+
+// ============================================================================
+// --- Battles (B1): Pursuit -> (overtaken) -> Hunt ---
+// Phase 1 PURSUIT: enemy behind you. Gap grows while you run clean; obstacles make
+// you STUMBLE (no death) and cost ground. Gap >= ESCAPE or reaching the goal = escape.
+// Gap <= 0 = the enemy overtakes -> Phase 2 HUNT: enemy ahead attacks with its own
+// obstacle pattern; orbs strike it; hearts are your life.
+#define BATTLE_GAP_START_M     30.0f  // m gap when a battle starts
+#define BATTLE_GAP_ESCAPE_M    60.0f  // m gap that counts as escaped
+#define BATTLE_GAP_VIS_M       40.0f  // m gap at/above which the pursuer is barely visible
+#define BATTLE_GAP_GAIN_L1     0.80f  // m/s gap gained running clean vs a level-1 enemy
+#define BATTLE_GAP_GAIN_STEP   0.18f  // m/s less gap gain per enemy level above 1
+#define BATTLE_GAP_LOSS_BARRIER 10.0f // m lost stumbling on a barrier
+#define BATTLE_GAP_LOSS_WALL   15.0f  // m lost stumbling into a wall
+#define BATTLE_STUMBLE_S       1.0f   // s of stumble (slowed, can't be hit again)
+#define BATTLE_STUMBLE_SPEED   0.55f  // speed multiplier while stumbling
+#define BATTLE_HEARTS          3      // hearts in the Hunt (sneakers may add)
+#define BATTLE_OVERTAKE_S      1.4f   // s of the overtake animation (no attacks)
+#define BATTLE_HUNT_Z_M        26.0f  // m the enemy runs ahead of you in the Hunt
+#define BATTLE_ENEMY_LANE_SPEED 3.0f  // lanes/s the enemy slides between lanes
+#define BATTLE_BANNER_S        1.3f   // s a battle banner ("STUMBLE!") stays up
+// Per enemy kind: HP, seconds between attacks, % of attacks that also drop an orb.
+#define BATTLE_SHADE_HP        5
+#define BATTLE_BRUTE_HP        8
+#define BATTLE_PHANTOM_HP      10
+#define BATTLE_SHADE_ATTACK_S  1.6f
+#define BATTLE_BRUTE_ATTACK_S  2.2f
+#define BATTLE_PHANTOM_ATTACK_S 1.4f
+#define BATTLE_SHADE_ORB_PCT   70
+#define BATTLE_BRUTE_ORB_PCT   65
+#define BATTLE_PHANTOM_ORB_PCT 55
+#define BATTLE_ORB_HIT_DEPTH_M 1.0f   // m collect window for orbs
+#define DEFEAT_BONUS_COINS     60     // wallet bonus for defeating an enemy (x level)

@@ -1,6 +1,6 @@
 // main.cpp — boot + main loop. Fixed-timestep logic (60 Hz) + render paced to the
 // panel refresh, with interpolation between ticks. game_state decides which mode runs
-// (menu / explore / chase / arcade) and which render layers are installed.
+// (menu / explore / battle / arcade) and which render layers are installed.
 #include <Arduino.h>
 #include "display.h"
 #include "renderer.h"
@@ -42,7 +42,7 @@ static const char* encName(encounter::State s) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners R3-R1 ===");
+  Serial.println("\n=== Runners B1-R1 ===");
   if (!display::init())   { Serial.println("FATAL: display init failed");   for(;;) delay(1000); }
   if (!renderer::init())  { Serial.println("FATAL: renderer init failed");  for(;;) delay(1000); }
   if (!input::init())     { Serial.println("FATAL: input init failed");     for(;;) delay(1000); }

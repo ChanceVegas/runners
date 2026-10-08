@@ -4,22 +4,37 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
+- Phase: B1 battle system BUILT, awaiting hardware gate (banner `B1-R1`).
+  R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
   scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
-- Builds: yes (espressif32@6.5.0; RAM 8.8%, Flash 33.6% of 1.3 MB app partition)
+- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.1% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
   281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. Capture timing data (non-blocking): serial `render ms` in MENU, EXPLORE, a CHASE
-   and ARCADE — none recorded since R1. Confirms the remaining frame headroom before
-   adding audio / art.
-2. R2 GPS: ON HOLD (user). The locator API is ready for it; also needs the GPS
-   module + 2nd board purchases. Resume only when the user says so. Approved Safety
-   items 1–5 (PLANNING) are mandatory R2 scope.
+1. B1 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R1 ===`.
+   EXPLORE -> engage an enemy and check:
+   - [ ] Pursuit: enemy visible behind (bottom of screen), grows as the gap closes;
+         red edge flashes when close; GAP meter + goal bar at top.
+   - [ ] Hitting an obstacle = STUMBLE (slow-down + banner, gap drops), not death.
+   - [ ] Clean running grows the gap; gap 60 m or goal -> ESCAPED! + bonus coins.
+   - [ ] Gap 0 -> "IT'S AHEAD - CATCH IT!" banner, enemy runs past to ~26 m ahead.
+   - [ ] Hunt: enemy changes lanes and attacks (Shade barrier / Brute two walls /
+         Phantom wall + blink); hearts top-left, HP bar top-centre.
+   - [ ] Orbs (cyan) appear in a free lane; collecting one hits the enemy (flash, HP-1).
+   - [ ] HP 0 -> DEFEATED! (bigger bonus); hearts 0 -> CAUGHT!; shields still absorb.
+   - [ ] Feel: is Pursuit too easy/hard per level? Is the Hunt too long?
+   - [ ] Serial `render ms` in a battle (Hunt especially) and ARCADE.
+2. S1 shop (approved spec in PLANNING) — starts after the B1 gate.
+3. A1 art foundation (CARRY-1 pushImage read-back test first), then A2.
+4. R2 GPS: ON HOLD (user). Approved Safety items 1–5 (PLANNING) are mandatory R2 scope.
 
 ## Known Issues / Risks
+- B1-TUNE (open): battle numbers (gap gain 0.80/0.62/0.44 m/s by level, losses
+  10/15 m, Hunt HP 5/8/10, attack 1.6/2.2/1.4 s, orb 70/65/55%) are first guesses,
+  all in config.h. The Hunt has no time limit — ends only on HP 0 or hearts 0.
+- B1-ART (by design): enemies are placeholder shapes until A2.
 - R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
   spawn windows use a boot-relative clock, so two devices won't share windows yet.
   R2 replaces both (GPS position + GPS UTC) behind locator / world::window().
@@ -87,6 +102,8 @@ session doesn't know it happened.
 - R4-HW (open): player-to-player testing needs two boards + two GPS units.
 
 ## Decisions Made
+- 2026-10-08: Battle/Shop/Art spec approved (PLANNING). Order: B1 battle -> S1 shop ->
+  A1 art foundation -> A2 art. Battle replaces chase mode; Arcade unchanged.
 - 2026-10-07: Safety items 1–5 approved for R2 (startup notice, no input while moving,
   audio enemy cue, speed lockout ~7 m/s, simplified moving view). Terrain blocking
   dropped. OpenStreetMap deferred (microSD would be the route if ever revisited).
@@ -104,6 +121,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — B1 battle system
+- User approved the spec ("Looks fine. Let's do it.").
+- New module battle.* (rules + per-kind data table + placeholder drawing).
+  encounter: Mode Battle, startBattle(), engine:: spawn API (obstacle/orb/clearAhead),
+  orb pool, stumble (slow + invulnerable, no crash) in battle, enemy in the depth-sorted
+  draw list, pursuer overlay, battle HUD, DEFEATED/ESCAPED/CAUGHT screens.
+  game_state: Chase -> Battle rename, DEFEAT_BONUS_COINS, battle::Stats hook for S1.
+- Built in container: SUCCESS (RAM 8.9%, Flash 34.1%). Pushed; awaiting hw gate.
+- Commit: feat(battle): pursuit -> overtake -> hunt battles replace chase mode
+
 ### 2026-10-08 — Session 3 (cont.) — next milestones: battles, shop, art
 - User: no speaker hardware yet (audio waits); start real art; add a shop (sneakers,
   energy drinks); chases don't feel like real battles; GPS still on hold.

@@ -33,8 +33,8 @@ uint32_t s_wallet = 0, s_escapes = 0;
 float s_saveT = 0.0f;
 float s_menuT = 0.0f;                      // ignore taps right after entering the menu
 
-world::Enemy s_chaseEnemy;
-uint8_t s_chaseShields = 0;
+world::Enemy s_battleEnemy;
+uint8_t s_battleShields = 0;
 
 void layersEncounter() {
   renderer::clearLayers();
@@ -98,37 +98,39 @@ void enterExplore() {
   s_mode = Mode::Explore;
 }
 
-void enterChase(const world::Enemy& e) {
-  s_chaseEnemy = e;
+void enterBattle(const world::Enemy& e) {
+  s_battleEnemy = e;
   // Shields: one per ENERGY_PER_SHIELD of Run energy, max 2, paid up front; unused
-  // ones are refunded after the chase.
+  // ones are refunded after the battle.
   int sh = (int)(overworld::energy() / ENERGY_PER_SHIELD);
   if (sh > 2) sh = 2;
-  s_chaseShields = (uint8_t)sh;
+  s_battleShields = (uint8_t)sh;
   overworld::setEnergy(overworld::energy() - sh * ENERGY_PER_SHIELD);
   saveProfile();
   locator::setEnabled(false);
   layersEncounter();
-  encounter::startChase(world::level(e.kind), world::goalM(e.kind), s_chaseShields,
-                        world::name(e.kind));
-  Serial.printf("[game] chase: %s level %u goal %d m shields %u\n", world::name(e.kind),
-                (unsigned)world::level(e.kind), (int)world::goalM(e.kind), (unsigned)s_chaseShields);
-  s_mode = Mode::Chase;
+  battle::Stats stats;                        // shop upgrades plug in here (S1)
+  encounter::startBattle((uint8_t)e.kind, world::level(e.kind), world::goalM(e.kind),
+                         s_battleShields, stats);
+  Serial.printf("[game] battle: %s level %u goal %d m shields %u\n", world::name(e.kind),
+                (unsigned)world::level(e.kind), (int)world::goalM(e.kind), (unsigned)s_battleShields);
+  s_mode = Mode::Battle;
 }
 
-void finishChase() {
+void finishBattle() {
   const encounter::Result r = encounter::result();
-  const uint8_t unused = (r.shieldsUsed < s_chaseShields) ? s_chaseShields - r.shieldsUsed : 0;
+  const uint8_t unused = (r.shieldsUsed < s_battleShields) ? s_battleShields - r.shieldsUsed : 0;
   overworld::setEnergy(overworld::energy() + unused * ENERGY_PER_SHIELD);
   s_wallet += r.coins;
   if (r.won) {
-    s_wallet += ESCAPE_BONUS_COINS * world::level(s_chaseEnemy.kind);
+    const uint8_t lv = world::level(s_battleEnemy.kind);
+    s_wallet += (r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv;
     ++s_escapes;
-    world::markEscaped(s_chaseEnemy);
+    world::markEscaped(s_battleEnemy);
   }
   overworld::requireMoveBeforeEngage();
-  Serial.printf("[game] chase %s: +%u coins, shields used %u, wallet %u\n",
-                r.won ? "ESCAPED" : "CAUGHT", (unsigned)r.coins, (unsigned)r.shieldsUsed,
+  Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
+                r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : "CAUGHT"), (unsigned)r.coins, (unsigned)r.shieldsUsed,
                 (unsigned)s_wallet);
   saveProfile();
   enterExplore();
@@ -185,13 +187,13 @@ void update(float dt) {
       if (s_saveT >= PROFILE_SAVE_S) saveProfile();
       world::Enemy e;
       if (overworld::takeMenuRequest()) { saveProfile(); enterMenu(); }
-      else if (overworld::takeEngagement(e)) enterChase(e);
+      else if (overworld::takeEngagement(e)) enterBattle(e);
       break;
     }
 
-    case Mode::Chase:
+    case Mode::Battle:
       encounter::update(dt);
-      if (encounter::finished()) finishChase();
+      if (encounter::finished()) finishBattle();
       break;
 
     case Mode::Arcade:
@@ -212,7 +214,7 @@ const char* modeName() {
   switch (s_mode) {
     case Mode::Menu:    return "MENU";
     case Mode::Explore: return "EXPLORE";
-    case Mode::Chase:   return "CHASE";
+    case Mode::Battle:   return "BATTLE";
     case Mode::Arcade:  return "ARCADE";
   }
   return "?";

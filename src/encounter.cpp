@@ -3,12 +3,13 @@
 // so the only thing that moves each tick is travel. That keeps interpolation trivial.
 //
 // Flow: Ready (idle attract road; game_state's menu draws on top) -> startArcade() or
-// startChase() -> Countdown -> Run -> hit -> Crash -> GameOver, or goal -> StageClear.
+// startBattle() -> Countdown -> Run -> hit -> Crash -> GameOver, or goal -> StageClear.
 // ARCADE: StageClear -> tap -> next stage (faster, more walls); GameOver -> tap -> new
 // game, or MENU button -> finished(). Score = metres across stages + coins x
 // COIN_POINTS; arcade best saved to flash (NVS) at game over.
-// CHASE: one stage vs an overworld enemy (goal + speed tier from the enemy); shields
-// (bought with Run energy) absorb hits; either end screen -> tap -> finished().
+// BATTLE: one run vs an overworld enemy; rules live in battle.* (Pursuit -> Overtake
+// -> Hunt). Hits stumble instead of crash; shields (Run energy) absorb hits; the
+// battle outcome ends the run; either end screen -> tap -> finished().
 //
 // Art is drawn with fillRect/fillEllipse/fillTriangle (no bitmaps), so the open
 // sprite colour-key issue (CARRY-1) can't affect it. Text uses LovyanGFX's smooth
@@ -17,6 +18,7 @@
 #include "lanes.h"
 #include "scenery.h"
 #include "hud.h"
+#include "battle.h"
 #include "input.h"
 #include "config.h"
 #include "color.h"
@@ -36,9 +38,12 @@ enum class Kind : uint8_t { Barrier, Wall };
 
 struct Obstacle { bool active; Kind kind; int8_t lane; float wz; };
 struct Coin     { bool active; bool high; int8_t lane; float wz; };
+struct Orb      { bool active; int8_t lane; float wz; };     // battle: strikes the enemy
 
 Obstacle s_obst[OBST_POOL];
 Coin     s_coin[COIN_POOL];
+constexpr int ORB_POOL = 8;
+Orb      s_orb[ORB_POOL];
 
 // ---- Game state ---------------------------------------------------------------
 State s_state = State::Ready;
@@ -64,13 +69,14 @@ uint32_t s_best = 0;
 bool     s_newBest = false;
 Preferences s_prefs;
 
-// Mode: Arcade (menu -> endless stages, best score) or Chase (from the overworld:
+// Mode: Arcade (menu -> endless stages, best score) or Battle (from the overworld:
 // one stage vs an enemy, shields from Run energy, result handed back to game_state).
 encounter::Mode s_mode = encounter::Mode::Arcade;
 float s_goalM = RUN_GOAL_M;                // stage length this run
 uint8_t s_shields = 0, s_shieldsUsed = 0;  // chase: hits absorbed
 float s_invuln = 0;                        // s of post-shield invulnerability left
-const char* s_label = "";                  // chase: enemy name for the HUD
+float s_stumbleT = 0;                      // battle: s of stumble left (slowed, no hits)
+battle::Outcome s_outcome = battle::Outcome::None;   // how the battle ended
 bool s_done = false;                       // chase finished / arcade exit requested
 encounter::Result s_result = {};
 
@@ -79,10 +85,11 @@ float d_travel = 0, d_laneX = 0, d_jumpY = 0, d_time = 0;
 bool  d_blink = false;                     // latched per frame: all bands agree
 
 // One depth-sorted list of everything on the road, built once per frame.
-enum class DrawKind : uint8_t { Obstacle, Coin, Runner };
+enum class DrawKind : uint8_t { Obstacle, Coin, Orb, Enemy, Runner };
 struct DrawItem { DrawKind kind; uint8_t idx; int16_t x, y; float s; float z; };
 DrawItem s_draw[OBST_POOL + COIN_POOL + 1];
 int s_nDraw = 0;
+int16_t d_runnerX = LCD_WIDTH / 2;         // runner screen x this frame (pursuer overlay)
 
 uint32_t s_rng = 1;
 uint32_t rnd() { s_rng = s_rng * 1664525u + 1013904223u; return s_rng >> 8; }
@@ -105,6 +112,7 @@ uint32_t currentScore() {
 void clearWorld() {
   for (auto& o : s_obst) o.active = false;
   for (auto& c : s_coin) c.active = false;
+  for (auto& o : s_orb)  o.active = false;
 }
 
 void spawnObstacle(Kind k, int8_t lane, float wz) {
@@ -156,7 +164,7 @@ void spawnRow(float wz) {
 void setState(State st) { s_state = st; s_stateT = 0; }
 
 void finish(bool won, bool exitToMenu) {
-  s_result = { won, s_coins, s_shieldsUsed, exitToMenu };
+  s_result = { won, s_outcome == battle::Outcome::Defeated, s_coins, s_shieldsUsed, exitToMenu };
   s_done = true;
 }
 
@@ -261,6 +269,17 @@ void drawCoin(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   if (rx > 2) b.fillEllipse(d.x - rx / 4, yc - r / 4 - bandY, rx / 2, r / 2, C_GOLD_HI);
 }
 
+void drawOrb(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
+  const float s = d.s;
+  const int32_t r = (int32_t)(26.0f * s) + 2;
+  const int32_t pulse = (int32_t)(sinf(d_time * 10.0f + d.z) * 2.0f * s);
+  const int32_t yc = d.y - (int32_t)(55.0f * s);
+  if (!rowsHit(yc - r - 4, yc + r + 4, bandY, b.height())) return;
+  b.fillCircle(d.x, yc - bandY, r + pulse, rgb565(40, 140, 220));       // glow
+  b.fillCircle(d.x, yc - bandY, r * 2 / 3, rgb565(150, 230, 255));      // core
+  b.fillCircle(d.x - r / 4, yc - r / 4 - bandY, r / 4 + 1, rgb565(255, 255, 255));
+}
+
 void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const int32_t cx = d.x;
   const bool down = (s_state == State::Crash || s_state == State::GameOver);
@@ -274,7 +293,19 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const uint16_t SKIN = rgb565(240, 196, 150), HAIR = rgb565(110, 60, 20);
   const uint16_t SHORTS = rgb565(40, 50, 90), SHOE = rgb565(240, 240, 240);
 
-  if (s_invuln > 0.0f && ((int32_t)(d_time * 12.0f) & 1)) return;   // shield blink
+  const bool stumbling = s_stumbleT > 0.0f;
+  if (!stumbling && s_invuln > 0.0f && ((int32_t)(d_time * 12.0f) & 1)) return;   // shield blink
+
+  if (stumbling && !down) {                             // tripping: pitched forward, arms out
+    rect(b, bandY, cx - 10, feet - 18, 8, 18, SKIN);
+    rect(b, bandY, cx + 4,  feet - 12, 14, 7, SKIN);    // trailing leg kicked back
+    rect(b, bandY, cx - 14, feet - 40, 28, 22, JERSEY);
+    rect(b, bandY, cx - 30, feet - 44, 16, 6, SKIN);    // arms flung out
+    rect(b, bandY, cx + 14, feet - 44, 16, 6, SKIN);
+    rect(b, bandY, cx - 9, feet - 56, 18, 16, SKIN);
+    rect(b, bandY, cx - 10, feet - 58, 20, 7, HAIR);
+    return;
+  }
 
   if (down) {                                           // knocked flat
     rect(b, bandY, cx - 34, RUN_FEET_Y - 16, 50, 14, JERSEY);
@@ -363,13 +394,13 @@ void update(float dt) {
     case State::StageClear:
       s_travel += RUN_ATTRACT_SPEED * dt;
       if (s_done || s_stateT <= RUN_END_LOCKOUT_S || !in.pressed) return;
-      if (s_mode == Mode::Chase) finish(true, false);
+      if (s_mode == Mode::Battle) finish(true, false);
       else { ++s_stage; beginStage(); }
       return;
 
     case State::GameOver:
       if (s_done || s_stateT <= RUN_END_LOCKOUT_S || !in.pressed) return;
-      if (s_mode == Mode::Chase) finish(false, false);
+      if (s_mode == Mode::Battle) finish(false, false);
       else if (in.pointX >= 0 && in.pointX < 120 && in.pointY < 56) finish(false, true);  // MENU
       else newGame();
       return;
@@ -403,17 +434,34 @@ void update(float dt) {
   }
 
   s_speed = fminf(s_speed + RUN_SPEED_RAMP * dt, s_speedMax);
-  s_travel += s_speed * dt;
+  const bool battleMode = (s_mode == Mode::Battle);
+  if (s_stumbleT > 0.0f) s_stumbleT -= dt;
+  s_travel += s_speed * (s_stumbleT > 0.0f ? BATTLE_STUMBLE_SPEED : 1.0f) * dt;
   const float run = s_travel - s_runStart;
   const float prog = run / s_goalM;
 
-  while (s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + s_goalM - 20.0f) {
+  // Regular obstacle rows: arcade always, battles only during the Pursuit (in the
+  // Hunt the enemy's attacks are the obstacles).
+  const bool rows = !battleMode || battle::phase() == battle::Phase::Pursuit;
+  while (rows && s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + s_goalM - 20.0f) {
     spawnRow(s_nextRowWz);
     s_nextRowWz += OBST_GAP_START_M + (OBST_GAP_MIN_M - OBST_GAP_START_M) * fminf(prog, 1.0f);
   }
 
   const float pz = playerZ();
   if (s_invuln > 0.0f) s_invuln -= dt;
+  if (battleMode) battle::update(dt, s_travel, run, pz, s_stumbleT > 0.0f);
+
+  // Orbs (battle): collect or recycle. Any height counts — they float at waist level.
+  for (auto& o : s_orb) {
+    if (!o.active) continue;
+    const float z = o.wz - s_travel;
+    if (z < 0.5f) { o.active = false; continue; }
+    if (fabsf(z - pz) < BATTLE_ORB_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < 0.5f) {
+      o.active = false;
+      battle::onOrb();
+    }
+  }
 
   // Coins: collect or recycle.
   for (auto& c : s_coin) {
@@ -437,6 +485,7 @@ void update(float dt) {
           --s_shields; ++s_shieldsUsed;
           o.active = false;
           s_invuln = SHIELD_INVULN_S;
+          if (battleMode) battle::onShieldBlock();
 #if DEBUG_INPUT_LOG
           Serial.printf("[hit] shield absorbed %s at %d m (%u left)\n",
                         o.kind == Kind::Wall ? "WALL" : "BARRIER", (int)run, (unsigned)s_shields);
@@ -448,13 +497,26 @@ void update(float dt) {
                       o.kind == Kind::Wall ? "WALL" : "BARRIER", o.lane, s_laneX,
                       (int)s_jumpY, (int)run);
 #endif
+        if (battleMode) {                          // battles: stumble, never instant death
+          o.active = false;
+          battle::onObstacleHit(o.kind == Kind::Wall);
+          s_stumbleT = battle::stumbleSeconds();
+          s_invuln = s_stumbleT;
+          continue;
+        }
         crash();
         return;
       }
     }
   }
 
-  if (run >= s_goalM) stageClear();
+  if (battleMode) {
+    s_outcome = battle::outcome();
+    if (s_outcome == battle::Outcome::Escaped || s_outcome == battle::Outcome::Defeated) stageClear();
+    else if (s_outcome == battle::Outcome::Caught) crash();
+  } else if (run >= s_goalM) {
+    stageClear();
+  }
 }
 
 void beginRender(float alpha) {
@@ -488,10 +550,24 @@ void beginRender(float alpha) {
     if (!lanes::project(z, (float)c.lane, sx, sy, s) || s < 0.03f) continue;
     s_draw[s_nDraw++] = { DrawKind::Coin, (uint8_t)i, (int16_t)sx, (int16_t)sy, s, z };
   }
+  for (int i = 0; i < ORB_POOL; ++i) {
+    const Orb& o = s_orb[i];
+    if (!o.active) continue;
+    const float z = o.wz - d_travel;
+    if (!lanes::project(z, (float)o.lane, sx, sy, s) || s < 0.03f) continue;
+    s_draw[s_nDraw++] = { DrawKind::Orb, (uint8_t)i, (int16_t)sx, (int16_t)sy, s, z };
+  }
+  const float pz = playerZ();
+  if (s_mode == Mode::Battle && battle::enemyOnRoad() && s_state != State::Ready) {
+    const float z = pz + battle::enemyZAhead();
+    if (lanes::project(z, battle::enemyLane(), sx, sy, s))
+      s_draw[s_nDraw++] = { DrawKind::Enemy, 0, (int16_t)sx, (int16_t)sy, s, z };
+  }
   if (s_state != State::Ready) {
-    const float pz = playerZ();
-    if (lanes::project(pz, d_laneX, sx, sy, s))
+    if (lanes::project(pz, d_laneX, sx, sy, s)) {
       s_draw[s_nDraw++] = { DrawKind::Runner, 0, (int16_t)sx, (int16_t)sy, s, pz };
+      d_runnerX = (int16_t)sx;
+    }
   }
   for (int i = 1; i < s_nDraw; ++i) {
     DrawItem k = s_draw[i];
@@ -507,30 +583,38 @@ void composeObjects(lgfx::LGFX_Sprite& band, int32_t bandY) {
     switch (d.kind) {
       case DrawKind::Obstacle: drawObstacle(band, bandY, d); break;
       case DrawKind::Coin:     drawCoin(band, bandY, d);     break;
+      case DrawKind::Orb:      drawOrb(band, bandY, d);      break;
+      case DrawKind::Enemy:    battle::drawEnemyOnRoad(band, bandY, d.x, d.y, d.s, d_time); break;
       case DrawKind::Runner:   drawRunner(band, bandY, d);   break;
     }
   }
+  // Pursuit: the enemy is behind the runner — drawn over the road, from the bottom edge.
+  if (s_mode == Mode::Battle && (s_state == State::Run || s_state == State::Countdown))
+    battle::drawPursuer(band, bandY, d_runnerX, d_time);
 }
 
 void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   char buf[40];
   using hud::F9; using hud::F12; using hud::F18; using hud::F24;
-  const bool chase = (s_mode == Mode::Chase);
+  const bool chase = (s_mode == Mode::Battle);
   const int32_t cx = LCD_WIDTH / 2;
   const bool blink = d_blink;
 
   // In-game HUD: escape progress bar, score, stage, coins.
   if (s_state == State::Run || s_state == State::Countdown || s_state == State::Crash) {
+    const bool showGoal = !chase || battle::phase() == battle::Phase::Pursuit;
     const float p = fminf(runM() / s_goalM, 1.0f);
-    rect(band, bandY, 10, 6, LCD_WIDTH - 20, 10, C_SHADOW);
-    rect(band, bandY, 12, 8, (int32_t)((LCD_WIDTH - 24) * (s_state == State::Countdown ? 0 : p)),
-         6, C_GREEN);
+    if (showGoal) {
+      rect(band, bandY, 10, 6, LCD_WIDTH - 20, 10, C_SHADOW);
+      rect(band, bandY, 12, 8, (int32_t)((LCD_WIDTH - 24) * (s_state == State::Countdown ? 0 : p)),
+           6, C_GREEN);
+    }
     snprintf(buf, sizeof buf, "%u", (unsigned)currentScore());
     text(band, bandY, buf, 70, 34, F12, 1.0f, C_WHITE, 130);
     if (chase) {
-      text(band, bandY, s_label, cx, 34, F9, 1.0f, C_RED);
-      for (uint8_t i = 0; i < s_shields; ++i)            // shield pips under the label
-        hud::rect(band, bandY, cx - 14 + i * 18, 46, 12, 6, rgb565(90, 200, 255));
+      battle::composeHud(band, bandY, d_time);
+      for (uint8_t i = 0; i < s_shields; ++i)            // shield pips, top right
+        hud::rect(band, bandY, LCD_WIDTH - 40 - i * 16, 56, 12, 8, rgb565(90, 200, 255));
     } else {
       snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
       text(band, bandY, buf, cx, 34, F9, 1.0f, C_GREY);
@@ -561,7 +645,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       if (n >= 1) { snprintf(buf, sizeof buf, "%d", n); text(band, bandY, buf, cx, 120, F24, 2.0f, C_YELLOW); }
       else text(band, bandY, "GO!", cx, 120, F24, 1.8f, C_GREEN);
       if (chase) {
-        snprintf(buf, sizeof buf, "%s IS CHASING YOU", s_label);
+        snprintf(buf, sizeof buf, "%s IS CHASING YOU", battle::enemyName());
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_RED);
       } else if (s_stage > 1) {
         snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
@@ -580,9 +664,19 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       break;
 
     case State::StageClear:
+      if (chase && s_outcome == battle::Outcome::Defeated) {
+        text(band, bandY, "DEFEATED!", cx, 70, F24, 1.3f, C_YELLOW);
+        snprintf(buf, sizeof buf, "You beat the %s", battle::enemyName());
+        text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
+        snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
+        text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
+        if (s_stateT > RUN_END_LOCKOUT_S && blink)
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+        break;
+      }
       text(band, bandY, "ESCAPED!", cx, 70, F24, 1.3f, C_GREEN);
       if (chase) {
-        snprintf(buf, sizeof buf, "You lost the %s", s_label);
+        snprintf(buf, sizeof buf, "You lost the %s", battle::enemyName());
         text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
         text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
@@ -601,7 +695,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     case State::GameOver:
       text(band, bandY, "CAUGHT!", cx, 62, F24, 1.3f, C_RED);
       if (chase) {
-        snprintf(buf, sizeof buf, "The %s got you", s_label);
+        snprintf(buf, sizeof buf, "The %s got you", battle::enemyName());
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins kept", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_YELLOW);
@@ -636,24 +730,43 @@ void startArcade() {
   s_goalM = RUN_GOAL_M;
   s_shields = s_shieldsUsed = 0;
   s_invuln = 0;
+  s_stumbleT = 0;
   s_done = false;
   newGame();
 }
 
-void startChase(uint8_t level, float goalM, uint8_t shields, const char* label) {
-  s_mode = Mode::Chase;
+void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
+                 const battle::Stats& stats) {
+  s_mode = Mode::Battle;
   s_goalM = goalM;
   s_shields = shields;
   s_shieldsUsed = 0;
   s_invuln = 0;
-  s_label = label;
+  s_stumbleT = 0;
+  s_outcome = battle::Outcome::None;
   s_done = false;
   s_stage = level;
   s_coins = 0;
   s_bankedM = 0;
   s_newBest = false;
+  battle::start(kind, level, goalM, stats);
   beginStage();
 }
+
+namespace engine {
+void spawnObstacle(bool wall, int8_t lane, float wz) {
+  ::spawnObstacle(wall ? Kind::Wall : Kind::Barrier, lane, wz);
+}
+void spawnOrb(int8_t lane, float wz) {
+  for (auto& o : s_orb) if (!o.active) { o = { true, lane, wz }; return; }
+}
+void clearAhead() {
+  const float from = s_travel + playerZ() + 2.0f;     // keep whatever is already at the runner
+  for (auto& o : s_obst) if (o.active && o.wz > from) o.active = false;
+  for (auto& c : s_coin) if (c.active && c.wz > from) c.active = false;
+  for (auto& o : s_orb)  if (o.active && o.wz > from) o.active = false;
+}
+} // namespace engine
 
 bool finished() { return s_done; }
 Result result() { return s_result; }

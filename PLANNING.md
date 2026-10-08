@@ -50,7 +50,7 @@ real river may be map grass). Therefore:
   water/roads extract could live on a microSD card in the board's TF slot (shares the
   touch SPI bus). Revisit only if spawn-placement safety becomes a need.
 
-## Battles, Shop, Art — PROPOSED 2026-10-08 (awaiting user approval)
+## Battles, Shop, Art — APPROVED 2026-10-08 (user: "Looks fine. Let's do it.")
 User feedback: chases "don't feel like real enemy battles" (enemy never on screen,
 one-hit death). User's design: PURSUIT that can turn into a HUNT.
 
@@ -89,7 +89,7 @@ Arcade mode stays the endless runner.
   cycle), obstacles, coin, orb, hearts/HUD icons, shop items; map tiles later.
 - Risk: flash use (33.6% of the 1.3 MB app slot now) — repartition if needed.
 
-**Proposed order:** B1 battle system (placeholder shapes, gameplay first) -> S1 shop
+**Approved order:** B1 battle system (placeholder shapes, gameplay first) -> S1 shop
 -> A1 art foundation + runner/obstacles -> A2 enemies + shop/HUD art.
 
 ## Rendering Approach
@@ -111,14 +111,15 @@ Arcade mode stays the endless runner.
 | renderer | src/renderer.* | band compositor, layer callbacks, band byte-order test + raw() colour conversion | DONE (R0); raw() moved here R3 |
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
-| encounter | src/encounter.* | lane-chase game: runner, obstacles, coins, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Chase modes | P1 hw-verified; chase mode = R3 |
+| encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
+| battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts); per-kind data table; placeholder shape art | B1 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
 | locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | DONE (R3, hw-verified) |
 | world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
 | overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
-| game_state | src/game_state.* | mode machine Menu/Explore/Chase/Arcade, layer stacks, chase handshake, profile in NVS | DONE (R3, hw-verified) |
+| game_state | src/game_state.* | mode machine Menu/Explore/Battle/Arcade, layer stacks, battle handshake (shields, Stats, rewards), profile in NVS | DONE (R3, hw-verified); Battle rename B1 |
 | gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
 
@@ -151,6 +152,10 @@ Arcade mode stays the endless runner.
   2026-10-08 (hw-verified by user report).
 - **R3 (original plan, superseded):** ON HOLD (user, 2026-10-07). deterministic world from GPS cells, top-down view, avatar
   follows real movement, enemy spawns, encounter trigger on stop.
+- **B1 — Battle system:** Pursuit -> Overtake -> Hunt, replaces chase mode
+  (placeholder shapes). Built 2026-10-08, awaiting hardware gate.
+- **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen. Next.
+- **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.
 - **R5 — Game loop:** states, Run energy economy, scoring/progression, HUD, menus.

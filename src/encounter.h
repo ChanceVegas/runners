@@ -4,14 +4,16 @@
 #pragma once
 #include <LovyanGFX.hpp>
 #include <stdint.h>
+#include "battle.h"
 
 namespace encounter {
 
 enum class State : uint8_t { Ready, Countdown, Run, Crash, StageClear, GameOver };
-enum class Mode : uint8_t { Arcade, Chase };
+enum class Mode : uint8_t { Arcade, Battle };
 
 struct Result {
-  bool won;            // chase: escaped
+  bool won;            // battle: escaped or defeated the enemy
+  bool defeated;       // battle: defeated it (bigger reward)
   uint32_t coins;      // coins collected this encounter
   uint8_t shieldsUsed; // chase: shields broken
   bool exitToMenu;     // arcade: player tapped MENU on game over
@@ -21,13 +23,22 @@ bool init();                    // seed RNG, load best score from flash, enter R
 
 // Ready = idle attract road (the menu draws on top). Starting a mode runs the
 // countdown. Arcade: endless stages, best score, MENU button on game over.
-// Chase: one stage of `goalM` metres at speed tier `level`; `shields` absorb hits.
+// Battle: pursuit -> (if overtaken) hunt vs an overworld enemy (rules in battle.*);
+// `goalM` metres = escape distance, `level` = speed tier, `shields` absorb hits.
 void startArcade();
-void startChase(uint8_t level, float goalM, uint8_t shields, const char* label);
+void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
+                 const battle::Stats& stats);
 bool finished();                // chase over, or arcade MENU tapped — read result()
 Result result();
 void idle();                    // back to Ready (attract road), clears the road
 uint32_t bestScore();           // arcade best (saved in flash)
+
+// Engine hooks for battle.cpp: spawn things on the road / clear it.
+namespace engine {
+void spawnObstacle(bool wall, int8_t lane, float wz);   // wz = world metres along the road
+void spawnOrb(int8_t lane, float wz);
+void clearAhead();                                       // remove everything ahead of the runner
+}
 void update(float dt);          // one fixed logic tick; reads input::state()
 
 // Latch interpolated positions for this frame (alpha = fraction of a tick since

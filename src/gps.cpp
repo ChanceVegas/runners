@@ -25,13 +25,31 @@ int      s_len = 0;
 uint8_t  s_gsvCount = 0;           // sats-in-view accumulator across GSV talkers
 uint32_t s_lastStatusMs = 0;
 uint32_t s_bytes = 0;              // raw bytes received (wiring check: 0 = nothing on RX)
+int8_t   s_rxPin = GPS_PIN_RX, s_txPin = GPS_PIN_TX;   // swapped at boot if the probe says so
+
+// Boot-time pin probe (G0-R2): with both UART pins as pulled-down inputs, count level
+// changes for GPS_PROBE_MS. The GPS TX line idles HIGH and toggles while it sends; an
+// unconnected / unpowered line sits LOW. Tells "nothing wired" from "TX/RX swapped".
+struct Probe { uint32_t edges; uint32_t highPct; };
+Probe probePin(int pin, uint32_t ms) {
+  pinMode(pin, INPUT_PULLDOWN);
+  uint32_t edges = 0, high = 0, n = 0;
+  int last = digitalRead(pin);
+  const uint32_t t0 = millis();
+  while (millis() - t0 < ms) {
+    const int v = digitalRead(pin);
+    if (v != last) { ++edges; last = v; }
+    high += v; ++n;
+  }
+  return { edges, n ? high * 100 / n : 0 };
+}
 char     s_status[32] = "GPS starting";
 
 void tryBaud(int i) {
   s_baudIdx = i;
   U.end();
   U.setRxBufferSize(1024);
-  U.begin(BAUDS[i], SERIAL_8N1, GPS_PIN_RX, GPS_PIN_TX);
+  U.begin(BAUDS[i], SERIAL_8N1, s_rxPin, s_txPin);
   s_tryStart = millis();
   s_len = 0;
   Serial.printf("[gps] listening at %u baud\n", (unsigned)BAUDS[i]);
@@ -117,6 +135,25 @@ void handleSentence() {
 namespace gps {
 
 bool init() {
+  // Probe both pins at once (sequentially, GPS_PROBE_MS each; ~2.4 s at boot).
+  const Probe pr = probePin(GPS_PIN_RX, GPS_PROBE_MS);
+  const Probe pt = probePin(GPS_PIN_TX, GPS_PROBE_MS);
+  Serial.printf("[gps] pin probe: IO%d (RX1) edges %u high %u%% | IO%d (TX1) edges %u high %u%%\n",
+                GPS_PIN_RX, (unsigned)pr.edges, (unsigned)pr.highPct,
+                GPS_PIN_TX, (unsigned)pt.edges, (unsigned)pt.highPct);
+  if (pr.edges < 20 && pt.edges >= 20) {
+    s_rxPin = GPS_PIN_TX; s_txPin = GPS_PIN_RX;
+    Serial.printf("[gps] GPS data is on IO%d: TX/RX wires are SWAPPED - using it anyway "
+                  "(fine to leave as is)\n", GPS_PIN_TX);
+  } else if (pr.edges >= 20) {
+    Serial.printf("[gps] GPS data seen on IO%d (correct pin)\n", GPS_PIN_RX);
+  } else if (pr.highPct > 90 || pt.highPct > 90) {
+    Serial.println("[gps] a line is held HIGH but silent: GPS powered but not sending yet, "
+                   "or that wire is on a 3V3 hole");
+  } else {
+    Serial.println("[gps] NO activity on IO18 or IO17: GPS unpowered, GND missing, or the "
+                   "data wires are on the wrong holes");
+  }
   tryBaud(0);
   return true;
 }

@@ -16,7 +16,10 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. G0 GPS GATE (user): `git pull`, flash, confirm `=== Runners G0-R1 ===`.
+1. G0 GPS GATE (user): `git pull`, flash, confirm `=== Runners G0-R2 ===`.
+   G0-R1 result (2026-10-08): `raw bytes 0` at every baud for minutes = nothing on IO18.
+   G0-R2 adds a boot pin probe on IO18/IO17 (auto-uses IO17 if TX/RX are swapped).
+   Read the `[gps] pin probe:` line right after the banner (press RST with the monitor open).
    Wiring (user, 2026-10-08): GPS on J4 socket — VCC->3V3, GND->GND, GPS TX->IO18-RX1,
    GPS RX->IO17-TX1 (hole order from photo; user asked to verify with a meter).
    - [ ] Serial `[gps] LINK OK at N baud` within ~10 s (indoors is fine for this).
@@ -26,7 +29,7 @@ session doesn't know it happened.
    - [ ] Map HUD bottom-left shows "GPS n sats ..." (red = no data, amber = no fix,
          green = fix). Game still uses drag movement (GPS not wired into play yet).
    - [ ] fps/render unchanged.
-   Also pending: A3 map art check (tiles, avatar facing, render ms while moving).
+   A3 map art: PASSED (user: "map art tiles look perfect").
    Then: R2 proper (GPS drives the locator + approved Safety items 1–5) — breakdown first.
 
 ## Known Issues / Risks
@@ -141,6 +144,14 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — G0-R1 hw: no GPS data
+- User: "map art tiles look perfect" (A3 passed). G0-R1 log: link never found, raw
+  bytes 0 across all 6 bauds for several minutes -> no signal reaches IO18 (wiring,
+  power, or swapped TX/RX; not a software baud problem). MENU 33–34 ms, SETTINGS 21.
+- Done: G0-R2 boot pin probe (edges/high% on IO18 and IO17), auto-swap RX to IO17 if
+  the GPS data is there. Asked user: GPS LED on? 3.3 V at the GPS? meter check of J4.
+- Commit: diag(gps): boot pin probe + auto TX/RX swap (G0-R2)
+
 ### 2026-10-08 — Session 3 (cont.) — G0 GPS bring-up
 - User wired the HGLRC M100 Mini to the J4 socket (photo: J4 = 3V3,3V3,GND,GND,
   IO18-RX1,IO17-TX1,IO38,IO37). Module: 3.3-5 V, NMEA, 9600 default (Cirkit Designer).

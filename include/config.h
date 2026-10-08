@@ -166,6 +166,8 @@
 #define GPS_DETECT_MS        1500   // ms listening per candidate baud before trying the next
 #define GPS_LOST_MS          5000   // ms without a valid sentence = link lost, search again
 #define GPS_REPORT_MS        2000   // ms between [gps] serial status lines / HUD refresh
+#define GPS_PROBE_MS         1200   // ms per pin of the boot-time wiring probe (NMEA comes
+                                    // in ~1 s bursts, so >= 1.1 s catches one)
 
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black

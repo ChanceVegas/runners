@@ -62,16 +62,18 @@ Arcade mode stays the endless runner.
   - Hitting an obstacle = STUMBLE (no death): slowed 1 s (barrier) / 1.6 s (wall),
     gap −10 m / −15 m, with camera shake + red border + pursuer lunge (B1-R2).
   - Fewer rows than arcade and walls rare (user, B1-R1: walls felt out of place).
+  - Obstacles everywhere (B1-R3): barrier = jump, duck bar = duck, wall = dodge (rare).
+    DUCK = tap the bottom of the middle zone.
   - Gap reaches 60 m (or you reach the distance goal) -> ESCAPED (small reward).
   - Gap reaches 0 -> the enemy OVERTAKES you -> Phase 2.
 - Phase 2 — HUNT: the enemy is now AHEAD on the road, switching lanes and attacking
-  with its own obstacle pattern: Shade drops barriers, Brute smashes in walls
-  (2-lane), Phantom flickers lanes and leaves "ghost walls".
+  with its own obstacle pattern: Shade drops barriers, Brute smashes in DUCK BARS
+  (2 lanes, or all 3 = must duck), Phantom flickers lanes and drops a random obstacle.
   - You have HEARTS (3 base). An attack hit = −1 heart + stumble.
   - Glowing energy ORBS appear in lanes; each one collected strikes the enemy (−1 HP).
     Enemy HP: Shade 4, Brute 6, Phantom 6 (B1-R2).
   - TIME LIMIT (user, B1-R1): fastest possible kill x 1.6. Out of time -> the enemy
-    GETS AWAY: no bonus, the battle's coins are lost. Scoreboard tracks battles
+    GETS AWAY: no bonus, the battle's coins are lost (CAUGHT also loses them). Scoreboard tracks battles
     won / lost (caught) / got away.
   - Enemy HP 0 -> DEFEATED (big reward + chance of a drink drop). Hearts 0 -> CAUGHT.
 - Run-energy shields carry over: each absorbs one stumble's gap loss (Phase 1) or one
@@ -113,7 +115,7 @@ Arcade mode stays the endless runner.
 | main | src/main.cpp | init + fixed-timestep loop + stats | R0 test harness |
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
 | renderer | src/renderer.* | band compositor, layer callbacks, band byte-order test + raw() colour conversion | DONE (R0); raw() moved here R3 |
-| input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
+| input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump (top) / duck (bottom, B1-R3), any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |

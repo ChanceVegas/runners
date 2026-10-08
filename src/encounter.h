@@ -10,6 +10,9 @@ namespace encounter {
 
 enum class State : uint8_t { Ready, Countdown, Run, Crash, StageClear, GameOver };
 enum class Mode : uint8_t { Arcade, Battle };
+// Obstacle types: Barrier = low, jump over; Wall = tall, change lane;
+// Overhead = duck bar (beam on posts), duck under (B1-R3).
+enum class Block : uint8_t { Barrier, Wall, Overhead };
 
 struct Result {
   bool won;            // battle: escaped or defeated the enemy
@@ -36,7 +39,7 @@ uint32_t bestScore();           // arcade best (saved in flash)
 
 // Engine hooks for battle.cpp: spawn things on the road / clear it.
 namespace engine {
-void spawnObstacle(bool wall, int8_t lane, float wz);   // wz = world metres along the road
+void spawnObstacle(Block kind, int8_t lane, float wz);  // wz = world metres along the road
 void spawnOrb(int8_t lane, float wz);
 void clearAhead();                                       // remove everything ahead of the runner
 }

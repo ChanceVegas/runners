@@ -15,7 +15,8 @@ namespace {
 using battle::Phase;
 using battle::Outcome;
 
-enum class Attack : uint8_t { Barrier, TwoWalls, PhaseWall };
+enum class Attack : uint8_t { Barrier, Smash, Phase };   // Shade / Brute / Phantom
+using encounter::Block;
 
 struct KindDef {
   const char* name;
@@ -29,9 +30,9 @@ struct KindDef {
 const KindDef KINDS[3] = {
   { "SHADE",   BATTLE_SHADE_HP,   BATTLE_SHADE_ATTACK_S,   BATTLE_SHADE_ORB_PCT,   Attack::Barrier,
     rgb565(120, 60, 170), rgb565(255, 255, 255) },
-  { "BRUTE",   BATTLE_BRUTE_HP,   BATTLE_BRUTE_ATTACK_S,   BATTLE_BRUTE_ORB_PCT,   Attack::TwoWalls,
+  { "BRUTE",   BATTLE_BRUTE_HP,   BATTLE_BRUTE_ATTACK_S,   BATTLE_BRUTE_ORB_PCT,   Attack::Smash,
     rgb565(180, 40, 40),  rgb565(255, 220, 0) },
-  { "PHANTOM", BATTLE_PHANTOM_HP, BATTLE_PHANTOM_ATTACK_S, BATTLE_PHANTOM_ORB_PCT, Attack::PhaseWall,
+  { "PHANTOM", BATTLE_PHANTOM_HP, BATTLE_PHANTOM_ATTACK_S, BATTLE_PHANTOM_ORB_PCT, Attack::Phase,
     rgb565(60, 190, 220), rgb565(220, 250, 255) },
 };
 
@@ -89,18 +90,24 @@ void attack() {
   int8_t blocked[3] = {0, 0, 0};
   switch (s_k->attack) {
     case Attack::Barrier:                                   // Shade: barrier in its lane
-      encounter::engine::spawnObstacle(false, el, wz);
+      encounter::engine::spawnObstacle(Block::Barrier, el, wz);
       blocked[el + 1] = 1;
       break;
-    case Attack::TwoWalls: {                                // Brute: walls in 2 lanes
-      int8_t other = (el == 0) ? (int8_t)((rnd() & 1) ? 1 : -1) : 0;
-      encounter::engine::spawnObstacle(true, el, wz);
-      encounter::engine::spawnObstacle(true, other, wz);
-      blocked[el + 1] = blocked[other + 1] = 1;
+    case Attack::Smash: {                                   // Brute: duck bars, 2 lanes or all 3
+      if (rnd() % 3 == 0) {                                 // full-width smash: must duck
+        for (int8_t l = -1; l <= 1; ++l) encounter::engine::spawnObstacle(Block::Overhead, l, wz);
+        blocked[0] = blocked[1] = blocked[2] = 1;
+      } else {
+        int8_t other = (el == 0) ? (int8_t)((rnd() & 1) ? 1 : -1) : 0;
+        encounter::engine::spawnObstacle(Block::Overhead, el, wz);
+        encounter::engine::spawnObstacle(Block::Overhead, other, wz);
+        blocked[el + 1] = blocked[other + 1] = 1;
+      }
       break;
     }
-    case Attack::PhaseWall: {                               // Phantom: wall, then blink away
-      encounter::engine::spawnObstacle(true, el, wz);
+    case Attack::Phase: {                                   // Phantom: random kind, then blink away
+      static const Block KINDS_P[3] = { Block::Barrier, Block::Overhead, Block::Wall };
+      encounter::engine::spawnObstacle(KINDS_P[rnd() % 3], el, wz);
       blocked[el + 1] = 1;
       int8_t nl;
       do { nl = (int8_t)((int)(rnd() % 3) - 1); } while (nl == el);
@@ -114,6 +121,7 @@ void attack() {
     int8_t free[3]; int nf = 0;
     for (int8_t l = -1; l <= 1; ++l) if (!blocked[l + 1]) free[nf++] = l;
     if (nf) encounter::engine::spawnOrb(free[rnd() % nf], wz);
+    else encounter::engine::spawnOrb((int8_t)((int)(rnd() % 3) - 1), wz - 6.0f);   // full smash: orb just before it
   }
 }
 
@@ -266,7 +274,7 @@ void drawEnemyOnRoad(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, 
       }
       break;
     }
-    case Attack::TwoWalls: {                                         // Brute: hulking back + horns
+    case Attack::Smash: {                                         // Brute: hulking back + horns
       b.fillRect(x - w / 3, by - h / 4, w / 5, h / 4, stride ? body : rgb565(120, 25, 25));   // legs
       b.fillRect(x + w / 8, by - h / 4, w / 5, h / 4, stride ? rgb565(120, 25, 25) : body);
       b.fillRoundRect(x - w / 2, by - h, w, h * 3 / 4, w / 6 + 1, body);
@@ -276,7 +284,7 @@ void drawEnemyOnRoad(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, 
                      rgb565(240, 220, 180));
       break;
     }
-    case Attack::PhaseWall: {                                        // Phantom: glowing wisp
+    case Attack::Phase: {                                        // Phantom: glowing wisp
       b.fillCircle(x, by - h / 2, w / 2, body);
       b.fillCircle(x - w / 6, by - h / 2 - w / 6, w / 5 + 1, s_k->accent);
       const int32_t sp = ((int32_t)(time * 10.0f)) % 6;
@@ -317,14 +325,14 @@ void drawPursuer(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t runnerX, float tim
       b.fillTriangle(x - w / 2, ty + w / 2, x - w / 2 - w / 4, ty + w / 3, x - w / 2, ty + w / 2 + w / 6, body);
       b.fillTriangle(x + w / 2, ty + w / 2, x + w / 2 + w / 4, ty + w / 3, x + w / 2, ty + w / 2 + w / 6, body);
       break;
-    case Attack::TwoWalls:                                           // Brute: horned head
+    case Attack::Smash:                                           // Brute: horned head
       b.fillRoundRect(x - w / 2, ty, w, LCD_HEIGHT - top + 10, w / 6 + 1, body);
       b.fillTriangle(x - w / 2, ty + w / 6, x - w / 3, ty, x - w / 2 - w / 5, ty - w / 4, rgb565(240, 220, 180));
       b.fillTriangle(x + w / 2, ty + w / 6, x + w / 3, ty, x + w / 2 + w / 5, ty - w / 4, rgb565(240, 220, 180));
       b.fillRect(x - w / 4, ty + w / 4, w / 7 + 1, w / 10 + 1, s_k->accent);
       b.fillRect(x + w / 4 - w / 7, ty + w / 4, w / 7 + 1, w / 10 + 1, s_k->accent);
       break;
-    case Attack::PhaseWall:                                          // Phantom: big wisp
+    case Attack::Phase:                                          // Phantom: big wisp
       b.fillCircle(x, ty + w / 2, w / 2, body);
       b.fillCircle(x - w / 6, ty + w / 3, w / 5 + 1, s_k->accent);
       b.fillRect(x - w / 2, ty + w / 2, w, LCD_HEIGHT - top, body);

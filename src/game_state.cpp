@@ -124,7 +124,7 @@ void finishBattle() {
   const encounter::Result r = encounter::result();
   const uint8_t unused = (r.shieldsUsed < s_battleShields) ? s_battleShields - r.shieldsUsed : 0;
   overworld::setEnergy(overworld::energy() + unused * ENERGY_PER_SHIELD);
-  if (!r.gotAway) s_wallet += r.coins;         // enemy got away: the battle's coins are lost
+  if (r.won) s_wallet += r.coins;              // lost (caught / got away): the battle's coins are lost
   if (r.gotAway) ++s_gotAway;
   else if (!r.won) ++s_lost;
   if (r.won) {
@@ -135,7 +135,7 @@ void finishBattle() {
   }
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
-                r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT")),
+                r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT (coins lost)")),
                 (unsigned)r.coins, (unsigned)r.shieldsUsed,
                 (unsigned)s_wallet);
   saveProfile();

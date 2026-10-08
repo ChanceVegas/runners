@@ -19,7 +19,9 @@
 #define INPUT_JOY_RANGE_PX   60     // px of drag = full deflection
 #define INPUT_EMA_ALPHA      0.6f   // x/y smoothing per sample 0..1 (drag axis/UI point)
 #define INPUT_ZONE_LEFT_X    160    // px; taps left of this = lane left (left third)
-#define INPUT_ZONE_RIGHT_X   320    // px; taps at/right of this = lane right; between = jump
+#define INPUT_ZONE_RIGHT_X   320    // px; taps at/right of this = lane right; between = jump/duck
+#define INPUT_ZONE_DUCK_Y    170    // px; middle-zone taps at/below this row = duck, above = jump
+                                    // (bottom ~38% of the screen; user, B1-R3)
 
 // --- Encounter road: pseudo-3D projection (R1) ---
 // Screen row y below the horizon has d = y - HORIZON rows of depth; world depth
@@ -48,15 +50,15 @@
 #define RUN_COUNTDOWN_S      2.0f   // s of "3-2-1-GO" before a stage starts
 #define RUN_CRASH_S          0.9f   // s of crash freeze + flash before GAME OVER
 #define RUN_CRASH_FLASH_S    0.18f  // s the red screen border flashes on impact
-#define RUN_HINT_S           5.0f   // s the "<  JUMP  >" tap hints stay up into a run
+#define RUN_HINT_S           5.0f   // s the lane / jump / duck tap hints stay up into a run
 #define RUN_FIRST_ROW_M      80.0f  // m ahead of the start where the first row sits
                                     // (R1 had 66 m: ~4 s, fine; a bit more room now
                                     // that the countdown ends with the runner moving)
 // Stages: escaping (RUN_GOAL_M) advances the stage; each stage is faster and denser.
 #define STAGE_SPEED_STEP     3.0f   // m/s added to start and max speed per stage
 #define STAGE_SPEED_CAP      38.0f  // m/s absolute cap (~137 km/h)
-#define STAGE_WALL_STEP      5      // % more walls per stage
-#define STAGE_WALL_CAP       70     // % max wall share
+#define STAGE_DUCK_STEP      5      // % more duck bars per stage (walls stay rare, user B1-R1)
+#define STAGE_DUCK_CAP       55     // % max duck-bar share
 
 // --- Coins (R1 polish pass) ---
 #define COIN_POOL            40     // max live coins
@@ -80,6 +82,9 @@
 #define SCENERY_LANE_JITTER  1.2f   // lanes of random extra offset per prop
 #define RUN_JUMP_VEL_PX_S    520.0f // px/s launch; apex = v^2/2g ≈ 90 px
 #define RUN_GRAVITY_PX_S2    1500.0f// px/s^2; airtime = 2v/g ≈ 0.69 s
+#define RUN_DUCK_S           0.60f  // s a duck lasts (long enough to pass a bar at 14 m/s+)
+#define RUN_DUCK_DROP_PX_S   900.0f // px/s downward when DUCK is tapped mid-air (fast fall,
+                                    // the duck starts on landing)
 #define RUN_SPEED_START      14.0f  // m/s at the start of a run
 #define RUN_SPEED_MAX        28.0f  // m/s cap; reaction window shrinks as speed climbs
 #define RUN_SPEED_RAMP       0.6f   // m/s gained per second of running
@@ -93,7 +98,9 @@
 #define OBST_GAP_START_M     30.0f  // m between rows at the start
 #define OBST_GAP_MIN_M       18.0f  // m between rows at full difficulty (0.64 s at max
                                     // speed; a lane change takes 0.14 s)
-#define OBST_WALL_CHANCE     45     // % of blocks that are walls (must dodge sideways)
+#define OBST_WALL_CHANCE     15     // % of blocks that are walls (must dodge sideways). Was 45;
+                                    // most walls became duck bars (user, B1-R2)
+#define OBST_DUCK_CHANCE     35     // % of blocks that are duck bars (must duck under); rest = barriers
 #define OBST_HIT_DEPTH_M     0.7f   // m; collision window either side of the runner.
                                     // > half the per-tick travel (0.47 m at 28 m/s),
                                     // so no obstacle can skip through the window
@@ -102,6 +109,11 @@
 #define OBST_BARRIER_H_PX    50.0f  // px at scale 1; low, jumpable
 #define OBST_WALL_H_PX       170.0f // px at scale 1; tall, unjumpable
 #define OBST_CLEAR_PX        30.0f  // px of jump height needed to clear a barrier
+// Duck bar: a beam on two posts. Beam bottom sits above the ducked runner and below
+// the standing one (at the runner's depth, scale ~0.875: beam bottom ~49 px, ducked
+// runner 40 px, standing 76 px). Hit unless ducking — jumping into it hits too.
+#define OBST_DUCK_LOW_PX     56.0f  // px at scale 1; beam bottom above the road
+#define OBST_DUCK_TOP_PX     150.0f // px at scale 1; beam top
 
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black
@@ -177,7 +189,8 @@
 #define BATTLE_HIT_SHAKE_PX    12.0f  // px peak sideways camera shake on a hit (decays)
 #define BATTLE_HIT_SHAKE_S     0.45f  // s the camera shake lasts
 #define BATTLE_HIT_FLASH_S     0.30f  // s the red screen border shows on a hit
-#define BATTLE_WALL_CHANCE     12     // % of Pursuit blocks that are walls (arcade: OBST_WALL_CHANCE)
+#define BATTLE_WALL_CHANCE     8      // % of Pursuit blocks that are walls (arcade: OBST_WALL_CHANCE)
+#define BATTLE_DUCK_CHANCE     35     // % of Pursuit blocks that are duck bars
 #define BATTLE_ROW_GAP_MUL     1.35f  // Pursuit rows this much farther apart than arcade (fewer, harder-hitting)
 #define BATTLE_HEARTS          3      // hearts in the Hunt (sneakers may add)
 #define BATTLE_OVERTAKE_S      1.4f   // s of the overtake animation (no attacks)

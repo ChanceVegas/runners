@@ -4,11 +4,11 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); tuning pass B1-R2 built,
-  awaiting hardware gate (banner `B1-R2`).
+- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); B1-R2 tuning + B1-R3
+  duck controls built, awaiting hardware gate (banner `B1-R3`).
   R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
   scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
-- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.2% of 1.3 MB app partition)
+- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.3% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (B1-R1, 2026-10-08): fps 25.2–25.4 in every mode. render ms avg: MENU ~29.6,
   EXPLORE 24–28 (max 32), BATTLE run 26–28 (max 32), ARCADE run ~24.5, game-over ~30.
@@ -16,7 +16,15 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-1. B1-R2 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R2 ===`.
+1. B1-R3 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R3 ===`.
+   - [ ] DUCK: tap the bottom of the middle zone (below the line in the hints) ->
+         runner crouches ~0.6 s. Mid-air tap = fast fall, then duck on landing.
+   - [ ] Duck bars (red/white beam on posts) in Arcade + Pursuit: duck under = pass;
+         standing or jumping into one = hit. Walls now rare everywhere.
+   - [ ] Brute Hunt attack = duck bars (2 lanes, or all 3 = must duck; orb just before).
+         Phantom drops a random barrier / duck bar / wall.
+   - [ ] CAUGHT screen says "coins lost"; wallet does not grow after a lost battle.
+   - [ ] Does the jump/duck split row (y 170) feel right? Mis-taps between them?
    - [ ] Pursuit: fewer obstacle rows, walls rare -> feels fair, not too hard.
    - [ ] A hit feels big: camera shake, thick red border, runner trips, pursuer
          lunges closer at once; wall hits recover slower (1.6 s) than barriers (1.0 s).
@@ -33,10 +41,12 @@ session doesn't know it happened.
 - B1-TUNE (open): battle numbers are guesses, all in config.h. B1-R2 values: Pursuit
   walls 12%, rows 1.35x farther apart; Hunt HP 4/6/6, attack 1.6/1.8/1.4 s, orb
   75/80/60%, timer = fastest kill x 1.6.
-- B1-CAUGHT (raised to user): CAUGHT (hearts 0) still KEEPS the battle's coins while
-  GOT AWAY (timer) loses them — the worse loss is cheaper. Awaiting user decision.
-- B1-WALLS (raised to user): Brute's Hunt attack is still two WALLS; user said walls
-  feel out of place (Pursuit). Kept for now — the Brute needs a lane-blocking attack.
+- B1-CAUGHT (closed B1-R3): user — CAUGHT and GOT AWAY both lose the battle's coins
+  (wallet untouched).
+- B1-WALLS (closed B1-R3): user — walls replaced by duck-under bars (new DUCK control);
+  walls kept rare (arcade 15%, Pursuit 8%, Phantom 1-in-3).
+- DUCK-1 (watch): duck/jump split is by touch Y (INPUT_ZONE_DUCK_Y 170). Resistive
+  Y readings near the split may misclassify; tune the row from the [in] log.
 - B1-ART (by design): enemies are placeholder shapes until A2.
 - R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
   spawn windows use a boot-relative clock, so two devices won't share windows yet.
@@ -124,6 +134,17 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — B1-R3 duck controls + coin loss
+- User: CAUGHT loses the battle's coins too (wallet untouched). Replace walls with
+  tall bars the player DUCKS under — everywhere (Arcade, Pursuit, Brute). Duck input =
+  split middle zone (top = jump, bottom = duck).
+- Done: input duckPressed (middle zone, y >= 170); encounter Block::Overhead (duck bar)
+  + duck state (0.6 s, fast fall mid-air, jump cancels), crouch pose, hint row;
+  spawn mix walls 15% / duck 35%+5%/stage (arcade), 8% / 35% (Pursuit); Brute smash
+  = duck bars (1 in 3 full-width), Phantom random kind; lost battle = coins lost.
+  Built: SUCCESS. Banner B1-R3.
+- Commit: feat(encounter): duck control + duck-under bars replace most walls (B1-R3)
+
 ### 2026-10-08 — Session 3 (cont.) — B1-R1 hw feedback -> B1-R2 tuning
 - User (B1-R1 on hw): Pursuit slightly too hard; big walls feel out of place; hits
   should be much more impactful; Hunt drags -> needs a time limit. Log: 25.3 fps all

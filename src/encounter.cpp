@@ -34,7 +34,7 @@ using encounter::State;
 using encounter::Mode;
 
 // ---- World objects ------------------------------------------------------------
-enum class Kind : uint8_t { Barrier, Wall };
+using Kind = encounter::Block;    // Barrier = jump, Wall = dodge, Overhead = duck
 
 struct Obstacle { bool active; Kind kind; int8_t lane; float wz; };
 struct Coin     { bool active; bool high; int8_t lane; float wz; };
@@ -54,9 +54,12 @@ float s_laneX = 0, s_prevLaneX = 0;        // lanes, -1..1 (animated)
 int8_t s_laneTarget = 0;
 float s_jumpY = 0, s_prevJumpY = 0;        // px above the ground
 float s_jumpV = 0;                         // px/s, + = up
+float s_duckT = 0;                         // s of duck left (0 = standing)
+bool  s_duckQueued = false;                // DUCK tapped mid-air: duck on landing
 float s_speed = 0;                         // m/s
 float s_speedMax = RUN_SPEED_MAX;          // this stage's cap
 int   s_wallChance = OBST_WALL_CHANCE;     // this stage's wall %
+int   s_duckChance = OBST_DUCK_CHANCE;     // this stage's duck-bar %
 float s_runStart = 0;                      // travel when this stage started
 float s_nextRowWz = 0;
 float s_prevRowWz = -1e9f;                 // last row spawned; trails must not reach back into it
@@ -116,6 +119,10 @@ void clearWorld() {
   for (auto& o : s_orb)  o.active = false;
 }
 
+const char* kindName(Kind k) {
+  return k == Kind::Wall ? "WALL" : (k == Kind::Overhead ? "DUCK BAR" : "BARRIER");
+}
+
 void spawnObstacle(Kind k, int8_t lane, float wz) {
   for (auto& o : s_obst) if (!o.active) { o = { true, k, lane, wz }; return; }
 }
@@ -134,7 +141,9 @@ void spawnRow(float wz) {
   for (int lane = -1; lane <= 1 && placed < blocked; ++lane) {
     if (lane == open) continue;
     if (blocked == 1 && (rnd() % 2)) continue;
-    const Kind k = ((int)(rnd() % 100) < s_wallChance) ? Kind::Wall : Kind::Barrier;
+    const int roll = (int)(rnd() % 100);
+    const Kind k = roll < s_wallChance ? Kind::Wall
+                 : roll < s_wallChance + s_duckChance ? Kind::Overhead : Kind::Barrier;
     spawnObstacle(k, (int8_t)lane, wz);
     if (k == Kind::Barrier) barrierLane = lane;
     ++placed;
@@ -175,13 +184,19 @@ void beginStage() {
   const float step = (s_stage - 1) * STAGE_SPEED_STEP;
   s_speed = fminf(RUN_SPEED_START + step, STAGE_SPEED_CAP);
   s_speedMax = fminf(RUN_SPEED_MAX + step, STAGE_SPEED_CAP);
-  s_wallChance = OBST_WALL_CHANCE + (s_stage - 1) * STAGE_WALL_STEP;
-  if (s_wallChance > STAGE_WALL_CAP) s_wallChance = STAGE_WALL_CAP;
-  if (s_mode == encounter::Mode::Battle) s_wallChance = BATTLE_WALL_CHANCE;   // walls rare in a Pursuit
+  s_wallChance = OBST_WALL_CHANCE;
+  s_duckChance = OBST_DUCK_CHANCE + (s_stage - 1) * STAGE_DUCK_STEP;
+  if (s_duckChance > STAGE_DUCK_CAP) s_duckChance = STAGE_DUCK_CAP;
+  if (s_mode == encounter::Mode::Battle) {                   // walls rare in a Pursuit
+    s_wallChance = BATTLE_WALL_CHANCE;
+    s_duckChance = BATTLE_DUCK_CHANCE;
+  }
   s_shakeT = s_hitFlashT = 0;
   s_laneTarget = 0;
   s_laneX = s_prevLaneX = 0;
   s_jumpY = s_prevJumpY = s_jumpV = 0;
+  s_duckT = 0;
+  s_duckQueued = false;
   setState(State::Countdown);
 }
 
@@ -257,6 +272,16 @@ void drawObstacle(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
     rect(b, bandY, x, yb - h, w, h * 6 / 10 + 1, rgb565(250, 130, 0));          // board
     rect(b, bandY, x, yb - h + h / 5, w, h / 5 + 1, C_WHITE);                    // stripe
     rect(b, bandY, x, yb - h, w, h / 14 + 1, rgb565(255, 190, 90));              // lit edge
+  } else if (o.kind == Kind::Overhead) {                    // duck bar: beam on two posts
+    const int32_t lo = (int32_t)(OBST_DUCK_LOW_PX * s), top = (int32_t)(OBST_DUCK_TOP_PX * s) + 1;
+    const int32_t post = w / 12 + 1;
+    rect(b, bandY, x, yb - top, post, top, rgb565(80, 80, 88));                  // posts
+    rect(b, bandY, x + w - post, yb - top, post, top, rgb565(80, 80, 88));
+    const int32_t bh = top - lo;                                                 // beam
+    rect(b, bandY, x, yb - top, w, bh, rgb565(200, 30, 40));
+    for (int i = 0; i < 4; ++i)                                                  // hazard stripes
+      rect(b, bandY, x + w / 16 + i * w / 4, yb - top + bh / 4, w / 8 + 1, bh / 2 + 1, C_WHITE);
+    rect(b, bandY, x, yb - top, w, bh / 10 + 1, rgb565(255, 120, 120));          // lit edge
   } else {
     const int32_t h = (int32_t)(OBST_WALL_H_PX * s) + 1;
     rect(b, bandY, x, yb - h, w, h, rgb565(50, 54, 62));                         // slab
@@ -315,6 +340,18 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
     rect(b, bandY, cx + 14, feet - 44, 16, 6, SKIN);
     rect(b, bandY, cx - 9, feet - 56, 18, 16, SKIN);
     rect(b, bandY, cx - 10, feet - 58, 20, 7, HAIR);
+    return;
+  }
+
+  if (s_duckT > 0.0f && !down) {                        // ducking: low crouch, 40 px tall
+    rect(b, bandY, cx - 16, feet - 10, 12, 10, SHOE);
+    rect(b, bandY, cx + 4,  feet - 10, 12, 10, SHOE);
+    rect(b, bandY, cx - 16, feet - 20, 32, 10, SHORTS);
+    rect(b, bandY, cx - 18, feet - 34, 36, 16, JERSEY);
+    rect(b, bandY, cx - 18, feet - 34, 36, 4, JERSEY_HI);
+    rect(b, bandY, cx - 22, feet - 26, 6, 12, SKIN);    // arms tucked
+    rect(b, bandY, cx + 16, feet - 26, 6, 12, SKIN);
+    rect(b, bandY, cx - 8,  feet - 40, 16, 10, HAIR);   // head down, back of the head
     return;
   }
 
@@ -423,8 +460,13 @@ void update(float dt) {
   // Controls.
   if (in.laneStep < 0 && s_laneTarget > -1) --s_laneTarget;
   if (in.laneStep > 0 && s_laneTarget <  1) ++s_laneTarget;
-  const bool jumpOk = in.jumpPressed && s_jumpY <= 0.0f;
-  if (jumpOk) s_jumpV = RUN_JUMP_VEL_PX_S;
+  const bool airborne = s_jumpY > 0.0f || s_jumpV > 0.0f;
+  const bool jumpOk = in.jumpPressed && !airborne;
+  if (jumpOk) { s_jumpV = RUN_JUMP_VEL_PX_S; s_duckT = 0; s_duckQueued = false; }   // jump cancels a duck
+  if (in.duckPressed && !jumpOk) {
+    if (airborne) { s_jumpV = -RUN_DUCK_DROP_PX_S; s_duckQueued = true; }          // fast fall
+    else s_duckT = RUN_DUCK_S;
+  }
 #if DEBUG_INPUT_LOG
   if (in.laneStep) Serial.printf("[in] tap %s -> lane %d at %d m\n",
                                  in.laneStep < 0 ? "LEFT" : "RIGHT", s_laneTarget,
@@ -432,6 +474,8 @@ void update(float dt) {
   if (in.jumpPressed) Serial.printf("[in] tap MIDDLE: jump%s at %d m\n",
                                     jumpOk ? "" : " (ignored: airborne)",
                                     (int)(s_travel - s_runStart));
+  if (in.duckPressed) Serial.printf("[in] tap BOTTOM: duck%s at %d m\n",
+                                    airborne ? " (fast fall)" : "", (int)(s_travel - s_runStart));
 #endif
 
   const float step = RUN_LANE_SPEED * dt;
@@ -441,8 +485,12 @@ void update(float dt) {
   if (s_jumpY > 0.0f || s_jumpV > 0.0f) {
     s_jumpV -= RUN_GRAVITY_PX_S2 * dt;
     s_jumpY += s_jumpV * dt;
-    if (s_jumpY <= 0.0f) { s_jumpY = 0.0f; s_jumpV = 0.0f; }
+    if (s_jumpY <= 0.0f) {
+      s_jumpY = 0.0f; s_jumpV = 0.0f;
+      if (s_duckQueued) { s_duckQueued = false; s_duckT = RUN_DUCK_S; }
+    }
   }
+  if (s_duckT > 0.0f) s_duckT -= dt;
 
   s_speed = fminf(s_speed + RUN_SPEED_RAMP * dt, s_speedMax);
   const bool battleMode = (s_mode == Mode::Battle);
@@ -494,7 +542,10 @@ void update(float dt) {
     const float z = o.wz - s_travel;
     if (z < 0.5f) { o.active = false; continue; }
     if (s_invuln <= 0.0f && fabsf(z - pz) < OBST_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < OBST_HIT_LANE) {
-      if (o.kind == Kind::Wall || s_jumpY < OBST_CLEAR_PX) {
+      const bool hit = o.kind == Kind::Wall ||
+                       (o.kind == Kind::Barrier && s_jumpY < OBST_CLEAR_PX) ||
+                       (o.kind == Kind::Overhead && s_duckT <= 0.0f);
+      if (hit) {
         if (s_shields > 0) {                       // shield absorbs the hit
           --s_shields; ++s_shieldsUsed;
           o.active = false;
@@ -502,13 +553,13 @@ void update(float dt) {
           if (battleMode) battle::onShieldBlock();
 #if DEBUG_INPUT_LOG
           Serial.printf("[hit] shield absorbed %s at %d m (%u left)\n",
-                        o.kind == Kind::Wall ? "WALL" : "BARRIER", (int)run, (unsigned)s_shields);
+                        kindName(o.kind), (int)run, (unsigned)s_shields);
 #endif
           continue;
         }
 #if DEBUG_INPUT_LOG
         Serial.printf("[hit] %s lane %d, runner lane %.2f jumpY %d at %d m\n",
-                      o.kind == Kind::Wall ? "WALL" : "BARRIER", o.lane, s_laneX,
+                      kindName(o.kind), o.lane, s_laneX,
                       (int)s_jumpY, (int)run);
 #endif
         if (battleMode) {                          // battles: stumble, never instant death
@@ -660,10 +711,12 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   const bool hints = s_state == State::Countdown ||
                      (s_state == State::Run && s_stateT < RUN_HINT_S);
   if (hints) {
-    rect(band, bandY, INPUT_ZONE_LEFT_X, LCD_HEIGHT - 30, 2, 30, C_GREY);
-    rect(band, bandY, INPUT_ZONE_RIGHT_X, LCD_HEIGHT - 30, 2, 30, C_GREY);
+    rect(band, bandY, INPUT_ZONE_LEFT_X, INPUT_ZONE_DUCK_Y - 40, 2, LCD_HEIGHT - INPUT_ZONE_DUCK_Y + 40, C_GREY);
+    rect(band, bandY, INPUT_ZONE_RIGHT_X, INPUT_ZONE_DUCK_Y - 40, 2, LCD_HEIGHT - INPUT_ZONE_DUCK_Y + 40, C_GREY);
     text(band, bandY, "< LANE", INPUT_ZONE_LEFT_X / 2, LCD_HEIGHT - 15, F12, 1.0f, C_WHITE, 150);
-    text(band, bandY, "JUMP", cx, LCD_HEIGHT - 15, F12, 1.0f, C_WHITE, 150);
+    rect(band, bandY, INPUT_ZONE_LEFT_X, INPUT_ZONE_DUCK_Y, INPUT_ZONE_RIGHT_X - INPUT_ZONE_LEFT_X, 2, C_GREY);
+    text(band, bandY, "JUMP", cx, INPUT_ZONE_DUCK_Y - 16, F12, 1.0f, C_WHITE, 150);
+    text(band, bandY, "DUCK", cx, LCD_HEIGHT - 15, F12, 1.0f, C_WHITE, 150);
     text(band, bandY, "LANE >", (INPUT_ZONE_RIGHT_X + LCD_WIDTH) / 2, LCD_HEIGHT - 15, F12, 1.0f,
          C_WHITE, 150);
   }
@@ -739,8 +792,8 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       if (chase) {
         snprintf(buf, sizeof buf, "The %s got you", battle::enemyName());
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
-        snprintf(buf, sizeof buf, "%u coins kept", (unsigned)s_coins);
-        text(band, bandY, buf, cx, 152, F12, 1.0f, C_YELLOW);
+        snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
+        text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
         if (s_stateT > RUN_END_LOCKOUT_S)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
         break;
@@ -797,8 +850,8 @@ void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
 }
 
 namespace engine {
-void spawnObstacle(bool wall, int8_t lane, float wz) {
-  ::spawnObstacle(wall ? Kind::Wall : Kind::Barrier, lane, wz);
+void spawnObstacle(Block kind, int8_t lane, float wz) {
+  ::spawnObstacle(kind, lane, wz);
 }
 void spawnOrb(int8_t lane, float wz) {
   for (auto& o : s_orb) if (!o.active) { o = { true, lane, wz }; return; }

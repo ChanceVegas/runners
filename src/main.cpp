@@ -42,7 +42,7 @@ static const char* encName(encounter::State s) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners B1-R2 ===");
+  Serial.println("\n=== Runners B1-R3 ===");
   if (!display::init())   { Serial.println("FATAL: display init failed");   for(;;) delay(1000); }
   if (!renderer::init())  { Serial.println("FATAL: renderer init failed");  for(;;) delay(1000); }
   if (!input::init())     { Serial.println("FATAL: input init failed");     for(;;) delay(1000); }

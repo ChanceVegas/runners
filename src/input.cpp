@@ -2,7 +2,8 @@
 // dedicated task at INPUT_SAMPLE_HZ instead of from the game loop.
 //
 // Controls = TAP ZONES (R1-R3, user decision 2026-10-06): the screen is split into
-// thirds; a tap in the left/right third steps one lane, a tap in the middle jumps.
+// thirds; a tap in the left/right third steps one lane, a tap in the middle jumps
+// (upper part) or ducks (bottom part, y >= INPUT_ZONE_DUCK_Y; B1-R3).
 // Zones replaced swipe/flick gestures, which had to watch several samples before
 // recognising anything, so they always lagged on resistive touch. A zone tap fires
 // on the second sample after touch-down (10 ms): the first resistive sample at
@@ -30,21 +31,21 @@ float t_emaX = 0, t_emaY = 0;
 
 // ---- Shared: written by the sampler under s_mux, read by input::update ----
 portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
-uint32_t sh_jumps = 0, sh_presses = 0, sh_stepL = 0, sh_stepR = 0;
+uint32_t sh_jumps = 0, sh_ducks = 0, sh_presses = 0, sh_stepL = 0, sh_stepR = 0;
 float    sh_moveX = 0, sh_moveY = 0;
 bool     sh_touching = false;
 int16_t  sh_px = -1, sh_py = -1;
 
 // ---- Game-loop side: edges already delivered ----
-uint32_t g_jumps = 0, g_presses = 0, g_stepL = 0, g_stepR = 0;
-input::State s_state = {0.0f, 0.0f, false, 0, false, false, -1, -1};
+uint32_t g_jumps = 0, g_ducks = 0, g_presses = 0, g_stepL = 0, g_stepR = 0;
+input::State s_state = {0.0f, 0.0f, false, false, 0, false, false, -1, -1};
 
 inline float clamp1(float v) { return v < -1.0f ? -1.0f : (v > 1.0f ? 1.0f : v); }
 
 void sampleOnce() {
   int32_t rx, ry;
   const bool touching = display::lcd().getTouch(&rx, &ry);
-  uint32_t jumps = 0, presses = 0, stepL = 0, stepR = 0;
+  uint32_t jumps = 0, ducks = 0, presses = 0, stepL = 0, stepR = 0;
   float moveX = 0.0f, moveY = 0.0f;
 
   if (touching && !t_wasTouching) {                  // touch-down: wait one sample
@@ -59,6 +60,7 @@ void sampleOnce() {
       presses = 1;
       if (rx < INPUT_ZONE_LEFT_X)       stepL = 1;
       else if (rx >= INPUT_ZONE_RIGHT_X) stepR = 1;
+      else if (ry >= INPUT_ZONE_DUCK_Y)  ducks = 1;
       else                               jumps = 1;
     } else {
       t_emaX += INPUT_EMA_ALPHA * ((float)rx - t_emaX);
@@ -78,7 +80,7 @@ void sampleOnce() {
   t_wasTouching = touching;
 
   portENTER_CRITICAL(&s_mux);
-  sh_jumps += jumps; sh_presses += presses; sh_stepL += stepL; sh_stepR += stepR;
+  sh_jumps += jumps; sh_ducks += ducks; sh_presses += presses; sh_stepL += stepL; sh_stepR += stepR;
   sh_moveX = moveX;
   sh_moveY = moveY;
   sh_touching = touching && t_heldSamples >= 2;
@@ -111,7 +113,7 @@ bool init() {
 void update(float dt) {
   (void)dt;
   portENTER_CRITICAL(&s_mux);
-  const uint32_t jumps = sh_jumps, presses = sh_presses, stL = sh_stepL, stR = sh_stepR;
+  const uint32_t jumps = sh_jumps, ducks = sh_ducks, presses = sh_presses, stL = sh_stepL, stR = sh_stepR;
   s_state.moveX = sh_moveX;
   s_state.moveY = sh_moveY;
   s_state.touching = sh_touching;
@@ -119,9 +121,10 @@ void update(float dt) {
   s_state.pointY = sh_py;
   portEXIT_CRITICAL(&s_mux);
 
-  // Jumps and presses collapse (two between ticks = one action). Lane steps are
+  // Jumps, ducks and presses collapse (two between ticks = one action). Lane steps are
   // queued, one per tick, so two quick taps on one side move two lanes.
   s_state.jumpPressed = (jumps != g_jumps);  g_jumps = jumps;
+  s_state.duckPressed = (ducks != g_ducks);  g_ducks = ducks;
   s_state.pressed     = (presses != g_presses); g_presses = presses;
   s_state.laneStep = 0;
   if (stL != g_stepL)      { s_state.laneStep = -1; ++g_stepL; }

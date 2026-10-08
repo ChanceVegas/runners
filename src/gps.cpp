@@ -30,6 +30,125 @@ uint32_t s_lastEchoMs = 0;
 bool     s_echoing = false;        // echoing the current epoch (RMC to next RMC)
 uint32_t s_lastStatusMs = 0;
 uint32_t s_bytes = 0;              // raw bytes received (wiring check: 0 = nothing on RX)
+uint32_t s_winSent = 0, s_winBytes = 0;   // rate window (since the last report)
+uint8_t  s_winTypes = 0;
+char     s_types[48] = "";
+
+void tryBaud(int i);   // below
+
+// ---- UBX binary parser (G0-R5) ----------------------------------------------------
+// Frame: B5 62 class id lenLo lenHi payload[len] ckA ckB (8-bit Fletcher over class..
+// payload). Runs on every byte alongside the NMEA line parser.
+enum UbxState : uint8_t { U_SYNC1, U_SYNC2, U_CLASS, U_ID, U_LEN1, U_LEN2, U_PAYLOAD, U_CKA, U_CKB };
+UbxState u_state = U_SYNC1;
+uint8_t  u_cls = 0, u_id = 0, u_ckA = 0, u_ckB = 0, u_rxA = 0;
+uint16_t u_len = 0, u_pos = 0;
+uint8_t  u_buf[100];                 // NAV-PVT is 92 bytes; longer payloads are checksummed but not kept
+uint32_t s_winUbx = 0, s_winPvt = 0;
+struct UbxSeen { uint8_t cls, id; uint16_t n; };
+UbxSeen  s_ubxSeen[6];               // distinct class/id pairs in the window
+int      s_nUbxSeen = 0;
+char     s_ubxText[64] = "";
+bool     s_ubxLogged = false;
+
+inline uint32_t u4(const uint8_t* p) { return p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24); }
+inline int32_t  i4(const uint8_t* p) { return (int32_t)u4(p); }
+
+void ubxFrame() {
+  ++s_winUbx;
+  s_fix.lastMs = millis();                       // UBX counts as a live link too
+  if (!s_locked) {
+    s_locked = true;
+    s_fix.baud = BAUDS[s_baudIdx];
+    Serial.printf("[gps] LINK OK at %u baud (UBX)\n", (unsigned)s_fix.baud);
+  }
+  s_fix.link = true;
+  int i = 0;
+  for (; i < s_nUbxSeen; ++i) if (s_ubxSeen[i].cls == u_cls && s_ubxSeen[i].id == u_id) break;
+  if (i == s_nUbxSeen && s_nUbxSeen < 6) s_ubxSeen[s_nUbxSeen++] = { u_cls, u_id, 0 };
+  if (i < 6) ++s_ubxSeen[i].n;
+  if (!s_ubxLogged) {
+    s_ubxLogged = true;
+    Serial.printf("[gps] UBX binary frames detected (first %02X-%02X, %u bytes)\n", u_cls, u_id, u_len);
+  }
+  if (u_cls == 0x01 && u_id == 0x07 && u_len == 92) {   // UBX-NAV-PVT
+    ++s_winPvt;
+    const uint8_t* p = u_buf;
+    const uint8_t fixType = p[20], flags = p[21];
+    s_fix.fixType = fixType;
+    s_fix.quality = (fixType >= 2 && (flags & 0x01)) ? 1 : 0;
+    s_fix.valid = s_fix.quality != 0;
+    s_fix.satsUsed = p[23];
+    if (p[11] & 0x02) { s_fix.hh = p[8]; s_fix.mm = p[9]; s_fix.ss = p[10]; }   // validTime
+    if (s_fix.quality) {
+      s_fix.lon = i4(p + 24) * 1e-7;
+      s_fix.lat = i4(p + 28) * 1e-7;
+      s_fix.altM = i4(p + 36) * 0.001f;
+      s_fix.speedMS = i4(p + 60) * 0.001f;
+      s_fix.courseDeg = i4(p + 64) * 1e-5f;
+    }
+    s_fix.hAccM = u4(p + 40) * 0.001f;
+    s_fix.hdop = (p[76] | (p[77] << 8)) * 0.01f;        // pDOP (closest NAV-PVT has)
+  }
+}
+
+// ---- Baud upgrade (G0-R5) ----------------------------------------------------------
+// The module streams more than 9600 baud can carry (G0-R2 log: ~4 NMEA sentences/s with
+// 10 s gaps full of non-NMEA bytes). Once linked below 115200 we ask it, in RAM only
+// (a power cycle restores its own setting), to switch UART1 to 115200: both the M10
+// way (CFG-VALSET CFG-UART1-BAUDRATE) and the legacy way (CFG-PRT). A module that
+// doesn't know one of them just NAKs it. Then we follow to 115200; if nothing valid
+// arrives there, the normal baud search finds it again and we don't retry.
+bool s_upgradeTried = false;
+
+void ubxSend(uint8_t cls, uint8_t id, const uint8_t* pl, uint16_t len) {
+  uint8_t a = 0, b = 0;
+  const uint8_t hdr[4] = { cls, id, (uint8_t)len, (uint8_t)(len >> 8) };
+  for (uint8_t v : hdr) { a += v; b += a; }
+  for (uint16_t i = 0; i < len; ++i) { a += pl[i]; b += a; }
+  U.write(0xB5); U.write(0x62); U.write(hdr, 4); U.write(pl, len); U.write(a); U.write(b);
+}
+
+void requestBaud115200() {
+  const uint32_t baud = 115200;
+  // CFG-VALSET: version 0, layer RAM (1), 2 reserved, key 0x40520001 (U4), value.
+  const uint8_t valset[12] = { 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x52, 0x40,
+                               (uint8_t)baud, (uint8_t)(baud >> 8), (uint8_t)(baud >> 16), (uint8_t)(baud >> 24) };
+  ubxSend(0x06, 0x8A, valset, sizeof valset);
+  // CFG-PRT (legacy): port 1 (UART1), 8N1, baud, in UBX+NMEA, out UBX+NMEA.
+  const uint8_t prt[20] = { 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00,
+                            (uint8_t)baud, (uint8_t)(baud >> 8), (uint8_t)(baud >> 16), (uint8_t)(baud >> 24),
+                            0x03, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  ubxSend(0x06, 0x00, prt, sizeof prt);
+  U.flush();                                     // wait until it's on the wire
+  delay(60);                                     // module applies it after the frame
+  Serial.printf("[gps] asked the module for 115200 baud (RAM only); following\n");
+  for (int i = 0; i < NBAUDS; ++i) if (BAUDS[i] == 115200) { s_locked = false; s_fix.link = false; tryBaud(i); }
+}
+
+void ubxByte(uint8_t c) {
+  switch (u_state) {
+    case U_SYNC1: if (c == 0xB5) u_state = U_SYNC2; break;
+    case U_SYNC2: u_state = (c == 0x62) ? U_CLASS : (c == 0xB5 ? U_SYNC2 : U_SYNC1); break;
+    case U_CLASS: u_cls = c; u_ckA = c; u_ckB = c; u_state = U_ID; break;
+    case U_ID:    u_id = c; u_ckA += c; u_ckB += u_ckA; u_state = U_LEN1; break;
+    case U_LEN1:  u_len = c; u_ckA += c; u_ckB += u_ckA; u_state = U_LEN2; break;
+    case U_LEN2:
+      u_len |= (uint16_t)c << 8; u_ckA += c; u_ckB += u_ckA; u_pos = 0;
+      u_state = u_len > 1024 ? U_SYNC1 : (u_len ? U_PAYLOAD : U_CKA);
+      break;
+    case U_PAYLOAD:
+      if (u_pos < sizeof u_buf) u_buf[u_pos] = c;
+      ++u_pos; u_ckA += c; u_ckB += u_ckA;
+      if (u_pos >= u_len) u_state = U_CKA;
+      break;
+    case U_CKA: u_rxA = c; u_state = U_CKB; break;
+    case U_CKB:
+      if (u_rxA == u_ckA && c == u_ckB) ubxFrame();
+      u_state = U_SYNC1;
+      break;
+  }
+}
 int8_t   s_rxPin = GPS_PIN_RX, s_txPin = GPS_PIN_TX;   // swapped at boot if the probe says so
 
 // Boot-time pin probe (G0-R2): with both UART pins as pulled-down inputs, count level
@@ -95,6 +214,7 @@ void handleSentence() {
   if (h < 0 || l < 0 || sum != (uint8_t)(h * 16 + l)) { ++s_fix.badSum; return; }
   *star = 0;
   ++s_fix.sentences;
+  ++s_winSent;
   s_fix.lastMs = millis();
   if (!s_locked) {
     s_locked = true;
@@ -115,6 +235,9 @@ void handleSentence() {
   char* f[24];
   const int n = split(s_line, f, 24);
   const char* type = f[0] + 2;                 // skip talker ("GP", "GN", "GL", ...)
+  s_winTypes |= !strcmp(type, "RMC") ? 1 : !strcmp(type, "GGA") ? 2 : !strcmp(type, "GSV") ? 4
+              : !strcmp(type, "GSA") ? 8 : !strcmp(type, "VTG") ? 16 : !strcmp(type, "GLL") ? 32
+              : !strcmp(type, "TXT") ? 64 : 128;
   if (!strcmp(type, "GGA") && n >= 10) {
     s_fix.quality = (uint8_t)atoi(f[6]);
     s_fix.satsUsed = (uint8_t)atoi(f[7]);
@@ -186,10 +309,17 @@ void update() {
     tryBaud(s_baudIdx);                        // re-listen at the last good baud first
   }
 
+  if (s_locked && !s_upgradeTried && s_fix.baud && s_fix.baud < 115200) {
+    s_upgradeTried = true;
+    requestBaud115200();
+  }
+
   int budget = 1200;                           // bytes per call; plenty at 115200 / 40 ms
   while (U.available() && budget--) {
     const char c = (char)U.read();
     ++s_bytes;
+    ++s_winBytes;
+    ubxByte((uint8_t)c);
     if (c == '$') { s_len = 0; continue; }
     if (c == '\r' || c == '\n') {
       if (s_len > 0) { s_line[s_len] = 0; handleSentence(); }
@@ -202,17 +332,40 @@ void update() {
 
   // HUD text + serial status every GPS_REPORT_MS.
   if (now - s_lastStatusMs >= GPS_REPORT_MS) {
+    const uint32_t win = now - s_lastStatusMs;
     s_lastStatusMs = now;
+    s_fix.rateSps = (uint16_t)(s_winSent * 1000 / (win ? win : 1));
+    s_fix.bps = (uint16_t)(s_winBytes * 1000 / (win ? win : 1));
+    s_fix.types = s_winTypes;
+    s_fix.ubxPerS = (uint16_t)(s_winUbx * 1000 / (win ? win : 1));
+    s_fix.pvtPerS = (uint16_t)(s_winPvt * 1000 / (win ? win : 1));
+    s_ubxText[0] = 0;
+    for (int k = 0; k < s_nUbxSeen; ++k) {
+      char item[16];
+      snprintf(item, sizeof item, "%02X-%02X x%u ", s_ubxSeen[k].cls, s_ubxSeen[k].id, s_ubxSeen[k].n);
+      if (strlen(s_ubxText) + strlen(item) < sizeof s_ubxText) strcat(s_ubxText, item);
+    }
+    s_nUbxSeen = 0;
+    s_winUbx = s_winPvt = 0;
+    s_winSent = s_winBytes = 0;
+    s_winTypes = 0;
+    static const char* const NAMES[8] = { "RMC", "GGA", "GSV", "GSA", "VTG", "GLL", "TXT", "?" };
+    s_types[0] = 0;
+    for (int i = 0; i < 8; ++i)
+      if (s_fix.types & (1 << i)) { strcat(s_types, NAMES[i]); strcat(s_types, " "); }
     if (!s_fix.link) snprintf(s_status, sizeof s_status, "GPS no data (%u)", (unsigned)BAUDS[s_baudIdx]);
     else if (!s_fix.quality) snprintf(s_status, sizeof s_status, "GPS %u/%u heard, no fix", s_fix.satsHeard, s_fix.satsView);
     else snprintf(s_status, sizeof s_status, "GPS %u sats FIX", s_fix.satsUsed);
     if (s_fix.link)
       Serial.printf("[gps] %u baud | fix q%u %s | sats used %u view %u | hdop %.1f | %.6f, %.6f | "
-                    "heard %u best %u dB | alt %.0f m | %.1f m/s | UTC %02u:%02u:%02u | ok %u bad %u\n",
+                    "heard %u best %u dB | alt %.0f m | %.1f m/s | UTC %02u:%02u:%02u | ok %u bad %u | "
+                    "%u sent/s %u B/s [%s] | UBX %u/s PVT %u/s fixType %u hAcc %.0f m [%s]\n",
                     (unsigned)s_fix.baud, s_fix.quality, s_fix.valid ? "A" : "V", s_fix.satsUsed,
                     s_fix.satsView, s_fix.hdop, s_fix.lat, s_fix.lon, s_fix.satsHeard, s_fix.snrMax,
                     s_fix.altM, s_fix.speedMS,
-                    s_fix.hh, s_fix.mm, s_fix.ss, (unsigned)s_fix.sentences, (unsigned)s_fix.badSum);
+                    s_fix.hh, s_fix.mm, s_fix.ss, (unsigned)s_fix.sentences, (unsigned)s_fix.badSum,
+                    s_fix.rateSps, s_fix.bps, s_types, s_fix.ubxPerS, s_fix.pvtPerS, s_fix.fixType,
+                    s_fix.hAccM, s_ubxText);
     else
       Serial.printf("[gps] no NMEA yet (trying %u baud) | raw bytes %u%s\n",
                     (unsigned)BAUDS[s_baudIdx], (unsigned)s_bytes,
@@ -224,5 +377,7 @@ void update() {
 const Fix& fix() { return s_fix; }
 const char* statusText() { return s_status; }
 void setEcho(bool on) { s_echo = on; }
+const char* typesText() { return s_types; }
+const char* ubxText() { return s_ubxText; }
 
 }

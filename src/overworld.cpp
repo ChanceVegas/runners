@@ -40,6 +40,7 @@ bool  s_engaged = false;
 world::Enemy s_engagedEnemy;
 bool  s_needMove = false;            // after a chase: must move before engaging again
 bool  s_menuReq = false;
+bool  s_gpsPanel = false;            // G0: tap the GPS status box for the detail panel
 float s_energy = 0.0f;
 float s_walked = 0.0f;
 uint32_t s_wallet = 0, s_escapes = 0;
@@ -208,6 +209,9 @@ void update(float dt) {
   if (in.pressed && in.pointX >= MENU_X && in.pointX < MENU_X + MENU_W &&
       in.pointY >= 0 && in.pointY < MENU_Y + MENU_H + 6)
     s_menuReq = true;
+  if (in.pressed && in.pointX >= 4 && in.pointX < 172 && in.pointY >= LCD_HEIGHT - 60 &&
+      in.pointY < LCD_HEIGHT - 36)
+    s_gpsPanel = !s_gpsPanel;
 }
 
 void beginRender(float alpha) {
@@ -311,6 +315,28 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     const uint16_t gc = !g.link ? rgb565(235, 80, 70) : (g.quality ? rgb565(90, 230, 110) : rgb565(255, 200, 60));
     rect(band, bandY, 4, LCD_HEIGHT - 58, 168, 20, rgb565(24, 28, 32));
     text(band, bandY, gps::statusText(), 88, LCD_HEIGHT - 48, hud::F9, 1.0f, gc, 160);
+    if (s_gpsPanel) {                      // detail panel (tap the box again to close)
+      char ln[64];
+      const int32_t PY = 40, PH = 150;
+      rect(band, bandY, 4, PY, 300, PH, rgb565(16, 18, 26));
+      hud::frame(band, bandY, 4, PY, 300, PH, rgb565(120, 120, 130));
+      snprintf(ln, sizeof ln, "link %s  %u baud  %u sent/s  %u B/s", g.link ? "OK" : "NO",
+               (unsigned)g.baud, g.rateSps, g.bps);
+      text(band, bandY, ln, 154, PY + 14, hud::F9, 1.0f, WHITE, 290);
+      snprintf(ln, sizeof ln, "fix q%u (%s)  used %u  hdop %.1f", g.quality, g.valid ? "valid" : "void",
+               g.satsUsed, g.hdop);
+      text(band, bandY, ln, 154, PY + 36, hud::F9, 1.0f, gc, 290);
+      snprintf(ln, sizeof ln, "sats view %u  heard %u  best %u dB", g.satsView, g.satsHeard, g.snrMax);
+      text(band, bandY, ln, 154, PY + 58, hud::F9, 1.0f, WHITE, 290);
+      snprintf(ln, sizeof ln, "UTC %02u:%02u:%02u   alt %.0f m   %.1f m/s", g.hh, g.mm, g.ss, g.altM,
+               g.speedMS);
+      text(band, bandY, ln, 154, PY + 80, hud::F9, 1.0f, WHITE, 290);
+      snprintf(ln, sizeof ln, "types: %s", gps::typesText());
+      text(band, bandY, ln, 154, PY + 102, hud::F9, 1.0f, GREY, 290);
+      snprintf(ln, sizeof ln, "UBX %u/s  PVT %u/s  fixType %u  [%s]", g.ubxPerS, g.pvtPerS, g.fixType,
+               gps::ubxText());
+      text(band, bandY, ln, 154, PY + 124, hud::F9, 1.0f, GREY, 290);
+    }
   }
 
   // Bottom banner: engage prompt, or the movement hint.

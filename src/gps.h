@@ -24,6 +24,15 @@ struct Fix {
   uint32_t sentences;   // good sentences (checksum OK)
   uint32_t badSum;      // checksum failures
   uint32_t lastMs;      // millis() of the last good sentence
+  uint16_t rateSps;     // good sentences per second (last report window)
+  uint16_t bps;         // raw bytes per second (9600 baud tops out near 960)
+  uint8_t  types;       // bitmask of sentence types seen in the window: 1 RMC, 2 GGA,
+                        // 4 GSV, 8 GSA, 16 VTG, 32 GLL, 64 TXT, 128 other
+  // UBX binary (G0-R5): FPV modules like the HGLRC M100 ship configured for UBX.
+  uint16_t ubxPerS;     // valid UBX frames per second (last window)
+  uint16_t pvtPerS;     // UBX-NAV-PVT frames per second
+  uint8_t  fixType;     // NAV-PVT: 0 none, 2 2D, 3 3D (when NAV-PVT is present)
+  float    hAccM;       // NAV-PVT horizontal accuracy estimate, metres
 };
 
 bool init();            // start UART1 and baud detection
@@ -31,5 +40,7 @@ void update();          // non-blocking: drain the UART, parse; call every loop
 const Fix& fix();
 const char* statusText();   // short line for the HUD: "GPS 7 sats 3D" / "GPS no data"
 void setEcho(bool on);      // G0: also print raw GSV/GGA/TXT sentences to serial
+const char* ubxText();      // e.g. "01-07 x10 01-35 x1" (UBX class-id seen recently)
+const char* typesText();    // e.g. "RMC GGA GSV" for the types seen recently
 
 }

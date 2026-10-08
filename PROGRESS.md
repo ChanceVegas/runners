@@ -16,7 +16,10 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. G0 GPS GATE (user): LINK OK ✅ 2026-10-08 (after swapping the data jumpers, as the
+1. G0-R5 GPS (user): flash `=== Runners G0-R5 ===`; serial should show `UBX binary frames
+   detected` and/or `asked the module for 115200 baud` then `LINK OK at 115200`. Then
+   outdoors: tap the map's GPS box for the panel (fixType 3, sats, hAcc).
+   Previous: LINK OK ✅ 2026-10-08 (after swapping the data jumpers, as the
    user suspected): NMEA at 9600 baud, $GN talkers (multi-GNSS), checksums all good.
    Indoors: 0 sats, no fix, no time (expected). NEXT: outdoor / window fix test with
    the map HUD + serial log (G0-R3 = longer link-loss timeout, softer probe text).
@@ -147,6 +150,18 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — GPS: module streams UBX, 9600 too slow
+- User: outside, open sky, ~5 min, no fix; GPS blue LED on, red LED slowly flashing
+  (red = PPS per a seller listing; may pulse without a fix). Log (G0-R2, likely indoors):
+  ~4 NMEA sentences/s, 10 s gaps where 24.8 KB of non-NMEA bytes arrived, UTC never set.
+  Seller listing: M100 Mini = UBX protocol, 10 Hz, 115200 baud, 3.3-5 V (rcdrone.top).
+- Hypothesis: module streams UBX (+ some NMEA) faster than 9600 can carry.
+- Done: G0-R5 — UBX parser (NAV-PVT -> fix/sats/lat/lon/speed/hAcc), UBX + NMEA rate
+  and type stats, RAM-only request for 115200 (CFG-VALSET + legacy CFG-PRT) once linked
+  below 115200, then follow; tap the map GPS box for a detail panel (works outdoors
+  without a laptop).
+- Commit: feat(gps): UBX NAV-PVT parser, 115200 baud request, detail panel (G0-R5)
+
 ### 2026-10-08 — Session 3 (cont.) — no satellite lock
 - User: "i am not getting any satellite lock" (location/duration/log not yet given).
 - Done: G0-R4 diagnostics — talker-agnostic per-epoch GSV stats (in view, heard =

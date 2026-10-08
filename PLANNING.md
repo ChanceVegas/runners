@@ -114,8 +114,9 @@ Arcade mode stays the endless runner.
   ARCADE_WALLET_PCT (50%) of its coins at game over (user: "yes, but reduced").
 
 **Art** — bright chunky pixel art (user: the hardware dictates it).
-- Foundation: PNG -> RGB565 + transparency pipeline (host tool), with the pushImage
-  read-back self-test (CARRY-1) BEFORE any bitmap ships; a scaled, colour-keyed blit
+- Foundation (A1, built 2026-10-08): text-grid pixel art -> palette-indexed sprites
+  (tools/art_gen.py; PNG import can be added if the user draws art), and a scaled,
+  transparent-index blit (sprite.*; no pushImage, so CARRY-1 can't bite) 
   that writes the band buffer directly (sprites shrink with depth on the road).
 - Content: runner (run cycle, jump, stumble), 3 enemies (front + back views, run
   cycle), obstacles, coin, orb, hearts/HUD icons, shop items; map tiles later.
@@ -146,6 +147,9 @@ Arcade mode stays the endless runner.
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter (+ runner rank scaling and rank helpers): Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | DONE (B1..RK-R3, hw-verified) |
 | audio | src/audio.* | square/noise synth on the onboard I2S amp, own task (core 0): 2 SFX voices + M1 music sequencer (lead/bass/drums); play(Sfx), music(Track); volumes in config | AU0/M1/VOL hw-verified 2026-10-08 |
+| sprite | src/sprite.* | palette-indexed sprite blitter: direct band-buffer writes, scaled, flip, colour 0 transparent | A1 |
+| art_data | src/art_data.h | GENERATED sprite pixels + shared palette (flash) — edit tools/art_gen.py | A1 |
+| art_gen | tools/art_gen.py | host tool: text-grid / generated pixel art -> src/art_data.h (+ --preview PNG) | A1 |
 | music_data | src/music_data.h | GENERATED song row tables (flash) — edit tools/music_gen.py, not this file | M1 |
 | music_gen | tools/music_gen.py | host tool: song notation -> src/music_data.h | M1 |
 | settings | src/settings.* | SETTINGS screen (Music / Sound levels 0-10, mute), NVS vmus/vsfx/mute, in-run mute corner icon | DONE (VOL-R1, hw-verified) |

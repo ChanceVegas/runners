@@ -46,6 +46,7 @@
 
 // --- Encounter runner (R1) ---
 #define RUN_FEET_Y           250    // px; screen row of the runner's feet
+#define RUN_SPRITE_SCALE     2.0f   // runner art (20x35) -> 40x70 px on screen (A1)
 #define RUN_LANE_SPEED       10.0f  // lanes/s sideways; 100 ms per lane change (was 7)
 #define DEBUG_INPUT_LOG      1      // 1 = print each tap the encounter consumes + crash causes
 

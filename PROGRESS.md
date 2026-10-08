@@ -16,9 +16,15 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A1 ART FOUNDATION (approved spec, PLANNING "Art"): short breakdown approved by the
-   user before code (Session Workflow rule 3). CARRY-1 pushImage read-back test first;
-   report render ms (ART-PERF). Then A2.
+1. A1 ART GATE (user): `git pull`, flash, confirm `=== Runners A1-R1 ===`.
+   - [ ] Runner is pixel art: 4-step run cycle, tucked jump, crouch duck, arms-out
+         stumble, shield blink still works. Crash pose is still shapes (A2).
+   - [ ] Barrier (orange/white), duck bar (yellow/black + arrow), wall (concrete +
+         warning band), spinning gold coin, pulsing blue orb — all scale with distance.
+   - [ ] Colours right (no magenta / swapped colours).
+   - [ ] Hitboxes still match: duck under bars, jump barriers, as before.
+   - [ ] Serial render ms in ARCADE run + BATTLE run (ART-PERF; was 26–29 ms).
+   Then A2 (enemies front/back, HUD icons, shop art) — needs its own breakdown.
 2. GPS bring-up check as soon as the user solders the M100 Mini (UART1, baud
    autodetect, NMEA sats/fix over serial; window or outdoors). Then R2 proper, with
    approved Safety items 1–5 (PLANNING) as mandatory scope.
@@ -70,7 +76,7 @@ session doesn't know it happened.
   Amp chip unidentified. Volume capped at 30% (AUDIO_VOLUME_PCT) until the user
   confirms it sounds clean.
 - P1-ART (open): all art is still primitive shapes (rects/ellipses/triangles). Real
-  sprites need the pushImage read-back test first (CARRY-1).
+  sprites: A1 adds runner/obstacles/coin/orb; enemies, HUD and shop art are A2.
 - R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
   (boot self-test: red 0xF800 reads 0x00F8). Any direct write into a band buffer
   must swap. lanes::init() detects it and converts; colours verified on hardware.
@@ -103,10 +109,10 @@ session doesn't know it happened.
   marker uses input's smoothed point. If multiple dots persist, absolute touch
   mapping is wrong: Cave Escape only verified RELATIVE drag, never absolute position
   — corner xy readings will show mirroring/scaling.
-- CARRY-1 (open, strong lead): Cave Escape showed unexplained magenta on floor tiles.
-  R1-BYTE proved band buffers are byte-swapped; Cave Escape's parallax wrote native
-  colours straight into them, and its sprite pushImage path never checked byte order.
-  R1 uses NO bitmaps. Before the first bitmap art: read-back test of pushImage.
+- CARRY-1 (closed by design, A1): the A1 blitter (sprite.*) never uses pushImage — it
+  writes the band buffer directly with the palette converted once by renderer::raw(),
+  the same verified path as the road. Magenta/colour-key failure can't occur there.
+  If wrong colours ever show on sprites, check sprite::init ran after renderer::init.
 - HW-SUN (open, design): CrowPanel display not sunlight-readable; outdoor play needs
   different field hardware (PLANNING Open Decision #2).
 - GPS-INDOOR (open, process): GPS rarely fixes indoors. R2 must ship a fake-GPS
@@ -133,6 +139,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A1 art foundation
+- User approved A1 ("Let's Grind!").
+- Done: tools/art_gen.py (text-grid + generated pixel art -> src/art_data.h, one shared
+  27-colour palette, 5.7 KB; --preview writes a sprite sheet PNG, gitignored),
+  sprite.* (direct band-buffer blit, 16.16 nearest-neighbour scale, flip, transparent
+  index 0), runner (run A/B + mirror, jump, duck, stumble) at 2x, barrier / duck bar /
+  wall / coin / orb sprites sized within their collision boxes. CARRY-1 closed by
+  design. Flash 37.0%. Banner A1-R1.
+- Commit: feat(art): A1 sprite pipeline + runner, obstacles, coin, orb
+
 ### 2026-10-08 — Session 3 (cont.) — VOL-R1 hw result: milestone wrap
 - User (VOL-R1 on hw): "everything seems to be working great"; level 10 "very very
   minimal distortion". B1/S1/M1/rank/pass/volume marked complete. Next: A1 (needs

@@ -21,6 +21,7 @@
 #include "battle.h"
 #include "audio.h"
 #include "settings.h"
+#include "sprite.h"
 #include "input.h"
 #include "config.h"
 #include "color.h"
@@ -277,67 +278,35 @@ constexpr uint16_t C_RED    = rgb565(235, 50, 40);
 constexpr uint16_t C_GREY   = rgb565(200, 200, 200);
 constexpr uint16_t C_SHADOW = rgb565(32, 32, 36);
 
+// A1: obstacles, coins and orbs are sprites (art_data.h) scaled by road depth. Each is
+// drawn no larger than its collision box: width OBST_W_PX, barrier 48 <= 50 px, duck
+// bar 152 px with its beam's underside at 56 px (= OBST_DUCK_LOW_PX), wall 168 <= 170.
 void drawObstacle(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const Obstacle& o = s_obst[d.idx];
-  const float s = d.s;
-  const int32_t w = (int32_t)(OBST_W_PX * s) + 1;
-  const int32_t x = d.x - w / 2;
-  const int32_t yb = d.y;
-  if (o.kind == Kind::Barrier) {
-    const int32_t h = (int32_t)(OBST_BARRIER_H_PX * s) + 1;
-    const int32_t leg = w / 8 + 1;
-    rect(b, bandY, x + leg, yb - h, leg, h, rgb565(70, 70, 70));                 // legs
-    rect(b, bandY, x + w - 2 * leg, yb - h, leg, h, rgb565(70, 70, 70));
-    rect(b, bandY, x, yb - h, w, h * 6 / 10 + 1, rgb565(250, 130, 0));          // board
-    rect(b, bandY, x, yb - h + h / 5, w, h / 5 + 1, C_WHITE);                    // stripe
-    rect(b, bandY, x, yb - h, w, h / 14 + 1, rgb565(255, 190, 90));              // lit edge
-  } else if (o.kind == Kind::Overhead) {                    // duck bar: beam on two posts
-    const int32_t lo = (int32_t)(OBST_DUCK_LOW_PX * s), top = (int32_t)(OBST_DUCK_TOP_PX * s) + 1;
-    const int32_t post = w / 12 + 1;
-    rect(b, bandY, x, yb - top, post, top, rgb565(80, 80, 88));                  // posts
-    rect(b, bandY, x + w - post, yb - top, post, top, rgb565(80, 80, 88));
-    const int32_t bh = top - lo;                                                 // beam
-    // Yellow/black overhead-clearance beam (barriers are orange/white and low), with
-    // a white "duck" arrow pointing down, so the two read apart at a glance.
-    rect(b, bandY, x, yb - top, w, bh, rgb565(255, 210, 0));
-    for (int i = 0; i < 4; ++i)                                                  // black blocks
-      rect(b, bandY, x + i * w / 4, yb - top, w / 8 + 1, bh, rgb565(20, 20, 20));
-    if (rowsHit(yb - lo - bh / 2, yb - lo + 1, bandY, b.height()) && bh > 6) {
-      const int32_t aw = w / 6 + 2, ay = yb - lo - bandY;                        // arrow under the beam
-      b.fillTriangle(d.x - aw, ay - bh / 2, d.x + aw, ay - bh / 2, d.x, ay, C_WHITE);
-    }
-  } else {
-    const int32_t h = (int32_t)(OBST_WALL_H_PX * s) + 1;
-    rect(b, bandY, x, yb - h, w, h, rgb565(50, 54, 62));                         // slab
-    rect(b, bandY, x, yb - h, w, h / 10 + 1, rgb565(108, 112, 122));             // top
-    rect(b, bandY, x + w - w / 8, yb - h, w / 8 + 1, h, rgb565(36, 38, 44));     // side shade
-    rect(b, bandY, x + w / 6, yb - h * 7 / 10, w * 2 / 3, h / 6 + 1, rgb565(255, 200, 0));
-    rect(b, bandY, x + w / 6, yb - h * 7 / 10 + h / 12, w * 2 / 3, h / 24 + 1, rgb565(30, 30, 30));
-  }
+  const ArtSprite& a = o.kind == Kind::Barrier ? ART_BARRIER
+                     : o.kind == Kind::Overhead ? ART_DUCKBAR : ART_WALL;
+  const int32_t w = (int32_t)(OBST_W_PX * d.s) + 1;
+  const int32_t h = w * a.h / a.w;                       // keep the art's aspect
+  sprite::draw(b, bandY, a, d.x - w / 2, d.y - h, w, h);
 }
 
 void drawCoin(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   const Coin& c = s_coin[d.idx];
-  const float s = d.s;
-  const int32_t r = (int32_t)(COIN_R_PX * s) + 1;
-  const int32_t yc = d.y - (int32_t)((c.high ? COIN_HIGH_PX : COIN_LOW_PX) * s);
+  const int32_t r = (int32_t)(COIN_R_PX * d.s) + 1;
+  const int32_t yc = d.y - (int32_t)((c.high ? COIN_HIGH_PX : COIN_LOW_PX) * d.s);
   if (!rowsHit(yc - r, yc + r, bandY, b.height())) return;
-  // Spin: horizontal radius follows |cos|, phase offset per coin so they don't sync.
+  // Spin: width follows |cos|, phase offset per coin so they don't sync.
   const float spin = fabsf(cosf(d_time * 6.0f + c.wz * 0.7f));
   const int32_t rx = (int32_t)(r * (0.25f + 0.75f * spin)) + 1;
-  b.fillEllipse(d.x, yc - bandY, rx, r, C_GOLD);
-  if (rx > 2) b.fillEllipse(d.x - rx / 4, yc - r / 4 - bandY, rx / 2, r / 2, C_GOLD_HI);
+  sprite::draw(b, bandY, ART_COIN, d.x - rx, yc - r, 2 * rx, 2 * r);
 }
 
 void drawOrb(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
-  const float s = d.s;
-  const int32_t r = (int32_t)(26.0f * s) + 2;
-  const int32_t pulse = (int32_t)(sinf(d_time * 10.0f + d.z) * 2.0f * s);
-  const int32_t yc = d.y - (int32_t)(55.0f * s);
-  if (!rowsHit(yc - r - 4, yc + r + 4, bandY, b.height())) return;
-  b.fillCircle(d.x, yc - bandY, r + pulse, rgb565(40, 140, 220));       // glow
-  b.fillCircle(d.x, yc - bandY, r * 2 / 3, rgb565(150, 230, 255));      // core
-  b.fillCircle(d.x - r / 4, yc - r / 4 - bandY, r / 4 + 1, rgb565(255, 255, 255));
+  const int32_t pulse = (int32_t)(sinf(d_time * 10.0f + d.z) * 3.0f * d.s);
+  const int32_t r = (int32_t)(26.0f * d.s) + 2 + pulse;
+  const int32_t yc = d.y - (int32_t)(55.0f * d.s);
+  if (!rowsHit(yc - r, yc + r, bandY, b.height())) return;
+  sprite::draw(b, bandY, ART_ORB, d.x - r, yc - r, 2 * r, 2 * r);
 }
 
 void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
@@ -349,37 +318,12 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   if (shw > 4 && rowsHit(RUN_FEET_Y - 6, RUN_FEET_Y + 6, bandY, b.height()))
     b.fillEllipse(cx, RUN_FEET_Y - bandY, shw, 6, C_SHADOW);
 
-  const uint16_t JERSEY = rgb565(30, 170, 80), JERSEY_HI = rgb565(90, 225, 130);
-  const uint16_t SKIN = rgb565(240, 196, 150), HAIR = rgb565(110, 60, 20);
-  const uint16_t SHORTS = rgb565(40, 50, 90), SHOE = rgb565(240, 240, 240);
-
   const bool stumbling = s_stumbleT > 0.0f;
   if (!stumbling && s_invuln > 0.0f && ((int32_t)(d_time * 12.0f) & 1)) return;   // shield blink
 
-  if (stumbling && !down) {                             // tripping: pitched forward, arms out
-    rect(b, bandY, cx - 10, feet - 18, 8, 18, SKIN);
-    rect(b, bandY, cx + 4,  feet - 12, 14, 7, SKIN);    // trailing leg kicked back
-    rect(b, bandY, cx - 14, feet - 40, 28, 22, JERSEY);
-    rect(b, bandY, cx - 30, feet - 44, 16, 6, SKIN);    // arms flung out
-    rect(b, bandY, cx + 14, feet - 44, 16, 6, SKIN);
-    rect(b, bandY, cx - 9, feet - 56, 18, 16, SKIN);
-    rect(b, bandY, cx - 10, feet - 58, 20, 7, HAIR);
-    return;
-  }
-
-  if (s_duckT > 0.0f && !down) {                        // ducking: low crouch, 40 px tall
-    rect(b, bandY, cx - 16, feet - 10, 12, 10, SHOE);
-    rect(b, bandY, cx + 4,  feet - 10, 12, 10, SHOE);
-    rect(b, bandY, cx - 16, feet - 20, 32, 10, SHORTS);
-    rect(b, bandY, cx - 18, feet - 34, 36, 16, JERSEY);
-    rect(b, bandY, cx - 18, feet - 34, 36, 4, JERSEY_HI);
-    rect(b, bandY, cx - 22, feet - 26, 6, 12, SKIN);    // arms tucked
-    rect(b, bandY, cx + 16, feet - 26, 6, 12, SKIN);
-    rect(b, bandY, cx - 8,  feet - 40, 16, 10, HAIR);   // head down, back of the head
-    return;
-  }
-
-  if (down) {                                           // knocked flat
+  if (down) {                                           // knocked flat (shapes; A2 may add art)
+    const uint16_t JERSEY = rgb565(30, 170, 80), SKIN = rgb565(240, 196, 150);
+    const uint16_t HAIR = rgb565(110, 60, 20), SHORTS = rgb565(40, 50, 90);
     rect(b, bandY, cx - 34, RUN_FEET_Y - 16, 50, 14, JERSEY);
     rect(b, bandY, cx + 16, RUN_FEET_Y - 18, 16, 16, SKIN);
     rect(b, bandY, cx + 28, RUN_FEET_Y - 18, 6, 16, HAIR);
@@ -387,34 +331,23 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
     return;
   }
 
-  // Lean into a lane change: offset the upper body toward the target lane.
+  // A1 sprites at 2x (runner 40x70, duck 40x32 — under the duck bar's 49 px gap).
+  constexpr float SC = RUN_SPRITE_SCALE;
+  if (stumbling) { sprite::drawBottom(b, bandY, ART_STUMBLE, cx, feet, SC); return; }
+  if (s_duckT > 0.0f) { sprite::drawBottom(b, bandY, ART_DUCK, cx, feet, SC); return; }
+
+  // Lean into a lane change: shift the sprite toward the target lane.
   const float lean = (float)s_laneTarget - d_laneX;
-  const int32_t lx = (int32_t)(lean * 10.0f);
-  const bool air = d_jumpY > 1.0f;
-  const bool stride = (((int32_t)(d_travel / 1.6f)) & 1) != 0;
+  const int32_t lx = (int32_t)(lean * 8.0f);
+  if (d_jumpY > 1.0f) { sprite::drawBottom(b, bandY, ART_JUMP, cx + lx, feet, SC); return; }
+
   const bool moving = (s_state == State::Run || s_state == State::StageClear ||
                        s_state == State::Countdown);
-
-  if (air) {                                            // tucked legs
-    rect(b, bandY, cx - 11, feet - 20, 10, 12, SHORTS);
-    rect(b, bandY, cx + 1,  feet - 20, 10, 12, SHORTS);
-    rect(b, bandY, cx - 11, feet - 10, 10, 5, SHOE);
-    rect(b, bandY, cx + 1,  feet - 10, 10, 5, SHOE);
-  } else {
-    const int32_t lA = (moving && stride) ? 24 : 18, lB = (moving && !stride) ? 24 : 18;
-    rect(b, bandY, cx - 10, feet - 24, 8, lA - 4, SKIN);
-    rect(b, bandY, cx + 2,  feet - 24, 8, lB - 4, SKIN);
-    rect(b, bandY, cx - 11, feet - 24 + lA - 5, 10, 5, SHOE);
-    rect(b, bandY, cx + 1,  feet - 24 + lB - 5, 10, 5, SHOE);
-    rect(b, bandY, cx - 12, feet - 30, 24, 8, SHORTS);
-  }
-  rect(b, bandY, cx - 14 + lx / 2, feet - 56, 28, 28, JERSEY);
-  rect(b, bandY, cx - 14 + lx / 2, feet - 56, 28, 5, JERSEY_HI);
-  rect(b, bandY, cx - 6 + lx / 2,  feet - 48, 12, 12, C_WHITE);    // race number bib
-  rect(b, bandY, cx - 20 + lx / 2, feet - 52, 6, 18, SKIN);         // arms
-  rect(b, bandY, cx + 14 + lx / 2, feet - 52, 6, 18, SKIN);
-  rect(b, bandY, cx - 9 + lx, feet - 72, 18, 16, SKIN);             // head (from behind)
-  rect(b, bandY, cx - 10 + lx, feet - 76, 20, 9, HAIR);
+  // Run cycle: left stride, pass, right stride (mirrored), pass — one step per 1.6 m.
+  const int ph = moving ? (((int32_t)(d_travel / 1.6f)) & 3) : 1;
+  const ArtSprite& f = (ph & 1) ? ART_RUN_B : ART_RUN_A;
+  const int32_t bob = (ph & 1) ? 2 : 0;                 // passing frame rides a little higher
+  sprite::drawBottom(b, bandY, f, cx + lx, feet - bob, SC, ph == 2);
 }
 
 // Battle end screens: rank change from this outcome (same rule game_state saves).

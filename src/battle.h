@@ -55,6 +55,7 @@ const char* enemyName();
 // be drawn in the road's depth-sorted list this frame.
 bool  enemyOnRoad();
 bool  passing();                   // HP hit 0: running past it (no collisions)
+bool  passedIt();                  // passed at least once this battle = DEFEATED is locked in
 float enemyZAhead();
 float enemyLane();
 

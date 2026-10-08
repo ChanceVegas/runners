@@ -81,6 +81,7 @@ Preferences s_prefs;
 // one stage vs an enemy, shields from Run energy, result handed back to game_state).
 encounter::Mode s_mode = encounter::Mode::Arcade;
 float s_goalM = RUN_GOAL_M;                // stage length this run
+float s_goalFromM = 0.0f;                  // goal bar starts here (battle: moves after a pass)
 uint8_t s_shields = 0, s_shieldsUsed = 0;  // chase: hits absorbed
 float s_invuln = 0;                        // s of post-shield invulnerability left
 float s_stumbleT = 0;                      // battle: s of stumble left (slowed, no hits)
@@ -179,7 +180,9 @@ void spawnRow(float wz) {
 void setState(State st) { s_state = st; s_stateT = 0; }
 
 void finish(bool won, bool exitToMenu) {
-  s_result = { won, s_outcome == battle::Outcome::Defeated, s_outcome == battle::Outcome::GotAway,
+  const bool beaten = s_outcome == battle::Outcome::Defeated ||
+                      (s_mode == Mode::Battle && battle::passedIt());   // passed it = beaten
+  s_result = { won, beaten, s_outcome == battle::Outcome::GotAway,
                s_coins, s_shieldsUsed, exitToMenu };
   s_done = true;
 }
@@ -416,7 +419,9 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
 // Battle end screens: rank change from this outcome (same rule game_state saves).
 void rankNote(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t y) {
   char buf[40];
-  const uint16_t before = battle::rankPts(), after = battle::ptsAfter(before, s_outcome);
+  // Passing it locked in DEFEATED, even if it caught you again afterwards.
+  const battle::Outcome o = battle::passedIt() ? battle::Outcome::Defeated : s_outcome;
+  const uint16_t before = battle::rankPts(), after = battle::ptsAfter(before, o);
   const uint8_t r0 = battle::rankOf(before), r1 = battle::rankOf(after);
   if (r1 > r0) { snprintf(buf, sizeof buf, "RANK UP!  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_GREEN); }
   else if (r1 < r0) { snprintf(buf, sizeof buf, "RANK DOWN  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_RED); }
@@ -717,7 +722,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   // In-game HUD: escape progress bar, score, stage, coins.
   if (s_state == State::Run || s_state == State::Countdown || s_state == State::Crash) {
     const bool showGoal = !chase || battle::phase() == battle::Phase::Pursuit;
-    const float p = fminf(runM() / s_goalM, 1.0f);
+    const float p = fminf(fmaxf(runM() - s_goalFromM, 0.0f) / (s_goalM - s_goalFromM), 1.0f);
     if (showGoal) {
       rect(band, bandY, 10, 6, LCD_WIDTH - 20, 10, C_SHADOW);
       rect(band, bandY, 12, 8, (int32_t)((LCD_WIDTH - 24) * (s_state == State::Countdown ? 0 : p)),
@@ -842,8 +847,11 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
         rankNote(band, bandY, 180);
+        if (battle::passedIt())
+          text(band, bandY, "You passed it earlier: defeat bonus kept", cx, 202, F9, 1.0f,
+               rgb565(120, 230, 255));
         if (s_stateT > RUN_END_LOCKOUT_S)
-          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 228, F12, 1.0f, C_WHITE);
         break;
       }
       text(band, bandY, "CAUGHT!", cx, 62, F24, 1.3f, C_RED);
@@ -853,8 +861,11 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
         rankNote(band, bandY, 180);
+        if (battle::passedIt())
+          text(band, bandY, "You passed it earlier: defeat bonus kept", cx, 202, F9, 1.0f,
+               rgb565(120, 230, 255));
         if (s_stateT > RUN_END_LOCKOUT_S)
-          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 228, F12, 1.0f, C_WHITE);
         break;
       }
       hud::rect(band, bandY, 8, 8, 104, 40, rgb565(40, 40, 48));     // MENU button
@@ -888,6 +899,7 @@ void startArcade() {
   s_dropName = nullptr;
   s_jumpMul = 1.0f;                        // sneakers are battle stats; arcade stays fair
   s_goalM = RUN_GOAL_M;
+  s_goalFromM = 0.0f;
   s_shields = s_shieldsUsed = 0;
   s_invuln = 0;
   s_stumbleT = 0;
@@ -901,6 +913,7 @@ void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
   s_jumpMul = stats.jumpMul;
   // s_dropName is set by setDefeatDrop() just before this call; keep it.
   s_goalM = goalM;
+  s_goalFromM = 0.0f;
   s_shields = shields;
   s_shieldsUsed = 0;
   s_invuln = 0;
@@ -923,6 +936,13 @@ void spawnObstacle(Block kind, int8_t lane, float wz) {
 void spawnOrb(int8_t lane, float wz) {
   for (auto& o : s_orb) if (!o.active) { o = { true, lane, wz }; return; }
 }
+void restartRace(float goalM) {
+  s_goalFromM = s_travel - s_runStart;
+  s_goalM = goalM;
+  s_nextRowWz = s_travel + RUN_FIRST_ROW_M * 0.6f;   // rows resume a little way ahead
+  s_prevRowWz = -1e9f;
+}
+
 void clearAhead() {
   const float from = s_travel + playerZ() + 2.0f;     // keep whatever is already at the runner
   for (auto& o : s_obst) if (o.active && o.wz > from) o.active = false;

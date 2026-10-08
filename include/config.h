@@ -239,7 +239,14 @@
 #define BATTLE_HUNT_CLOSE_MS   6.0f   // m/s the enemy slides to its new distance after a hit
 #define BATTLE_ATTACK_MIN_Z_M  18.0f  // m; attacks never land closer than this (reaction time
                                       // ~0.7 s at 26 m/s), even when the enemy is nearer
-#define BATTLE_PASS_S          0.9f   // s of the "you run past it" animation on DEFEATED
+#define BATTLE_PASS_S          0.9f   // s of the "you run past it" animation
+// After you pass it (RK-R3, user): "YOU PASSED THE <NAME>!", the enemy is DEFEATED
+// (bonus, drop and rank points locked in) and the race restarts with it behind you,
+// weakened. Escape again to finish; if it catches you, a shorter Hunt.
+#define BATTLE_PASS_GAP_M      25.0f  // m gap when the race restarts after a pass
+#define BATTLE_PASS_ESCAPE_M   300.0f // m of running to the new finish after a pass
+#define BATTLE_PASS_GAIN_BONUS 0.20f  // m/s extra gap gain vs a passed (weakened) enemy
+#define BATTLE_PASS_BANNER_S   2.2f   // s the "YOU PASSED ..." banner stays up
 #define BATTLE_ENEMY_LANE_SPEED 3.0f  // lanes/s the enemy slides between lanes
 #define BATTLE_BANNER_S        1.3f   // s a battle banner ("STUMBLE!") stays up
 // Per enemy kind: HP, seconds between attacks, % of attacks that also drop an orb.

@@ -17,7 +17,12 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-0. RANK + HUNT + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners RK-R2 ===`.
+0. RANK + HUNT + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm the latest banner.
+   Pass (RK-R3):
+   - [ ] Last orb -> "CAUGHT IT!" -> "YOU PASSED THE <NAME>!" + jingle, the chase meter
+         restarts at 25 m with the enemy behind, goal bar restarts (300 m).
+   - [ ] Escaping afterwards -> DEFEATED! screen + bonus. If it catches you again, a
+         Hunt at half HP; losing then shows "defeat bonus kept".
    Hunt (RK-R2):
    - [ ] Each orb hit pulls the enemy visibly closer ("HIT! CLOSING IN").
    - [ ] Last orb -> "CAUGHT IT!", you run up level with it, then DEFEATED!.
@@ -175,6 +180,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — RK-R3 pass the enemy, race restarts
+- User (RK-R2 on hw): "feels better". Log: rank 2 Shade, 4 orb hits in ~8 s, defeated
+  with 8.7 s left; rank 2 -> 3; RUSH drop. fps 25.2-25.4, render 26-35 ms (MENU 33).
+- User: passing the enemy should restart the race meter, with "you passed <enemy>".
+  Chose: pass = DEFEATED locked in, then escape. Done: pass -> Pursuit at 25 m, new
+  finish +300 m (encounter::engine::restartRace, goal bar from the pass point),
+  weakened enemy, half-HP re-Hunt, loss after a pass keeps the defeat bonus.
+- Commit: feat(battle): pass the enemy, then the race restarts (RK-R3)
+
 ### 2026-10-08 — Session 3 (cont.) — RK-R2 Hunt "can't catch it"
 - User (RK-R1 on hw): "hunt feels like the player can never catch the enemy".
 - Causes found: (1) the enemy sat at a fixed 26 m — orb hits lowered HP but nothing

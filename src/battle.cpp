@@ -2,6 +2,7 @@
 // orb drop rate, gap gain) lives in the KINDS table so enemies differ by data.
 #include "battle.h"
 #include "encounter.h"
+#include "audio.h"
 #include "hud.h"
 #include "color.h"
 #include "config.h"
@@ -57,6 +58,8 @@ float s_overT = 0.0f;
 float s_zAhead = 0.0f;
 float s_passT = 0.0f;                // DEFEATED: s into the "run past it" animation
 bool  s_lastOrb = true;              // orb pity: never two attacks in a row without one
+bool  s_passed = false;              // passed it once: DEFEATED locked in, enemy weakened
+float s_runM = 0.0f;                 // metres since the battle started (last update)
 float s_lane = 0.0f, s_laneTarget = 0.0f, s_laneT = 0.0f;
 float s_attackT = 0.0f;
 float s_huntT = 0.0f;                // s left on the Hunt timer
@@ -81,7 +84,8 @@ void banner(const char* t, uint16_t c) {
 float gapGain() {
   const float g = BATTLE_GAP_GAIN_L1 - (s_level - 1) * BATTLE_GAP_GAIN_STEP
                   - s_rankT * RANK_GAP_GAIN_STEP + s_stats.gapGainBonus;
-  return g > RANK_GAP_GAIN_MIN ? g : RANK_GAP_GAIN_MIN;
+  const float w = g + (s_passed ? BATTLE_PASS_GAIN_BONUS : 0.0f);
+  return w > RANK_GAP_GAIN_MIN ? w : RANK_GAP_GAIN_MIN;
 }
 
 void beginOvertake() {
@@ -89,6 +93,7 @@ void beginOvertake() {
   s_overT = 0.0f;
   s_zAhead = 0.5f;
   s_lane = s_laneTarget = 0.0f;
+  if (s_passed && s_hp <= 0) s_hp = (s_hpMax + 1) / 2;    // re-caught a passed enemy: half HP
   encounter::engine::clearAhead();
   banner("IT'S AHEAD - CATCH IT!", rgb565(255, 220, 40));
 }
@@ -193,6 +198,8 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_
   s_zAhead = 0.0f;
   s_passT = 0.0f;
   s_lastOrb = true;
+  s_passed = false;
+  s_runM = 0.0f;
   s_flashT = s_blinkT = 0.0f;
   s_bannerT = 0.0f;
 }
@@ -200,6 +207,7 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_
 void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
   s_travel = travel;
   s_playerZ = playerZ;
+  s_runM = runM;
   if (s_bannerT > 0) s_bannerT -= dt;
   if (s_flashT > 0) s_flashT -= dt;
   if (s_blinkT > 0) s_blinkT -= dt;
@@ -209,7 +217,22 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
     s_passT += dt;
     const float t = fminf(s_passT / BATTLE_PASS_S, 1.0f);
     s_zAhead = BATTLE_HUNT_Z_LAST_M * 0.6f * (1.0f - t);   // to 0 = level with you
-    if (t >= 1.0f) s_outcome = Outcome::Defeated;
+    if (t >= 1.0f) {                                       // passed it: race again
+      s_passT = 0.0f;
+      s_passed = true;
+      s_phase = Phase::Pursuit;
+      s_gap = s_gapShown = BATTLE_PASS_GAP_M;
+      s_goalM = runM + BATTLE_PASS_ESCAPE_M;
+      encounter::engine::clearAhead();
+      encounter::engine::restartRace(s_goalM);
+      char buf[32];
+      snprintf(buf, sizeof buf, "YOU PASSED THE %s!", s_k->name);
+      banner(buf, rgb565(255, 220, 40));
+      s_bannerT = BATTLE_PASS_BANNER_S;
+      audio::play(audio::Sfx::Win);
+      Serial.printf("[battle] passed the %s at %d m; escape by %d m\n", s_k->name, (int)runM,
+                    (int)s_goalM);
+    }
     return;
   }
 
@@ -217,7 +240,10 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
     case Phase::Pursuit:
       if (!stumbling) s_gap += gapGain() * dt;
       s_gapShown += (s_gap - s_gapShown) * fminf(1.0f, dt * 5.0f);
-      if (s_gap >= BATTLE_GAP_ESCAPE_M || runM >= s_goalM) { s_outcome = Outcome::Escaped; return; }
+      if (s_gap >= BATTLE_GAP_ESCAPE_M || runM >= s_goalM) {
+        s_outcome = s_passed ? Outcome::Defeated : Outcome::Escaped;   // passed + got away = beaten
+        return;
+      }
       if (s_gap <= 0.0f) beginOvertake();
       break;
 
@@ -315,6 +341,7 @@ float   stumbleSeconds(bool wall) {
 float   huntSecondsLeft() { return s_huntT; }
 const char* enemyName() { return s_k->name; }
 bool  passing() { return s_passT > 0.0f; }
+bool  passedIt() { return s_passed; }
 // Hidden once you draw level during the pass (it's "behind" you from then on).
 bool  enemyOnRoad() { return s_phase != Phase::Pursuit && !(s_passT > 0.0f && s_zAhead < 1.5f); }
 float enemyZAhead() { return s_zAhead; }

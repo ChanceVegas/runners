@@ -77,6 +77,11 @@ Arcade mode stays the endless runner.
     ahead and every orb hit pulls it closer (11 m at 1 HP). HP 0 = "CAUGHT IT!" — you
     run past it, then DEFEATED. Attacks never land closer than 18 m. Orb pity: never
     two attacks in a row without an orb.
+  - PASS (RK-R3, user): after "CAUGHT IT!" you run past it — "YOU PASSED THE <NAME>!".
+    DEFEATED is locked in (bonus, drop, rank +2) and the race restarts: gap 25 m, the
+    enemy weakened (+0.2 m/s gap gain), a new finish 300 m on. Escape = DEFEATED
+    screen. If it catches you again: a Hunt at half HP; losing then still loses the
+    battle's coins but keeps the defeat bonus.
   - TIME LIMIT (user, B1-R1): fastest possible kill x 2.4 (was 1.6 until RK-R2). Out of time -> the enemy
     GETS AWAY: no bonus, the battle's coins are lost (CAUGHT also loses them). Scoreboard tracks battles
     won / lost (caught) / got away.

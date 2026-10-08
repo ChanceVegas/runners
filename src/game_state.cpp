@@ -167,9 +167,8 @@ void finishBattle() {
   if (unused > s_energyShields) unused = s_energyShields;   // the GUARD shield isn't energy
   overworld::setEnergy(overworld::energy() + unused * ENERGY_PER_SHIELD);
   if (r.won) s_wallet += r.coins;              // lost (caught / got away): the battle's coins are lost
-  if (r.gotAway) ++s_gotAway;
-  else if (!r.won) ++s_lost;
-  if (r.won) {
+  if (!r.won && !r.defeated) { if (r.gotAway) ++s_gotAway; else ++s_lost; }
+  if (r.won || r.defeated) {                    // defeated = passed it (kept even if caught later)
     const uint8_t lv = world::level(s_battleEnemy.kind);
     s_wallet += (uint32_t)((r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv *
                            battle::rewardMul(battle::rankOf(s_rankPts)));
@@ -180,7 +179,7 @@ void finishBattle() {
       Serial.printf("[game] drop: %s drink\n", shop::name((shop::Item)s_dropItem));
     }
   }
-  const battle::Outcome o = r.defeated ? battle::Outcome::Defeated
+  const battle::Outcome o = r.defeated ? battle::Outcome::Defeated   // passed it = defeated
                          : r.won ? battle::Outcome::Escaped
                          : r.gotAway ? battle::Outcome::GotAway : battle::Outcome::Caught;
   const uint8_t r0 = battle::rankOf(s_rankPts);

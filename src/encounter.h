@@ -48,6 +48,9 @@ namespace engine {
 void spawnObstacle(Block kind, int8_t lane, float wz);  // wz = world metres along the road
 void spawnOrb(int8_t lane, float wz);
 void clearAhead();                                       // remove everything ahead of the runner
+// Restart the race after a pass: obstacle rows resume ahead, and the finish line moves
+// to `goalM` metres of this run (the goal bar measures from the current distance).
+void restartRace(float goalM);
 }
 void update(float dt);          // one fixed logic tick; reads input::state()
 

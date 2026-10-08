@@ -22,7 +22,12 @@ uint32_t s_tryStart = 0;
 bool     s_locked = false;
 char     s_line[100];
 int      s_len = 0;
-uint8_t  s_gsvCount = 0;           // sats-in-view accumulator across GSV talkers
+// GSV accumulators for the current epoch (published + reset on each RMC, which
+// u-blox sends once per epoch). Talker-agnostic: works for GP/GL/GA/GB/GQ sets.
+uint8_t  s_gsvView = 0, s_gsvHeard = 0, s_gsvSnrMax = 0;
+bool     s_echo = GPS_ECHO_DEFAULT;
+uint32_t s_lastEchoMs = 0;
+bool     s_echoing = false;        // echoing the current epoch (RMC to next RMC)
 uint32_t s_lastStatusMs = 0;
 uint32_t s_bytes = 0;              // raw bytes received (wiring check: 0 = nothing on RX)
 int8_t   s_rxPin = GPS_PIN_RX, s_txPin = GPS_PIN_TX;   // swapped at boot if the probe says so
@@ -98,6 +103,15 @@ void handleSentence() {
   }
   s_fix.link = true;
 
+  // G0 diagnostics: echo one whole epoch of raw sentences every GPS_ECHO_MS. An epoch
+  // runs from one RMC to the next.
+  if (s_line[2] == 'R' && s_line[3] == 'M' && s_line[4] == 'C') {
+    if (s_echoing) { s_echoing = false; s_lastEchoMs = millis(); }
+    else if (s_echo && millis() - s_lastEchoMs >= GPS_ECHO_MS) s_echoing = true;
+  }
+  if (s_echoing && (strstr(s_line, "GSV") || strstr(s_line, "GGA") || strstr(s_line, "TXT")))
+    Serial.printf("[nmea] $%s\n", s_line);
+
   char* f[24];
   const int n = split(s_line, f, 24);
   const char* type = f[0] + 2;                 // skip talker ("GP", "GN", "GL", ...)
@@ -108,6 +122,8 @@ void handleSentence() {
     s_fix.altM = (float)atof(f[9]);
     if (s_fix.quality) { s_fix.lat = nmeaDeg(f[2], f[3]); s_fix.lon = nmeaDeg(f[4], f[5]); }
   } else if (!strcmp(type, "RMC") && n >= 9) {
+    s_fix.satsView = s_gsvView; s_fix.satsHeard = s_gsvHeard; s_fix.snrMax = s_gsvSnrMax;
+    s_gsvView = s_gsvHeard = s_gsvSnrMax = 0;
     s_fix.valid = (f[2][0] == 'A');
     if (strlen(f[1]) >= 6) {
       s_fix.hh = (uint8_t)((f[1][0] - '0') * 10 + f[1][1] - '0');
@@ -121,11 +137,11 @@ void handleSentence() {
       s_fix.courseDeg = (float)atof(f[8]);
     }
   } else if (!strcmp(type, "GSV") && n >= 4) {
-    // $xxGSV,total,msgNum,satsInView,...: sum the in-view counts across talkers once
-    // per cycle (msgNum 1 of each talker), publish when a GP set starts again.
-    if (atoi(f[2]) == 1) {
-      if (f[0][1] == 'P' && s_gsvCount) { s_fix.satsView = s_gsvCount; s_gsvCount = 0; }
-      s_gsvCount += (uint8_t)atoi(f[3]);
+    // $xxGSV,total,msgNum,inView,{prn,elev,az,snr}x(<=4)[,signalId]
+    if (atoi(f[2]) == 1) s_gsvView += (uint8_t)atoi(f[3]);
+    for (int i = 4; i + 3 < n; i += 4) {
+      const int snr = f[i + 3][0] ? atoi(f[i + 3]) : 0;
+      if (snr > 0) { ++s_gsvHeard; if (snr > s_gsvSnrMax) s_gsvSnrMax = (uint8_t)snr; }
     }
   }
 }
@@ -188,13 +204,14 @@ void update() {
   if (now - s_lastStatusMs >= GPS_REPORT_MS) {
     s_lastStatusMs = now;
     if (!s_fix.link) snprintf(s_status, sizeof s_status, "GPS no data (%u)", (unsigned)BAUDS[s_baudIdx]);
-    else if (!s_fix.quality) snprintf(s_status, sizeof s_status, "GPS %u sats, no fix", s_fix.satsView);
+    else if (!s_fix.quality) snprintf(s_status, sizeof s_status, "GPS %u/%u heard, no fix", s_fix.satsHeard, s_fix.satsView);
     else snprintf(s_status, sizeof s_status, "GPS %u sats FIX", s_fix.satsUsed);
     if (s_fix.link)
       Serial.printf("[gps] %u baud | fix q%u %s | sats used %u view %u | hdop %.1f | %.6f, %.6f | "
-                    "alt %.0f m | %.1f m/s | UTC %02u:%02u:%02u | ok %u bad %u\n",
+                    "heard %u best %u dB | alt %.0f m | %.1f m/s | UTC %02u:%02u:%02u | ok %u bad %u\n",
                     (unsigned)s_fix.baud, s_fix.quality, s_fix.valid ? "A" : "V", s_fix.satsUsed,
-                    s_fix.satsView, s_fix.hdop, s_fix.lat, s_fix.lon, s_fix.altM, s_fix.speedMS,
+                    s_fix.satsView, s_fix.hdop, s_fix.lat, s_fix.lon, s_fix.satsHeard, s_fix.snrMax,
+                    s_fix.altM, s_fix.speedMS,
                     s_fix.hh, s_fix.mm, s_fix.ss, (unsigned)s_fix.sentences, (unsigned)s_fix.badSum);
     else
       Serial.printf("[gps] no NMEA yet (trying %u baud) | raw bytes %u%s\n",
@@ -206,5 +223,6 @@ void update() {
 
 const Fix& fix() { return s_fix; }
 const char* statusText() { return s_status; }
+void setEcho(bool on) { s_echo = on; }
 
 }

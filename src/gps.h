@@ -12,7 +12,9 @@ struct Fix {
   uint8_t  quality;     // GGA fix quality: 0 none, 1 GPS, 2 DGPS, ...
   bool     valid;       // RMC status 'A'
   uint8_t  satsUsed;    // GGA
-  uint8_t  satsView;    // GSV (all constellations, last complete set)
+  uint8_t  satsView;    // GSV (all constellations, last 1 s epoch)
+  uint8_t  satsHeard;   // GSV entries with a signal (C/N0 > 0) in the last epoch
+  uint8_t  snrMax;      // best C/N0 in dB-Hz in the last epoch (~>30 = usable, >40 = good)
   float    hdop;        // GGA
   double   lat, lon;    // degrees (valid only when `valid`); double: GPS needs it
   float    altM;        // GGA, metres
@@ -28,5 +30,6 @@ bool init();            // start UART1 and baud detection
 void update();          // non-blocking: drain the UART, parse; call every loop
 const Fix& fix();
 const char* statusText();   // short line for the HUD: "GPS 7 sats 3D" / "GPS no data"
+void setEcho(bool on);      // G0: also print raw GSV/GGA/TXT sentences to serial
 
 }

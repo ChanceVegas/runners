@@ -147,6 +147,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — no satellite lock
+- User: "i am not getting any satellite lock" (location/duration/log not yet given).
+- Done: G0-R4 diagnostics — talker-agnostic per-epoch GSV stats (in view, heard =
+  C/N0 > 0, best C/N0 dB-Hz), HUD "GPS heard/view", raw GSV/GGA/TXT echo of one epoch
+  every 10 s (u-blox TXT lines can report antenna status).
+- Likely causes to rule out: indoor/obstructed sky, cold start without backup battery
+  (minutes), RF noise from the display/ESP32 right under the antenna, 3.3 V supply on
+  a module whose sellers often spec 5 V.
+- Commit: diag(gps): satellite signal stats + raw NMEA echo (G0-R4)
+
 ### 2026-10-08 — Session 3 (cont.) — GPS link up
 - User swapped the two data jumpers ("I think the wires are just swapped" — correct).
   G0-R2 log: LINK OK at 9600 ($GNRMC), ok 87 bad 0; indoors 0 sats / no fix. The boot

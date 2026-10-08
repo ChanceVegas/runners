@@ -116,6 +116,12 @@
 #define OBST_DUCK_LOW_PX     56.0f  // px at scale 1; beam bottom above the road
 #define OBST_DUCK_TOP_PX     150.0f // px at scale 1; beam top
 
+// --- Audio (AU0 bring-up, 2026-10-08): onboard I2S amp + ~8 ohm speaker ---
+#define AUDIO_SAMPLE_HZ      16000  // Hz; square/noise SFX need no more, keeps the task cheap
+#define AUDIO_VOLUME_PCT     30     // % of full scale. CAPPED: small salvaged speaker of
+                                    // unknown wattage; raise only if it sounds clean
+#define AUDIO_ENABLED        1      // 0 = never start I2S (silent build)
+
 // --- Colors (RGB565) ---
 #define COLOR_BG_DEBUG       0x0000 // black
 #define COLOR_TOUCH_DEBUG    0x07E0 // green — touch-point marker (debug)

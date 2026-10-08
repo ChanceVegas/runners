@@ -26,8 +26,9 @@ together see the same map and the same enemy, no internet involved.
 no pairing, ~100–200 m line-of-sight, low latency). BLE kept in reserve for a phone
 companion app. Accepted limit: you only meet players who are physically nearby.
 
-Explicitly OUT of v1: global/online multiplayer, cellular, servers, audio, real-map
-data (OpenStreetMap etc. — the map is fictional by design).
+Explicitly OUT of v1: global/online multiplayer, cellular, servers, music, real-map
+data (OpenStreetMap etc. — the map is fictional by design). Sound effects ARE in
+(speaker fitted 2026-10-08; also needed for Safety item 3).
 
 ## Safety (requirement for R2 GPS — raised by user 2026-10-07)
 Players move through the real world while the map is FICTIONAL: on-screen water,
@@ -119,6 +120,7 @@ Arcade mode stays the endless runner.
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
 | battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
+| audio | src/audio.* | 2-voice square/noise SFX synth on the onboard I2S amp, own task (core 0); play(Sfx) API; volume capped in config | AU0 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |

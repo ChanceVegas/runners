@@ -9,6 +9,7 @@
 #include "lanes.h"
 #include "scenery.h"
 #include "encounter.h"
+#include "audio.h"
 #include "hud.h"
 #include "color.h"
 #include "config.h"
@@ -180,8 +181,9 @@ void update(float dt) {
       encounter::update(dt);                  // attract road
       s_menuT += dt;
       if (s_menuT < 0.4f) break;
-      if (tapIn(in, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H)) enterExplore();
+      if (tapIn(in, BTN_EXPLORE_X, BTN_Y, BTN_W, BTN_H)) { audio::play(audio::Sfx::Tap); enterExplore(); }
       else if (tapIn(in, BTN_ARCADE_X, BTN_Y, BTN_W, BTN_H)) {
+        audio::play(audio::Sfx::Tap);
         layersEncounter();
         encounter::startArcade();
         s_mode = Mode::Arcade;

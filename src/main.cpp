@@ -9,6 +9,7 @@
 #include "scenery.h"
 #include "encounter.h"
 #include "game_state.h"
+#include "audio.h"
 #include "locator.h"
 #include "config.h"
 #include "board_config.h"
@@ -42,13 +43,14 @@ static const char* encName(encounter::State s) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== Runners B1-R4 ===");
+  Serial.println("\n=== Runners AU0-R1 ===");
   if (!display::init())   { Serial.println("FATAL: display init failed");   for(;;) delay(1000); }
   if (!renderer::init())  { Serial.println("FATAL: renderer init failed");  for(;;) delay(1000); }
   if (!input::init())     { Serial.println("FATAL: input init failed");     for(;;) delay(1000); }
   if (!lanes::init())     { Serial.println("FATAL: lanes init failed");     for(;;) delay(1000); }
   if (!encounter::init()) { Serial.println("FATAL: encounter init failed"); for(;;) delay(1000); }
   if (!game_state::init()) { Serial.println("FATAL: game_state init failed"); for(;;) delay(1000); }
+  if (audio::init()) audio::play(audio::Sfx::Boot);   // non-fatal: game runs silent
   Serial.printf("post-init heap free: %u | PSRAM free: %u\n",
                 (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getFreePsram());
   s_statT0 = millis();

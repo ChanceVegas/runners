@@ -83,8 +83,12 @@
 #define SD_PIN_CS      10   // shares SPI 11/12/13 with touch
 #define UART1_PIN_RX   18
 #define UART1_PIN_TX   17
-#define I2S_PIN_MCLK   19
+// Speaker I2S (onboard amp -> SPK connector). Pins per an Elecrow forum moderator
+// reply (no official doc found, 2026-10-08): BCLK 35, LRCK/WS 19, data 20. Earlier
+// carried-over labels called 19 "MCLK" — unverified; the amp needs no MCLK.
+// 19/20 are the S3's native-USB pins; this board uploads via CH340, so they're free.
 #define I2S_PIN_BCLK   35
-#define I2S_PIN_SDIN   20
+#define I2S_PIN_LRCK   19
+#define I2S_PIN_DOUT   20
 #define GPIO_D_A       37
 #define GPIO_D_B       38

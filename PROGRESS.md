@@ -17,6 +17,14 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
+0. AU0 AUDIO GATE (user): `git pull`, flash, confirm `=== Runners AU0-R1 ===`.
+   - [ ] Serial shows `[audio] I2S ok: 16000 Hz, BCLK 35 LRCK 19 DOUT 20, volume 30%`.
+   - [ ] Rising 3-note chime at boot. No hum/hiss when idle.
+   - [ ] SFX: menu tap, jump, duck, coin, orb, hit (thud + noise), win, lose.
+   - [ ] Clean or harsh? Too quiet/loud? Any clicks or stutter? fps still 25.3?
+   - If silent: report the [audio] line; next suspects are the pin map (19/20 swap)
+     or an amp-enable pin.
+   B1-R4 duck-tuning gate (below) can be tested in the same flash.
 1. B1-R4 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R4 ===`.
    - [ ] Duck strip is now only the bottom 67 px (y >= 205); grey ticks mark it all run.
    - [ ] Duck bar is now yellow/black with a white down-arrow; barrier stays orange/white.
@@ -74,8 +82,11 @@ session doesn't know it happened.
 - P1-NVS (accepted): best score is written to flash (Preferences/NVS) inside the
   game loop, but only once per game over, and only on a new best. Can stall a frame
   for a few ms when it happens; invisible on the game-over screen.
-- P1-AUDIO (open, not in P1): no sound yet. The board has an I2S speaker amp
-  (pins in board_config). Biggest remaining polish item; needs its own pass.
+- P1-AUDIO (in progress, AU0): speaker fitted by user 2026-10-08 (salvaged LilyGO
+  T-Deck Pro speaker, 7.2 ohm DC = 8 ohm nominal) on the board's amp output. I2S pins
+  BCLK 35 / LRCK 19 / DOUT 20 are from an Elecrow forum reply, NOT official docs.
+  Amp chip unidentified. Volume capped at 30% (AUDIO_VOLUME_PCT) until the user
+  confirms it sounds clean.
 - P1-ART (open): all art is still primitive shapes (rects/ellipses/triangles). Real
   sprites need the pushImage read-back test first (CARRY-1).
 - R1-BYTE (closed, data): LovyanGFX 16-bit sprite buffers store RGB565 BYTE-SWAPPED
@@ -140,6 +151,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — AU0 audio bring-up
+- User has an HGL M100 Mini GPS module and a small speaker; speaker soldered to the
+  board's amp output (from a LilyGO T-Deck Pro; reads 7.2 ohm = normal for 8 ohm).
+  GPS not yet wired. Open question to user: GPS check before or after S1 shop.
+- Done: audio.* (legacy IDF I2S, 16 kHz, 2-voice square/noise synth task on core 0,
+  priority 4), board_config I2S pins corrected (19 = LRCK, not MCLK; from Elecrow
+  forum), SFX hooked: boot chime, menu tap, jump, duck, coin, orb, hit, win, lose.
+  Volume capped 30%. Flash +16 KB (35.6%). Banner AU0-R1.
+- Commit: feat(audio): I2S SFX synth + game sound hooks (AU0)
+
 ### 2026-10-08 — Session 3 (cont.) — B1-R3 hw result -> B1-R4 duck tuning
 - User: jump/duck "a little sketchy". Log: duck taps at 103 m and 495 m each followed
   by a BARRIER hit (meant as jumps — user confirmed old habit of tapping low); two

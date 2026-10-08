@@ -19,6 +19,7 @@
 #include "scenery.h"
 #include "hud.h"
 #include "battle.h"
+#include "audio.h"
 #include "input.h"
 #include "config.h"
 #include "color.h"
@@ -217,6 +218,7 @@ void startRunning() {
 
 void crash() {
   s_finalRun = s_travel - s_runStart;
+  audio::play(audio::Sfx::Hit);
   setState(State::Crash);
 }
 
@@ -228,17 +230,20 @@ void gameOver() {
     s_prefs.putUInt("best", s_best);      // rare flash write: once per game over
   }
   setState(State::GameOver);
+  if (s_mode == encounter::Mode::Battle) audio::play(audio::Sfx::Lose);
 }
 
 // Battle: the Hunt timer ran out. No crash animation — the enemy just pulls away.
 void gotAway() {
   s_finalRun = s_travel - s_runStart;
+  audio::play(audio::Sfx::Lose);
   clearWorld();
   setState(State::GameOver);
 }
 
 void stageClear() {
   s_finalRun = s_travel - s_runStart;
+  audio::play(audio::Sfx::Win);
   s_bankedM += (uint32_t)s_finalRun;
   clearWorld();
   setState(State::StageClear);
@@ -467,10 +472,14 @@ void update(float dt) {
   if (in.laneStep > 0 && s_laneTarget <  1) ++s_laneTarget;
   const bool airborne = s_jumpY > 0.0f || s_jumpV > 0.0f;
   const bool jumpOk = in.jumpPressed && !airborne;
-  if (jumpOk) { s_jumpV = RUN_JUMP_VEL_PX_S; s_duckT = 0; s_duckQueued = false; }   // jump cancels a duck
+  if (jumpOk) {                                                                   // jump cancels a duck
+    s_jumpV = RUN_JUMP_VEL_PX_S; s_duckT = 0; s_duckQueued = false;
+    audio::play(audio::Sfx::Jump);
+  }
   if (in.duckPressed && !jumpOk) {
     if (airborne) { s_jumpV = -RUN_DUCK_DROP_PX_S; s_duckQueued = true; }          // fast fall
     else s_duckT = RUN_DUCK_S;
+    audio::play(audio::Sfx::Duck);
   }
 #if DEBUG_INPUT_LOG
   if (in.laneStep) Serial.printf("[in] tap %s -> lane %d at %d m (x%d y%d)\n",
@@ -528,6 +537,7 @@ void update(float dt) {
     if (fabsf(z - pz) < BATTLE_ORB_HIT_DEPTH_M && fabsf(s_laneX - o.lane) < 0.5f) {
       o.active = false;
       battle::onOrb();
+      audio::play(audio::Sfx::Orb);
     }
   }
 
@@ -538,7 +548,7 @@ void update(float dt) {
     if (z < 0.5f) { c.active = false; continue; }
     if (fabsf(z - pz) < COIN_HIT_DEPTH_M && fabsf(s_laneX - c.lane) < 0.5f) {
       const bool reach = c.high ? (s_jumpY >= COIN_HIGH_MIN_JUMP) : (s_jumpY <= COIN_LOW_MAX_JUMP);
-      if (reach) { c.active = false; ++s_coins; }
+      if (reach) { c.active = false; ++s_coins; audio::play(audio::Sfx::Coin); }
     }
   }
 
@@ -573,7 +583,8 @@ void update(float dt) {
           battle::onObstacleHit(o.kind == Kind::Wall);
           s_stumbleT = battle::stumbleSeconds(o.kind == Kind::Wall);
           s_invuln = s_stumbleT;
-          s_shakeT = BATTLE_HIT_SHAKE_S;           // impact: shake + red border
+          s_shakeT = BATTLE_HIT_SHAKE_S;           // impact: shake + red border + thud
+          audio::play(audio::Sfx::Hit);
           s_hitFlashT = BATTLE_HIT_FLASH_S;
           continue;
         }

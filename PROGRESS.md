@@ -4,38 +4,17 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: R3 overworld CODE DONE (tag R3-R1) — compiled, host-previewed; hw-verify
-  pending. P1 COMPLETE ✅ (user: "running smoothly" on hardware, 2026-10-07).
-  R1 COMPLETE ✅. R2 GPS ON HOLD.
+- Phase: R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
+  scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
 - Builds: yes (espressif32@6.5.0; RAM 8.8%, Flash 33.6% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
 - Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
   281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
 
 ## Next Up (in order)
-1. R3 hardware gate (tag R3-R1). `git pull`, flash, banner `=== Runners R3-R1 ===`,
-   then `[renderer] band buffer byte order: SWAPPED`, `[encounter] best score loaded`,
-   `[game] profile: ...` lines.
-   a. MENU: RUNNERS title over the scrolling road, EXPLORE and ARCADE buttons, stats
-      line (coins / escapes / best), walked metres.
-   b. ARCADE = the P1 game (hw-verified). New here: game over has a MENU button
-      (top-left) back to the menu. P1 render-ms numbers were never captured — grab
-      them in ARCADE during this gate.
-   c. EXPLORE: top-down map (grass, forest canopies, lakes with shore, rock, trails).
-      Drag from anywhere = walk (short drag) / run (long drag: RUN label, energy bar
-      fills, speed streaks). Release = STILL. Map scrolls smoothly?
-   d. Enemies: purple Shades, red horned Brutes. Cyan Phantoms appear only while
-      running and stay visible after.
-   e. Walk near one: yellow ring + name + banner. Release and hold still: red bar
-      fills (0.8 s) -> chase: "<NAME> IS CHASING YOU" countdown.
-   f. Chase: blue shield pips if energy >= 50 at the start; a hit with a shield =
-      runner blinks and keeps going. ESCAPED -> tap -> back on the map, enemy gone,
-      coins + bonus added. CAUGHT -> tap -> map, enemy still there, must walk away
-      and back before it can trigger again.
-   g. MENU (top-left on the map) -> menu. Power-cycle: coins / escapes / energy /
-      map position restored.
-   h. Serial: fps ~25.3; render ms on MENU, EXPLORE (full-screen terrain fast path),
-      and in a chase; heap flat across mode switches.
+1. Capture timing data (non-blocking): serial `render ms` in MENU, EXPLORE, a CHASE
+   and ARCADE — none recorded since R1. Confirms the remaining frame headroom before
+   adding audio / art.
 2. R2 GPS: ON HOLD (user). The locator API is ready for it; also needs the GPS
    module + 2nd board purchases. Resume only when the user says so. Approved Safety
    items 1–5 (PLANNING) are mandatory R2 scope.
@@ -50,7 +29,7 @@ session doesn't know it happened.
   since windows are short.
 - R3-BLOCK (closed 2026-10-07): terrain blocking dropped by user — the approved
   Safety section (PLANNING) addresses the real concern. All terrain walkable.
-- R3-PERF (watch): EXPLORE draws the full-screen terrain per row into the band
+- R3-PERF (watch; feels smooth on hw 2026-10-08, numbers not yet captured): EXPLORE draws the full-screen terrain per row into the band
   buffer (no per-tile calls); the tile cache re-evaluates noise only when the view
   crosses a tile edge. Measure render ms in EXPLORE at the gate.
 - TAP-1 (watch): R1-R3 test crash at 236 m — BARRIER in runner's lane, jumpY 0, no
@@ -125,6 +104,10 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — R3 hardware result
+- User: R3 feels smooth; menu works perfectly; buttons work; score data and stats
+  tracked well. Logged R3 COMPLETE on that report. No serial timing captured (P1/R3).
+
 ### 2026-10-07 — Session 3 (cont.) — real-world safety requirement
 - User clarified the blocking request is about safety: with GPS, players must stay
   aware of real surroundings (e.g. real water). Pointed out the map is fictional, so
@@ -299,7 +282,7 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
-- v0.3.0 — 2026-10-07 — R3: overworld + menu + chase mode (unverified on hardware).
+- v0.3.0 — 2026-10-08 — R3: overworld + menu + chase mode (hw-verified by user report).
 - v0.2.0 — 2026-10-07 — P1: standalone polish (hw-verified by user report).
 - v0.1.0 — 2026-10-07 — R1: playable encounter, tap-zone controls (hw-verified R1-R3).
 - v0.0.1 — 2026-10-05 — R0 scaffold (hw-verified R0-R2).

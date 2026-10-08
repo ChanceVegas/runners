@@ -73,10 +73,10 @@ real river may be map grass). Therefore:
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |
-| locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | R3 code done, hw-verify pending |
-| world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | R3 code done, hw-verify pending |
-| overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | R3 code done, hw-verify pending |
-| game_state | src/game_state.* | mode machine Menu/Explore/Chase/Arcade, layer stacks, chase handshake, profile in NVS | R3 code done, hw-verify pending |
+| locator | src/locator.* | world position (tile + offset), speed, still/walk/run; SIMULATED from drag now, GPS later behind the same API | DONE (R3, hw-verified) |
+| world | src/world.* | deterministic terrain (value noise on integer tiles) + enemy spawns per cell per time window; escaped/revealed memory | DONE (R3, hw-verified) |
+| overworld | src/overworld.* | top-down map render (direct band writes), avatar, enemies, engage-when-still, Run energy, map HUD | DONE (R3, hw-verified) |
+| game_state | src/game_state.* | mode machine Menu/Explore/Chase/Arcade, layer stacks, chase handshake, profile in NVS | DONE (R3, hw-verified) |
 | gps | src/gps.* | UART NMEA parse, fix/speed; feeds locator | R2 (on hold) |
 | link | src/link.* | ESP-NOW presence + encounter handshake | R4 |
 
@@ -105,8 +105,8 @@ real river may be map grass). Therefore:
 - **R3 — Overworld:** built in ONE iteration per user (2026-10-07), BEFORE R2 GPS:
   position is simulated from drag input behind the locator API, so R2 only adds a
   GPS reader. Menu (EXPLORE / ARCADE), deterministic terrain + spawns, engage when
-  still, chase mode with Run-energy shields, rewards, saved profile. Code done;
-  hw-verify pending (tag R3-R1).
+  still, chase mode with Run-energy shields, rewards, saved profile. ✅ DONE
+  2026-10-08 (hw-verified by user report).
 - **R3 (original plan, superseded):** ON HOLD (user, 2026-10-07). deterministic world from GPS cells, top-down view, avatar
   follows real movement, enemy spawns, encounter trigger on stop.
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see

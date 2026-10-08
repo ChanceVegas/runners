@@ -59,8 +59,9 @@ Arcade mode stays the endless runner.
 - Phase 1 — PURSUIT: the enemy is visible BEHIND you (looming at the bottom of the
   screen, bigger as it closes in). Gap meter, start 30 m.
   - Running clean widens the gap slowly (enemy type sets its speed).
-  - Hitting an obstacle = STUMBLE (no death): ~1 s slowed, gap −10 m (barrier) /
-    −15 m (wall).
+  - Hitting an obstacle = STUMBLE (no death): slowed 1 s (barrier) / 1.6 s (wall),
+    gap −10 m / −15 m, with camera shake + red border + pursuer lunge (B1-R2).
+  - Fewer rows than arcade and walls rare (user, B1-R1: walls felt out of place).
   - Gap reaches 60 m (or you reach the distance goal) -> ESCAPED (small reward).
   - Gap reaches 0 -> the enemy OVERTAKES you -> Phase 2.
 - Phase 2 — HUNT: the enemy is now AHEAD on the road, switching lanes and attacking
@@ -68,7 +69,10 @@ Arcade mode stays the endless runner.
   (2-lane), Phantom flickers lanes and leaves "ghost walls".
   - You have HEARTS (3 base). An attack hit = −1 heart + stumble.
   - Glowing energy ORBS appear in lanes; each one collected strikes the enemy (−1 HP).
-    Enemy HP: Shade 5, Brute 8, Phantom 10.
+    Enemy HP: Shade 4, Brute 6, Phantom 6 (B1-R2).
+  - TIME LIMIT (user, B1-R1): fastest possible kill x 1.6. Out of time -> the enemy
+    GETS AWAY: no bonus, the battle's coins are lost. Scoreboard tracks battles
+    won / lost (caught) / got away.
   - Enemy HP 0 -> DEFEATED (big reward + chance of a drink drop). Hearts 0 -> CAUGHT.
 - Run-energy shields carry over: each absorbs one stumble's gap loss (Phase 1) or one
   heart (Phase 2).
@@ -110,9 +114,9 @@ Arcade mode stays the endless runner.
 | display | src/display.* | panel + touch driver init (LovyanGFX) | carried over (hw-verified) |
 | renderer | src/renderer.* | band compositor, layer callbacks, band byte-order test + raw() colour conversion | DONE (R0); raw() moved here R3 |
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump, any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
-| lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
+| lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
-| battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts); per-kind data table; placeholder shape art | B1 (awaiting hw) |
+| battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
 | scenery | src/scenery.* | roadside props (pines, bushes, posts) placed by hash of slot index; decoration only | DONE (P1, hw-verified) |
 | color | include/color.h | constexpr rgb565() for library draw calls | P1 |
 | hud | src/hud.* | shared band-clipped rect/frame/text helpers + fonts | R3 (extracted from encounter) |

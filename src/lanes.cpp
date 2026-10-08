@@ -29,6 +29,7 @@ uint8_t s_ridgeFar[RIDGE_N], s_ridgeNear[RIDGE_N];
 
 // Per-frame state.
 float s_curve = 0.0f;                  // px bend at the horizon this frame
+float s_shake = 0.0f, s_shakeNext = 0.0f;   // px sideways camera shake (this frame / next)
 int32_t s_bgFar = 0, s_bgNear = 0;     // hill scroll offsets, px
 
 // Per-row road tables (index = d, 1..ROAD_ROWS), filled by beginFrame.
@@ -67,21 +68,24 @@ bool init() {
   return true;
 }
 
+void setShake(float px) { s_shakeNext = px; }
+
 void beginFrame(float travel) {
+  s_shake = s_shakeNext;
   const float w = travel / ROAD_CURVE_PERIOD_M;
   s_curve = ROAD_CURVE_PX * sinf(w * 2.0f * (float)M_PI);
   // Hill offset = integral of the bend over distance, so hills drift opposite the
   // bend and stop when the road straightens. Closed form keeps it interpolation-safe.
   float drift = -ROAD_CURVE_PX * ROAD_CURVE_PERIOD_M / (2.0f * (float)M_PI)
                 * cosf(w * 2.0f * (float)M_PI) * ROAD_BG_PARALLAX;
-  s_bgFar  = (int32_t)(drift * 0.5f);
-  s_bgNear = (int32_t)drift;
+  s_bgFar  = (int32_t)(drift * 0.5f - s_shake * 0.5f);   // hills shake with the road
+  s_bgNear = (int32_t)(drift - s_shake);
 
   for (int d = 1; d <= ROAD_ROWS; ++d) {
     float s = (float)d / ROAD_ROWS;
     float z = ROAD_CAM_K / d;
     float k = 1.0f - s;
-    s_cx[d]   = (int16_t)(LCD_WIDTH / 2 + s_curve * k * k);
+    s_cx[d]   = (int16_t)(LCD_WIDTH / 2 + s_curve * k * k + s_shake);
     s_half[d] = (int16_t)(ROAD_HALF_PX * s);
     s_phase[d] = (uint8_t)(((int32_t)((z + travel) / ROAD_SEG_M)) & 1);
   }
@@ -133,7 +137,7 @@ bool project(float z, float lane, float& sx, float& sy, float& s) {
   if (d < 0.5f) return false;                     // beyond the horizon
   s = d / ROAD_ROWS;
   const float k = 1.0f - s;
-  const float cx = LCD_WIDTH / 2 + s_curve * k * k;
+  const float cx = LCD_WIDTH / 2 + s_curve * k * k + s_shake;
   sx = cx + lane * (2.0f / 3.0f) * ROAD_HALF_PX * s;   // lane centres at ±2/3 half-width
   sy = ROAD_HORIZON_Y + d;
   return true;

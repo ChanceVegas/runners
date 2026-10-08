@@ -29,7 +29,8 @@ constexpr int32_t BTN_EXPLORE_X = 30, BTN_ARCADE_X = LCD_WIDTH - 30 - BTN_W;
 
 Mode s_mode = Mode::Menu;
 Preferences s_prefs;
-uint32_t s_wallet = 0, s_escapes = 0;
+uint32_t s_wallet = 0, s_escapes = 0;     // escapes = battles won (escaped or defeated)
+uint32_t s_lost = 0, s_gotAway = 0;       // battles lost: caught (hearts 0) / enemy got away (timer)
 float s_saveT = 0.0f;
 float s_menuT = 0.0f;                      // ignore taps right after entering the menu
 
@@ -60,6 +61,8 @@ void saveProfile() {
   const locator::Pos p = locator::pos();
   s_prefs.putUInt("wallet", s_wallet);
   s_prefs.putUInt("escapes", s_escapes);
+  s_prefs.putUInt("lost", s_lost);
+  s_prefs.putUInt("gotaway", s_gotAway);
   s_prefs.putFloat("energy", overworld::energy());
   s_prefs.putFloat("walked", overworld::walkedM());
   s_prefs.putInt("tx", p.tx);
@@ -121,7 +124,9 @@ void finishBattle() {
   const encounter::Result r = encounter::result();
   const uint8_t unused = (r.shieldsUsed < s_battleShields) ? s_battleShields - r.shieldsUsed : 0;
   overworld::setEnergy(overworld::energy() + unused * ENERGY_PER_SHIELD);
-  s_wallet += r.coins;
+  if (!r.gotAway) s_wallet += r.coins;         // enemy got away: the battle's coins are lost
+  if (r.gotAway) ++s_gotAway;
+  else if (!r.won) ++s_lost;
   if (r.won) {
     const uint8_t lv = world::level(s_battleEnemy.kind);
     s_wallet += (r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv;
@@ -130,7 +135,8 @@ void finishBattle() {
   }
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
-                r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : "CAUGHT"), (unsigned)r.coins, (unsigned)r.shieldsUsed,
+                r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT")),
+                (unsigned)r.coins, (unsigned)r.shieldsUsed,
                 (unsigned)s_wallet);
   saveProfile();
   enterExplore();
@@ -148,6 +154,8 @@ bool init() {
   s_prefs.begin("profile", false);
   s_wallet = s_prefs.getUInt("wallet", 0);
   s_escapes = s_prefs.getUInt("escapes", 0);
+  s_lost = s_prefs.getUInt("lost", 0);
+  s_gotAway = s_prefs.getUInt("gotaway", 0);
   overworld::setEnergy(s_prefs.getFloat("energy", 0.0f));
   overworld::setWalkedM(s_prefs.getFloat("walked", 0.0f));
   locator::Pos start;
@@ -238,10 +246,11 @@ void composeMenu(lgfx::LGFX_Sprite& b, int32_t bandY) {
   text(b, bandY, "ARCADE", BTN_ARCADE_X + BTN_W / 2, BTN_Y + 22, hud::F18, 1.0f, WHITE, BTN_W - 12);
   text(b, bandY, "endless run", BTN_ARCADE_X + BTN_W / 2, BTN_Y + 48, hud::F9, 1.0f, WHITE);
 
-  snprintf(buf, sizeof buf, "Coins %u   Escapes %u   Best %u", (unsigned)s_wallet,
-           (unsigned)s_escapes, (unsigned)encounter::bestScore());
+  snprintf(buf, sizeof buf, "Coins %u   Best %u   Walked %d m", (unsigned)s_wallet,
+           (unsigned)encounter::bestScore(), (int)overworld::walkedM());
   text(b, bandY, buf, cx, 222, hud::F12, 1.0f, WHITE);
-  snprintf(buf, sizeof buf, "Walked %d m", (int)overworld::walkedM());
+  snprintf(buf, sizeof buf, "Battles won %u   Lost %u   Got away %u", (unsigned)s_escapes,
+           (unsigned)s_lost, (unsigned)s_gotAway);
   text(b, bandY, buf, cx, 252, hud::F9, 1.0f, rgb565(200, 200, 200));
 }
 

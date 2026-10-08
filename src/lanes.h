@@ -15,6 +15,10 @@ bool init();
 // bend and the per-row depth/width/stripe tables used by composeBand and project.
 void beginFrame(float travel);
 
+// Sideways camera shake (px) applied to the road and everything projected on it
+// from the next beginFrame on. 0 = none. The HUD is not shaken.
+void setShake(float px);
+
 // Draw sky, hills and road into the band covering rows [bandY, bandY+h).
 void composeBand(lgfx::LGFX_Sprite& band, int32_t bandY);
 

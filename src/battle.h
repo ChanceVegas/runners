@@ -1,7 +1,8 @@
 // battle.h — rules for an overworld battle, layered on the encounter engine:
 // Phase 1 PURSUIT (enemy behind, gap meter, stumbles cost ground) -> if the gap hits
 // zero the enemy OVERTAKES -> Phase 2 HUNT (enemy ahead attacks with its own obstacle
-// pattern, orbs strike it, hearts are your life). encounter.cpp calls the hooks below;
+// pattern, orbs strike it, hearts are your life; if its timer runs out the enemy
+// GETS AWAY). encounter.cpp calls the hooks below;
 // battle asks encounter to spawn things via encounter::engine::*.
 #pragma once
 #include <LovyanGFX.hpp>
@@ -10,7 +11,7 @@
 namespace battle {
 
 enum class Phase : uint8_t { Pursuit, Overtake, Hunt };
-enum class Outcome : uint8_t { None, Escaped, Defeated, Caught };
+enum class Outcome : uint8_t { None, Escaped, Defeated, Caught, GotAway };   // GotAway = Hunt timer ran out
 
 // Player modifiers (sneakers / drinks from the shop; defaults = no upgrades).
 struct Stats {
@@ -35,7 +36,8 @@ void onOrb();                      // an orb was collected
 
 Phase   phase();
 Outcome outcome();
-float   stumbleSeconds();          // stumble length for this battle (stats applied)
+float   stumbleSeconds(bool wall);  // stumble length for this hit (stats applied)
+float   huntSecondsLeft();          // Hunt time limit remaining (s)
 const char* enemyName();
 
 // Hunt/overtake: enemy depth ahead of the runner (m), its lane, and whether it should

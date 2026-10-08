@@ -4,36 +4,39 @@ Every session: read this first, update it last. If it isn't logged here, the nex
 session doesn't know it happened.
 
 ## Current State
-- Phase: B1 battle system BUILT, awaiting hardware gate (banner `B1-R1`).
+- Phase: B1 battle system — B1-R1 played on hw (2026-10-08); tuning pass B1-R2 built,
+  awaiting hardware gate (banner `B1-R2`).
   R3 COMPLETE ✅ (2026-10-08, user report: "feels smooth", menu + buttons work,
   scores/stats tracked). P1 COMPLETE ✅. R1 COMPLETE ✅. R2 GPS ON HOLD.
-- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.1% of 1.3 MB app partition)
+- Builds: yes (espressif32@6.5.0; RAM 8.9%, Flash 34.2% of 1.3 MB app partition)
 - Runs on hardware: yes — encounter playable, colours correct, controls "much improved"
-- Measured (R1-R3): fps 25.2–25.3 paced, render ~21.3 ms (budget 35), heap flat
-  281,540 (−4.7 KB vs R1-R1 = touch sampler task stack; stable).
+- Measured (B1-R1, 2026-10-08): fps 25.2–25.4 in every mode. render ms avg: MENU ~29.6,
+  EXPLORE 24–28 (max 32), BATTLE run 26–28 (max 32), ARCADE run ~24.5, game-over ~30.
+  Under the 39.6 ms panel period but only ~7 ms spare at peak — art (A1) must be
+  measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-1. B1 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R1 ===`.
-   EXPLORE -> engage an enemy and check:
-   - [ ] Pursuit: enemy visible behind (bottom of screen), grows as the gap closes;
-         red edge flashes when close; GAP meter + goal bar at top.
-   - [ ] Hitting an obstacle = STUMBLE (slow-down + banner, gap drops), not death.
-   - [ ] Clean running grows the gap; gap 60 m or goal -> ESCAPED! + bonus coins.
-   - [ ] Gap 0 -> "IT'S AHEAD - CATCH IT!" banner, enemy runs past to ~26 m ahead.
-   - [ ] Hunt: enemy changes lanes and attacks (Shade barrier / Brute two walls /
-         Phantom wall + blink); hearts top-left, HP bar top-centre.
-   - [ ] Orbs (cyan) appear in a free lane; collecting one hits the enemy (flash, HP-1).
-   - [ ] HP 0 -> DEFEATED! (bigger bonus); hearts 0 -> CAUGHT!; shields still absorb.
-   - [ ] Feel: is Pursuit too easy/hard per level? Is the Hunt too long?
-   - [ ] Serial `render ms` in a battle (Hunt especially) and ARCADE.
+1. B1-R2 HARDWARE GATE (user): `git pull`, flash, confirm `=== Runners B1-R2 ===`.
+   - [ ] Pursuit: fewer obstacle rows, walls rare -> feels fair, not too hard.
+   - [ ] A hit feels big: camera shake, thick red border, runner trips, pursuer
+         lunges closer at once; wall hits recover slower (1.6 s) than barriers (1.0 s).
+   - [ ] Hunt: timer top-right (Shade ~14 s, Brute/Phantom ~22 s), blinks red in
+         the last 5 s; HP is lower (4/6/6) so it shouldn't drag.
+   - [ ] Timer out -> GOT AWAY! screen, "coins lost", no bonus.
+   - [ ] Menu bottom line: Battles won / Lost / Got away counts, persist after reboot.
+   - [ ] Shields still absorb hits (no shake/flash then).
 2. S1 shop (approved spec in PLANNING) — starts after the B1 gate.
 3. A1 art foundation (CARRY-1 pushImage read-back test first), then A2.
 4. R2 GPS: ON HOLD (user). Approved Safety items 1–5 (PLANNING) are mandatory R2 scope.
 
 ## Known Issues / Risks
-- B1-TUNE (open): battle numbers (gap gain 0.80/0.62/0.44 m/s by level, losses
-  10/15 m, Hunt HP 5/8/10, attack 1.6/2.2/1.4 s, orb 70/65/55%) are first guesses,
-  all in config.h. The Hunt has no time limit — ends only on HP 0 or hearts 0.
+- B1-TUNE (open): battle numbers are guesses, all in config.h. B1-R2 values: Pursuit
+  walls 12%, rows 1.35x farther apart; Hunt HP 4/6/6, attack 1.6/1.8/1.4 s, orb
+  75/80/60%, timer = fastest kill x 1.6.
+- B1-CAUGHT (raised to user): CAUGHT (hearts 0) still KEEPS the battle's coins while
+  GOT AWAY (timer) loses them — the worse loss is cheaper. Awaiting user decision.
+- B1-WALLS (raised to user): Brute's Hunt attack is still two WALLS; user said walls
+  feel out of place (Pursuit). Kept for now — the Brute needs a lane-blocking attack.
 - B1-ART (by design): enemies are placeholder shapes until A2.
 - R3-SIM (by design, until R2): position is SIMULATED from drag (6x time scale);
   spawn windows use a boot-relative clock, so two devices won't share windows yet.
@@ -121,6 +124,19 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — B1-R1 hw feedback -> B1-R2 tuning
+- User (B1-R1 on hw): Pursuit slightly too hard; big walls feel out of place; hits
+  should be much more impactful; Hunt drags -> needs a time limit. Log: 25.3 fps all
+  modes, render 24–32 ms.
+- User decisions: walls = the out-of-place obstacle; impact = feel + fewer obstacles;
+  keep HP + add a timer; timer out = enemy GOT AWAY, no bonus, battle coins lost;
+  scoreboard tracks battles lost and enemies that got away.
+- Done: Pursuit walls 12% + rows 1.35x apart; hit impact (lanes::setShake camera
+  shake, thick red border, pursuer lunges, wall stumble 1.6 s, slower stumble);
+  Hunt timer (Outcome::GotAway, GOT AWAY! screen, coins forfeited); HP lowered;
+  NVS "lost"/"gotaway" + menu line. Built: SUCCESS. Banner B1-R2.
+- Commit: feat(battle): hit impact, rarer Pursuit walls, Hunt time limit (B1-R2)
+
 ### 2026-10-08 — Session 3 (cont.) — B1 battle system
 - User approved the spec ("Looks fine. Let's do it.").
 - New module battle.* (rules + per-kind data table + placeholder drawing).

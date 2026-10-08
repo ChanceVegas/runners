@@ -76,6 +76,7 @@ float s_goalM = RUN_GOAL_M;                // stage length this run
 uint8_t s_shields = 0, s_shieldsUsed = 0;  // chase: hits absorbed
 float s_invuln = 0;                        // s of post-shield invulnerability left
 float s_stumbleT = 0;                      // battle: s of stumble left (slowed, no hits)
+float s_shakeT = 0, s_hitFlashT = 0;       // battle: hit impact (camera shake / red border)
 battle::Outcome s_outcome = battle::Outcome::None;   // how the battle ended
 bool s_done = false;                       // chase finished / arcade exit requested
 encounter::Result s_result = {};
@@ -164,7 +165,8 @@ void spawnRow(float wz) {
 void setState(State st) { s_state = st; s_stateT = 0; }
 
 void finish(bool won, bool exitToMenu) {
-  s_result = { won, s_outcome == battle::Outcome::Defeated, s_coins, s_shieldsUsed, exitToMenu };
+  s_result = { won, s_outcome == battle::Outcome::Defeated, s_outcome == battle::Outcome::GotAway,
+               s_coins, s_shieldsUsed, exitToMenu };
   s_done = true;
 }
 
@@ -175,6 +177,8 @@ void beginStage() {
   s_speedMax = fminf(RUN_SPEED_MAX + step, STAGE_SPEED_CAP);
   s_wallChance = OBST_WALL_CHANCE + (s_stage - 1) * STAGE_WALL_STEP;
   if (s_wallChance > STAGE_WALL_CAP) s_wallChance = STAGE_WALL_CAP;
+  if (s_mode == encounter::Mode::Battle) s_wallChance = BATTLE_WALL_CHANCE;   // walls rare in a Pursuit
+  s_shakeT = s_hitFlashT = 0;
   s_laneTarget = 0;
   s_laneX = s_prevLaneX = 0;
   s_jumpY = s_prevJumpY = s_jumpV = 0;
@@ -208,6 +212,13 @@ void gameOver() {
     s_newBest = true;
     s_prefs.putUInt("best", s_best);      // rare flash write: once per game over
   }
+  setState(State::GameOver);
+}
+
+// Battle: the Hunt timer ran out. No crash animation — the enemy just pulls away.
+void gotAway() {
+  s_finalRun = s_travel - s_runStart;
+  clearWorld();
   setState(State::GameOver);
 }
 
@@ -436,6 +447,8 @@ void update(float dt) {
   s_speed = fminf(s_speed + RUN_SPEED_RAMP * dt, s_speedMax);
   const bool battleMode = (s_mode == Mode::Battle);
   if (s_stumbleT > 0.0f) s_stumbleT -= dt;
+  if (s_shakeT > 0.0f) s_shakeT -= dt;
+  if (s_hitFlashT > 0.0f) s_hitFlashT -= dt;
   s_travel += s_speed * (s_stumbleT > 0.0f ? BATTLE_STUMBLE_SPEED : 1.0f) * dt;
   const float run = s_travel - s_runStart;
   const float prog = run / s_goalM;
@@ -445,7 +458,8 @@ void update(float dt) {
   const bool rows = !battleMode || battle::phase() == battle::Phase::Pursuit;
   while (rows && s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + s_goalM - 20.0f) {
     spawnRow(s_nextRowWz);
-    s_nextRowWz += OBST_GAP_START_M + (OBST_GAP_MIN_M - OBST_GAP_START_M) * fminf(prog, 1.0f);
+    s_nextRowWz += (OBST_GAP_START_M + (OBST_GAP_MIN_M - OBST_GAP_START_M) * fminf(prog, 1.0f)) *
+                   (battleMode ? BATTLE_ROW_GAP_MUL : 1.0f);
   }
 
   const float pz = playerZ();
@@ -500,8 +514,10 @@ void update(float dt) {
         if (battleMode) {                          // battles: stumble, never instant death
           o.active = false;
           battle::onObstacleHit(o.kind == Kind::Wall);
-          s_stumbleT = battle::stumbleSeconds();
+          s_stumbleT = battle::stumbleSeconds(o.kind == Kind::Wall);
           s_invuln = s_stumbleT;
+          s_shakeT = BATTLE_HIT_SHAKE_S;           // impact: shake + red border
+          s_hitFlashT = BATTLE_HIT_FLASH_S;
           continue;
         }
         crash();
@@ -514,6 +530,7 @@ void update(float dt) {
     s_outcome = battle::outcome();
     if (s_outcome == battle::Outcome::Escaped || s_outcome == battle::Outcome::Defeated) stageClear();
     else if (s_outcome == battle::Outcome::Caught) crash();
+    else if (s_outcome == battle::Outcome::GotAway) gotAway();
   } else if (run >= s_goalM) {
     stageClear();
   }
@@ -529,6 +546,12 @@ void beginRender(float alpha) {
   d_jumpY  = s_prevJumpY + (s_jumpY - s_prevJumpY) * a;
   d_time   = millis() * 0.001f;
   d_blink  = ((millis() / 450) & 1) == 0;
+  float shake = 0.0f;
+  if (s_shakeT > 0.0f && s_state == State::Run) {       // decaying side-to-side jolt
+    const float k = s_shakeT / BATTLE_HIT_SHAKE_S;
+    shake = BATTLE_HIT_SHAKE_PX * k * (((millis() / 35) & 1) ? 1.0f : -1.0f);
+  }
+  lanes::setShake(shake);
   lanes::beginFrame(d_travel);
   scenery::beginFrame(d_travel);
 
@@ -624,6 +647,15 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
     text(band, bandY, buf, LCD_WIDTH - 50, 34, F12, 1.0f, C_YELLOW, 70);
   }
 
+  // Battle hit: red impact border (thicker than the crash one, fades by thinning).
+  if (chase && s_state == State::Run && s_hitFlashT > 0.0f) {
+    const int32_t t = 6 + (int32_t)(12.0f * s_hitFlashT / BATTLE_HIT_FLASH_S);
+    rect(band, bandY, 0, 0, LCD_WIDTH, t, C_RED);
+    rect(band, bandY, 0, LCD_HEIGHT - t, LCD_WIDTH, t, C_RED);
+    rect(band, bandY, 0, 0, t, LCD_HEIGHT, C_RED);
+    rect(band, bandY, LCD_WIDTH - t, 0, t, LCD_HEIGHT, C_RED);
+  }
+
   // Tap-zone hints: on the title, through the countdown and the first seconds of a run.
   const bool hints = s_state == State::Countdown ||
                      (s_state == State::Run && s_stateT < RUN_HINT_S);
@@ -693,6 +725,16 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       break;
 
     case State::GameOver:
+      if (chase && s_outcome == battle::Outcome::GotAway) {
+        text(band, bandY, "GOT AWAY!", cx, 62, F24, 1.3f, rgb565(255, 140, 60));
+        snprintf(buf, sizeof buf, "The %s outran you", battle::enemyName());
+        text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
+        snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
+        text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
+        if (s_stateT > RUN_END_LOCKOUT_S)
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
+        break;
+      }
       text(band, bandY, "CAUGHT!", cx, 62, F24, 1.3f, C_RED);
       if (chase) {
         snprintf(buf, sizeof buf, "The %s got you", battle::enemyName());
@@ -743,6 +785,7 @@ void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
   s_shieldsUsed = 0;
   s_invuln = 0;
   s_stumbleT = 0;
+  s_shakeT = s_hitFlashT = 0;
   s_outcome = battle::Outcome::None;
   s_done = false;
   s_stage = level;

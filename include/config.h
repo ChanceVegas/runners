@@ -171,22 +171,32 @@
 #define BATTLE_GAP_GAIN_STEP   0.18f  // m/s less gap gain per enemy level above 1
 #define BATTLE_GAP_LOSS_BARRIER 10.0f // m lost stumbling on a barrier
 #define BATTLE_GAP_LOSS_WALL   15.0f  // m lost stumbling into a wall
-#define BATTLE_STUMBLE_S       1.0f   // s of stumble (slowed, can't be hit again)
-#define BATTLE_STUMBLE_SPEED   0.55f  // speed multiplier while stumbling
+#define BATTLE_STUMBLE_S       1.0f   // s of stumble on a barrier (slowed, can't be hit again)
+#define BATTLE_STUMBLE_WALL_S  1.6f   // s of stumble on a wall (harder hit, longer recovery)
+#define BATTLE_STUMBLE_SPEED   0.50f  // speed multiplier while stumbling
+#define BATTLE_HIT_SHAKE_PX    12.0f  // px peak sideways camera shake on a hit (decays)
+#define BATTLE_HIT_SHAKE_S     0.45f  // s the camera shake lasts
+#define BATTLE_HIT_FLASH_S     0.30f  // s the red screen border shows on a hit
+#define BATTLE_WALL_CHANCE     12     // % of Pursuit blocks that are walls (arcade: OBST_WALL_CHANCE)
+#define BATTLE_ROW_GAP_MUL     1.35f  // Pursuit rows this much farther apart than arcade (fewer, harder-hitting)
 #define BATTLE_HEARTS          3      // hearts in the Hunt (sneakers may add)
 #define BATTLE_OVERTAKE_S      1.4f   // s of the overtake animation (no attacks)
 #define BATTLE_HUNT_Z_M        26.0f  // m the enemy runs ahead of you in the Hunt
 #define BATTLE_ENEMY_LANE_SPEED 3.0f  // lanes/s the enemy slides between lanes
 #define BATTLE_BANNER_S        1.3f   // s a battle banner ("STUMBLE!") stays up
 // Per enemy kind: HP, seconds between attacks, % of attacks that also drop an orb.
-#define BATTLE_SHADE_HP        5
-#define BATTLE_BRUTE_HP        8
-#define BATTLE_PHANTOM_HP      10
+#define BATTLE_SHADE_HP        4
+#define BATTLE_BRUTE_HP        6
+#define BATTLE_PHANTOM_HP      6
 #define BATTLE_SHADE_ATTACK_S  1.6f
-#define BATTLE_BRUTE_ATTACK_S  2.2f
+#define BATTLE_BRUTE_ATTACK_S  1.8f
 #define BATTLE_PHANTOM_ATTACK_S 1.4f
-#define BATTLE_SHADE_ORB_PCT   70
-#define BATTLE_BRUTE_ORB_PCT   65
-#define BATTLE_PHANTOM_ORB_PCT 55
+#define BATTLE_SHADE_ORB_PCT   75
+#define BATTLE_BRUTE_ORB_PCT   80
+#define BATTLE_PHANTOM_ORB_PCT 60
 #define BATTLE_ORB_HIT_DEPTH_M 1.0f   // m collect window for orbs
+// Hunt time limit = fastest possible kill (HP / orbs-per-second) x this slack. Out of
+// time = the enemy GETS AWAY: no bonus and the battle's coins are lost.
+#define BATTLE_HUNT_SLACK      1.6f   // x; 1.6 -> Shade ~14 s, Brute ~22 s, Phantom ~22 s
+#define BATTLE_HUNT_WARN_S     5.0f   // s left when the Hunt timer turns red
 #define DEFEAT_BONUS_COINS     60     // wallet bonus for defeating an enemy (x level)

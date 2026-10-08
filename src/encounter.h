@@ -14,8 +14,9 @@ enum class Mode : uint8_t { Arcade, Battle };
 struct Result {
   bool won;            // battle: escaped or defeated the enemy
   bool defeated;       // battle: defeated it (bigger reward)
+  bool gotAway;        // battle: Hunt timer ran out — enemy escaped, coins forfeited
   uint32_t coins;      // coins collected this encounter
-  uint8_t shieldsUsed; // chase: shields broken
+  uint8_t shieldsUsed; // battle: shields broken
   bool exitToMenu;     // arcade: player tapped MENU on game over
 };
 

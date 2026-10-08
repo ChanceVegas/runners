@@ -51,6 +51,7 @@ float s_overT = 0.0f;
 float s_zAhead = 0.0f;
 float s_lane = 0.0f, s_laneTarget = 0.0f, s_laneT = 0.0f;
 float s_attackT = 0.0f;
+float s_huntT = 0.0f;                // s left on the Hunt timer
 float s_flashT = 0.0f;               // enemy hit flash
 float s_blinkT = 0.0f;               // phantom teleport flicker
 
@@ -140,6 +141,7 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats) {
   s_gap = s_gapShown = BATTLE_GAP_START_M + stats.startGapBonus;
   s_hearts = BATTLE_HEARTS + stats.extraHearts;
   s_hp = s_k->hp;
+  s_huntT = 0.0f;
   s_zAhead = 0.0f;
   s_flashT = s_blinkT = 0.0f;
   s_bannerT = 0.0f;
@@ -169,12 +171,23 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
       if (t >= 1.0f) {
         s_phase = Phase::Hunt;
         s_attackT = 0.8f;
+        // Time limit from the fastest possible kill: every orb collected, every attack
+        // dropping one at the kind's orb rate.
+        const float orbsPerS = (s_k->orbPct / 100.0f) / s_k->attackS;
+        const float needed = (float)((s_k->hp + s_stats.orbPower - 1) / s_stats.orbPower);
+        s_huntT = needed / orbsPerS * BATTLE_HUNT_SLACK;
         s_laneT = 1.0f;
       }
       break;
     }
 
     case Phase::Hunt: {
+      s_huntT -= dt;
+      if (s_huntT <= 0.0f) {
+        s_huntT = 0.0f;
+        s_outcome = Outcome::GotAway;
+        return;
+      }
       s_laneT -= dt;
       if (s_laneT <= 0.0f) {                                 // pick a new lane
         float nl;
@@ -201,6 +214,7 @@ void onObstacleHit(bool wall) {
   if (s_phase == Phase::Pursuit) {
     const float loss = (wall ? BATTLE_GAP_LOSS_WALL : BATTLE_GAP_LOSS_BARRIER) * s_stats.gapLossMul;
     s_gap -= loss;
+    s_gapShown = s_gap;                         // the pursuer lunges in at once
     snprintf(buf, sizeof buf, "STUMBLE!  -%d m", (int)loss);
     banner(buf, rgb565(255, 140, 60));
   } else if (s_phase == Phase::Hunt) {
@@ -222,7 +236,10 @@ void onOrb() {
 
 Phase   phase()   { return s_phase; }
 Outcome outcome() { return s_outcome; }
-float   stumbleSeconds() { return BATTLE_STUMBLE_S * s_stats.stumbleMul; }
+float   stumbleSeconds(bool wall) {
+  return (wall ? BATTLE_STUMBLE_WALL_S : BATTLE_STUMBLE_S) * s_stats.stumbleMul;
+}
+float   huntSecondsLeft() { return s_huntT; }
 const char* enemyName() { return s_k->name; }
 bool  enemyOnRoad() { return s_phase != Phase::Pursuit; }
 float enemyZAhead() { return s_zAhead; }
@@ -316,7 +333,6 @@ void drawPursuer(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t runnerX, float tim
 }
 
 void composeHud(lgfx::LGFX_Sprite& b, int32_t bandY, float time) {
-  (void)time;
   char buf[32];
   const int32_t cx = LCD_WIDTH / 2;
   hud::text(b, bandY, s_k->name, cx, 34, hud::F9, 1.0f, rgb565(255, 90, 80));
@@ -337,6 +353,15 @@ void composeHud(lgfx::LGFX_Sprite& b, int32_t bandY, float time) {
     hud::rect(b, bandY, cx - 88, 50, (int32_t)(176 * f), 8, rgb565(235, 60, 60));
     snprintf(buf, sizeof buf, "HP %d / %d", s_hp, s_k->hp);
     hud::text(b, bandY, buf, cx, 72, hud::F9, 1.0f, rgb565(255, 255, 255));
+    if (s_phase == Phase::Hunt) {                                    // time limit
+      const int secs = (int)ceilf(s_huntT);
+      const bool warn = s_huntT <= BATTLE_HUNT_WARN_S;
+      if (!warn || ((int32_t)(time * 4.0f) & 1)) {
+        snprintf(buf, sizeof buf, "%d:%02d", secs / 60, secs % 60);
+        hud::text(b, bandY, buf, cx + 130, 54, hud::F18, 1.0f,
+                  warn ? rgb565(255, 60, 50) : rgb565(255, 255, 255));
+      }
+    }
   }
 
   if (s_bannerT > 0.0f) hud::text(b, bandY, s_banner, cx, 110, hud::F18, 1.0f, s_bannerColor);

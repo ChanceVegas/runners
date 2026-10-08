@@ -150,6 +150,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — GPS low-power experiment
+- User reseated the jumpers; asked to try software first (no good 5 V source yet; has a
+  5 V 1 A boost module — explained safe wiring: VIN from J4 3V3/GND, VOUT+ to GPS VCC
+  only, verify ~5.0 V before connecting).
+- Done: G0-R7 — after every (re)link or silence, RAM-only CFG-VALSET: UBX out on (ACK/
+  NAK logged), GSV on, GLONASS/BeiDou/QZSS off (GPS+Galileo only, less acquisition
+  current). Baud upgrade now off by default (GPS_UPGRADE_BAUD 0).
+- Commit: feat(gps): low-power GNSS config experiment, ACK/NAK logging (G0-R7)
+
 ### 2026-10-08 — Session 3 (cont.) — GPS keeps restarting (power)
 - G0-R5 outdoors (photo of the detail panel + log): NO UBX at all (my UBX theory was
   wrong); the module sends only RMC + GGA (~3 sentences/s, ~118 B/s), no GSV.

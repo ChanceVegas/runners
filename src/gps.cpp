@@ -31,6 +31,7 @@ bool     s_echoing = false;        // echoing the current epoch (RMC to next RMC
 uint32_t s_lastByteMs = 0;         // G0-R6: silence detection (module restart evidence)
 uint32_t s_prevLockBaud = 0;       // baud of the previous lock (revert = module restarted)
 uint16_t s_silences = 0;
+bool     s_cfgSent = false;        // G0-R7 low-power config sent since the last (re)start
 uint32_t s_lastStatusMs = 0;
 uint32_t s_bytes = 0;              // raw bytes received (wiring check: 0 = nothing on RX)
 uint32_t s_winSent = 0, s_winBytes = 0;   // rate window (since the last report)
@@ -73,6 +74,10 @@ void ubxFrame() {
   if (!s_ubxLogged) {
     s_ubxLogged = true;
     Serial.printf("[gps] UBX binary frames detected (first %02X-%02X, %u bytes)\n", u_cls, u_id, u_len);
+  }
+  if (u_cls == 0x05 && u_len >= 2) {             // ACK-ACK (01) / ACK-NAK (00)
+    Serial.printf("[gps] module %s %02X-%02X\n", u_id == 0x01 ? "ACCEPTED (ACK)" : "REJECTED (NAK)",
+                  u_buf[0], u_buf[1]);
   }
   if (u_cls == 0x01 && u_id == 0x07 && u_len == 92) {   // UBX-NAV-PVT
     ++s_winPvt;
@@ -127,6 +132,33 @@ void requestBaud115200() {
   delay(60);                                     // module applies it after the frame
   Serial.printf("[gps] asked the module for 115200 baud (RAM only); following\n");
   for (int i = 0; i < NBAUDS; ++i) if (BAUDS[i] == 115200) { s_locked = false; s_fix.link = false; tryBaud(i); }
+}
+
+// ---- Low-power config (G0-R7) -------------------------------------------------------
+// Sent after every (re)link because the module keeps restarting (RAM settings are lost).
+// u-blox M10 CFG-VALSET, RAM layer only — nothing is saved in the module.
+// Keys (M10 interface description): CFG-UART1OUTPROT-UBX 0x10740001 (L),
+// CFG-MSGOUT-NMEA_ID_GSV_UART1 0x209100c5 (U1), CFG-SIGNAL-BDS_ENA 0x10310022,
+// QZSS_ENA 0x10310024, GLO_ENA 0x10310025 (L). GPS + Galileo stay on.
+void sendLowPowerConfig() {
+  struct KV { uint32_t key; uint8_t val; };
+  const KV kv[] = {
+    { 0x10740001, 1 },     // UBX output on UART1 -> we can read ACK/NAK
+    { 0x209100c5, 1 },     // GSV every epoch -> satellites in view + signal levels
+    { 0x10310025, 0 },     // GLONASS off
+    { 0x10310022, 0 },     // BeiDou off
+    { 0x10310024, 0 },     // QZSS off
+  };
+  uint8_t pl[4 + sizeof kv / sizeof kv[0] * 5];
+  int n = 0;
+  pl[n++] = 0x00; pl[n++] = 0x01; pl[n++] = 0x00; pl[n++] = 0x00;   // version, RAM, reserved
+  for (const KV& e : kv) {
+    pl[n++] = (uint8_t)e.key; pl[n++] = (uint8_t)(e.key >> 8);
+    pl[n++] = (uint8_t)(e.key >> 16); pl[n++] = (uint8_t)(e.key >> 24);
+    pl[n++] = e.val;                                                 // L and U1 = 1 byte
+  }
+  ubxSend(0x06, 0x8A, pl, (uint16_t)n);
+  Serial.println("[gps] sent low-power config (GPS+Galileo only, GSV on, RAM only)");
 }
 
 void ubxByte(uint8_t c) {
@@ -318,10 +350,16 @@ void update() {
     tryBaud(s_baudIdx);                        // re-listen at the last good baud first
   }
 
+#if GPS_UPGRADE_BAUD
   if (s_locked && !s_upgradeTried && s_fix.baud && s_fix.baud < 115200) {
     s_upgradeTried = true;
     requestBaud115200();
   }
+#endif
+#if GPS_LOW_POWER
+  if (!s_locked) s_cfgSent = false;              // every relink (= likely restart) resends
+  else if (!s_cfgSent) { s_cfgSent = true; sendLowPowerConfig(); }
+#endif
 
   int budget = 1200;                           // bytes per call; plenty at 115200 / 40 ms
   if (U.available()) {
@@ -329,6 +367,7 @@ void update() {
       ++s_silences;
       Serial.printf("[gps] data resumed after %.1f s of SILENCE (#%u) - the module stopped "
                     "sending entirely\n", (now - s_lastByteMs) * 0.001f, s_silences);
+      s_cfgSent = false;                         // it probably restarted: resend config
     }
     s_lastByteMs = now;
   }

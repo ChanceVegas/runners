@@ -169,6 +169,11 @@
 #define GPS_REPORT_MS        2000   // ms between [gps] serial status lines / HUD refresh
 #define GPS_ECHO_DEFAULT     1      // G0: print raw GSV/GGA/TXT sentences (diagnostics)
 #define GPS_ECHO_MS          10000  // ms between raw-sentence bursts
+#define GPS_UPGRADE_BAUD     0      // 1 = ask the module for 115200 after linking (G0-R5). Off:
+                                    // its restarts undo it, and 9600 fits RMC+GGA+GSV at 1 Hz
+#define GPS_LOW_POWER        1      // G0-R7: after every (re)link, RAM-only config: GPS+Galileo
+                                    // only (GLONASS/BeiDou/QZSS off = less acquisition current),
+                                    // GSV on (satellite list), UBX out on (to see ACK/NAK)
 #define GPS_PROBE_MS         1200   // ms per pin of the boot-time wiring probe (NMEA comes
                                     // in ~1 s bursts, so >= 1.1 s catches one)
 

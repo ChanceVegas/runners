@@ -16,20 +16,16 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. A2 ART GATE (user): `git pull`, flash, confirm `=== Runners A2-R1 ===`.
-   - [ ] Chase: the enemy behind you is its FRONT view (Shade purple ghost, Brute red
-         horned beast, Phantom cyan wisp), growing as it closes in.
-   - [ ] Hunt: enemy ahead is its BACK view with a 2-frame run; flashes white on an orb hit.
-   - [ ] Crash: knocked-down runner sprite. Hearts, shield and coin icons are pixel art.
-   - [ ] Shop + pre-battle cards: sneaker / can pictures top-left; text still readable.
-   - [ ] Render ms in a battle while the pursuer is big (gap near 0) — ART-PERF.
-   (A1 PASSED 2026-10-08: "love it"; art cost ~1 ms.)
+1. A2 ART GATE: PASSED ✅ 2026-10-08 (user: "shop text looks excellent"; log: BATTLE run
+   26–31 ms with the pursuer close, countdown 34 avg / 37 max, MENU 34 avg / 35 max).
+   Next milestone: user to choose (map art A3 / text-cache perf / GPS when soldered).
 2. GPS bring-up check as soon as the user solders the M100 Mini (UART1, baud
    autodetect, NMEA sats/fix over serial; window or outdoors). Then R2 proper, with
    approved Safety items 1–5 (PLANNING) as mandatory scope.
 
 ## Known Issues / Risks
-- ART-PERF (watch): A1 sprites cost ~0.5–1 ms (ARCADE run 25–26 ms vs ~24.5). The
+- ART-PERF (watch; A2 log 2026-10-08: battle run ≤ 31 ms with the big pursuer, but
+  countdown peaked 37 ms and MENU 35 — text-heavy frames, ~2.5 ms from the budget). A1 sprites cost ~0.5–1 ms (ARCADE run 25–26 ms vs ~24.5). The
   peaks are still TEXT-heavy frames, not art: MENU and battle countdown hit 35–36 ms of
   39.6. A2's big pursuer sprite must stay within its current footprint; if peaks
   pass ~37 ms, cache the static HUD/menu text (pre-rendered labels).
@@ -139,6 +135,11 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — A2 on hw
+- User: "shop text looks excellent". Log: Brute L2 at rank 5 (HP 8, 38.7 s timer): 3 orb
+  hits, then CAUGHT by duck-bar hits (one duck tapped 1 m late, one mid lane change).
+  fps 25.0–25.5; battle run 26–31 ms; countdown max 37. A2 closed.
+
 ### 2026-10-08 — Session 3 (cont.) — A2 art
 - User approved A2 ("works for me. let's work!").
 - Done: art_gen A2 — shape helpers + auto-outline; 10 new palette colours; Shade /
@@ -476,6 +477,8 @@ session doesn't know it happened.
 - Commit: chore(r0): scaffold Runners — carried-over display/input/renderer, docs
 
 ## Changelog
+- v0.5.0 — 2026-10-08 — A1 + A2 pixel art: runner, obstacles, pickups, enemies, HUD and
+  shop pictures (hw-verified by user report).
 - v0.4.0 — 2026-10-08 — B1 battles (pursuit/hunt/pass), duck control, S1 shop, runner rank,
   audio (SFX + M1 music), volume settings (hw-verified by user report).
 - v0.3.0 — 2026-10-08 — R3: overworld + menu + chase mode (hw-verified by user report).

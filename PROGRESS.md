@@ -104,6 +104,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — next milestones: battles, shop, art
+- User: no speaker hardware yet (audio waits); start real art; add a shop (sneakers,
+  energy drinks); chases don't feel like real battles; GPS still on hold.
+- User's battle design: Pursuit (enemy behind, gap meter, stumbles cost ground) that
+  becomes a Hunt (enemy overtakes, then attacks from ahead) — spec written into
+  PLANNING "Battles, Shop, Art — PROPOSED". Sneakers = permanent stat tiers, drinks =
+  one-use pre-battle boosts, art = bright chunky pixel art. Awaiting approval of the
+  spec + order (B1 battle -> S1 shop -> A1/A2 art).
+
 ### 2026-10-08 — Session 3 (cont.) — R3 hardware result
 - User: R3 feels smooth; menu works perfectly; buttons work; score data and stats
   tracked well. Logged R3 COMPLETE on that report. No serial timing captured (P1/R3).

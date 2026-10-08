@@ -50,6 +50,48 @@ real river may be map grass). Therefore:
   water/roads extract could live on a microSD card in the board's TF slot (shares the
   touch SPI bus). Revisit only if spawn-placement safety becomes a need.
 
+## Battles, Shop, Art — PROPOSED 2026-10-08 (awaiting user approval)
+User feedback: chases "don't feel like real enemy battles" (enemy never on screen,
+one-hit death). User's design: PURSUIT that can turn into a HUNT.
+
+**Battle = Phase 1 Pursuit -> (if caught up) Phase 2 Hunt.** Replaces chase mode.
+Arcade mode stays the endless runner.
+- Phase 1 — PURSUIT: the enemy is visible BEHIND you (looming at the bottom of the
+  screen, bigger as it closes in). Gap meter, start 30 m.
+  - Running clean widens the gap slowly (enemy type sets its speed).
+  - Hitting an obstacle = STUMBLE (no death): ~1 s slowed, gap −10 m (barrier) /
+    −15 m (wall).
+  - Gap reaches 60 m (or you reach the distance goal) -> ESCAPED (small reward).
+  - Gap reaches 0 -> the enemy OVERTAKES you -> Phase 2.
+- Phase 2 — HUNT: the enemy is now AHEAD on the road, switching lanes and attacking
+  with its own obstacle pattern: Shade drops barriers, Brute smashes in walls
+  (2-lane), Phantom flickers lanes and leaves "ghost walls".
+  - You have HEARTS (3 base). An attack hit = −1 heart + stumble.
+  - Glowing energy ORBS appear in lanes; each one collected strikes the enemy (−1 HP).
+    Enemy HP: Shade 5, Brute 8, Phantom 10.
+  - Enemy HP 0 -> DEFEATED (big reward + chance of a drink drop). Hearts 0 -> CAUGHT.
+- Run-energy shields carry over: each absorbs one stumble's gap loss (Phase 1) or one
+  heart (Phase 2).
+
+**Shop** (menu button). Coins from battles + arcade.
+- SNEAKERS — permanent stat tiers (3 lines x 3 tiers, e.g. 100 / 250 / 500 coins):
+  SPRINT (gap grows faster), SPRING (higher, longer jump), GRIP (shorter stumble,
+  smaller gap loss / +1 heart at tier 3).
+- ENERGY DRINKS — one-use, carried (max 3 each), offered on a pre-battle screen
+  (player is standing still: safe): RUSH (start +15 m gap), GUARD (+1 shield),
+  SURGE (orbs strike for 2 in the Hunt).
+
+**Art** — bright chunky pixel art (user: the hardware dictates it).
+- Foundation: PNG -> RGB565 + transparency pipeline (host tool), with the pushImage
+  read-back self-test (CARRY-1) BEFORE any bitmap ships; a scaled, colour-keyed blit
+  that writes the band buffer directly (sprites shrink with depth on the road).
+- Content: runner (run cycle, jump, stumble), 3 enemies (front + back views, run
+  cycle), obstacles, coin, orb, hearts/HUD icons, shop items; map tiles later.
+- Risk: flash use (33.6% of the 1.3 MB app slot now) — repartition if needed.
+
+**Proposed order:** B1 battle system (placeholder shapes, gameplay first) -> S1 shop
+-> A1 art foundation + runner/obstacles -> A2 enemies + shop/HUD art.
+
 ## Rendering Approach
 - Carried over: dual-core band compositor (SRAM bands → PSRAM framebuffer), now
   scene-agnostic via registered compose callbacks (renderer::addLayer).

@@ -25,7 +25,17 @@ struct Stats {
 };
 
 // kind: 0 Shade, 1 Brute, 2 Phantom (world::EnemyKind order). level 1..3.
-void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats);
+// rankPts: the player's rank points; the rank scales the enemy (config RANK_*).
+void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_t rankPts);
+
+// Runner rank: pure helpers shared by game_state (saving) and encounter (end screen).
+uint8_t  rankOf(uint16_t pts);                     // 1..RANK_MAX
+uint16_t ptsAfter(uint16_t pts, Outcome o);        // points after a battle ending in o
+float    rewardMul(uint8_t rank);                  // win-bonus multiplier at a rank
+uint8_t  rank();                                   // this battle's rank
+uint16_t rankPts();                                // this battle's starting points
+float    speedBonus();                             // m/s added to the battle road speed
+float    rowGapMul();                              // multiplier on Pursuit row spacing
 
 // One logic tick while running. travel = metres run (absolute); runM = metres since
 // the battle started; playerZ = runner depth (m); stumbling = runner is stumbling.

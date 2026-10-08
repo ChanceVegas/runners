@@ -17,7 +17,12 @@ session doesn't know it happened.
   measured against this. Heap flat 277,468.
 
 ## Next Up (in order)
-0. M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners M1-R1 ===`.
+0. RANK + M1 MUSIC + S1 SHOP GATE (user): `git pull`, flash, confirm `=== Runners RK-R1 ===`.
+   Rank:
+   - [ ] Menu shows RANK n. Countdown shows "RANK n" under "... IS CHASING YOU".
+   - [ ] End screens: RANK UP / RANK DOWN / "RANK n (p / 3)". Serial `[game] rank a -> b`.
+   - [ ] Higher rank feels harder (faster road, enemy closes faster, more HP).
+   - [ ] Rank survives reboot. Existing saves start at rank 1.
    Music:
    - [ ] Title theme on MENU + SHOP; explore loop on the map; battle loop on the
          pre-battle screen + during the run; arcade loop in arcade.
@@ -165,6 +170,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-08 — Session 3 (cont.) — runner rank (enemy scaling)
+- User: permanent sneakers need enemies that get progressively harder; drinks one
+  battle each (confirmed: already the case, kept as-is).
+- User chose: rank from wins; losses CAN drop rank. Done: battle rank helpers
+  (rankOf, ptsAfter, rewardMul) + per-rank scaling of gap gain/loss, speed, row
+  density, HP, attack rate, orb rate; encounter rank line on countdown + end screens;
+  game_state saves "rankpts", scales win bonus, menu shows RANK. Banner RK-R1.
+- Commit: feat(battle): runner rank — enemies scale with rank from battles
+
 ### 2026-10-08 — Session 3 (cont.) — M1 music
 - Done: tools/music_gen.py (8-bar song notation -> src/music_data.h, 4 x 128 rows),
   audio.* music sequencer (lead square w/ song duty + decay, bass square oct 3, kick

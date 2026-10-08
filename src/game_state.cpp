@@ -32,7 +32,8 @@ constexpr int32_t BTN_EXPLORE_X = 12, BTN_SHOP_X = 168, BTN_ARCADE_X = 324;
 Mode s_mode = Mode::Menu;
 Preferences s_prefs;
 uint32_t s_wallet = 0, s_escapes = 0;     // escapes = battles won (escaped or defeated)
-uint32_t s_lost = 0, s_gotAway = 0;       // battles lost: caught (hearts 0) / enemy got away (timer)
+uint32_t s_lost = 0, s_gotAway = 0;
+uint16_t s_rankPts = 0;                   // runner rank points (battle::rankOf -> rank)       // battles lost: caught (hearts 0) / enemy got away (timer)
 float s_saveT = 0.0f;
 float s_menuT = 0.0f;                      // ignore taps right after entering the menu
 
@@ -77,6 +78,7 @@ void saveProfile() {
   s_prefs.putUInt("escapes", s_escapes);
   s_prefs.putUInt("lost", s_lost);
   s_prefs.putUInt("gotaway", s_gotAway);
+  s_prefs.putUShort("rankpts", s_rankPts);
   s_prefs.putFloat("energy", overworld::energy());
   s_prefs.putFloat("walked", overworld::walkedM());
   s_prefs.putInt("tx", p.tx);
@@ -133,9 +135,10 @@ void enterBattle(const world::Enemy& e) {
   layersEncounter();
   encounter::setDefeatDrop(s_dropItem >= 0 ? shop::name((shop::Item)s_dropItem) : nullptr);
   encounter::startBattle((uint8_t)e.kind, world::level(e.kind), world::goalM(e.kind),
-                         s_battleShields, stats);
-  Serial.printf("[game] battle: %s level %u goal %d m shields %u (guard %u) gain+%.2f jump x%.2f "
+                         s_battleShields, stats, s_rankPts);
+  Serial.printf("[game] battle: %s level %u rank %u goal %d m shields %u (guard %u) gain+%.2f jump x%.2f "
                 "grip x%.2f orb %u rush %d\n", world::name(e.kind), (unsigned)world::level(e.kind),
+                (unsigned)battle::rankOf(s_rankPts),
                 (int)world::goalM(e.kind), (unsigned)s_battleShields, (unsigned)guard,
                 stats.gapGainBonus, stats.jumpMul, stats.gapLossMul, (unsigned)stats.orbPower,
                 (int)stats.startGapBonus);
@@ -168,7 +171,8 @@ void finishBattle() {
   else if (!r.won) ++s_lost;
   if (r.won) {
     const uint8_t lv = world::level(s_battleEnemy.kind);
-    s_wallet += (r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv;
+    s_wallet += (uint32_t)((r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv *
+                           battle::rewardMul(battle::rankOf(s_rankPts)));
     ++s_escapes;
     world::markEscaped(s_battleEnemy);
     if (r.defeated && s_dropItem >= 0) {
@@ -176,6 +180,12 @@ void finishBattle() {
       Serial.printf("[game] drop: %s drink\n", shop::name((shop::Item)s_dropItem));
     }
   }
+  const battle::Outcome o = r.defeated ? battle::Outcome::Defeated
+                         : r.won ? battle::Outcome::Escaped
+                         : r.gotAway ? battle::Outcome::GotAway : battle::Outcome::Caught;
+  const uint8_t r0 = battle::rankOf(s_rankPts);
+  s_rankPts = battle::ptsAfter(s_rankPts, o);
+  Serial.printf("[game] rank %u -> %u (points %u)\n", r0, battle::rankOf(s_rankPts), s_rankPts);
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
                 r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT (coins lost)")),
@@ -215,6 +225,7 @@ bool init() {
   s_escapes = s_prefs.getUInt("escapes", 0);
   s_lost = s_prefs.getUInt("lost", 0);
   s_gotAway = s_prefs.getUInt("gotaway", 0);
+  s_rankPts = s_prefs.getUShort("rankpts", 0);
   overworld::setEnergy(s_prefs.getFloat("energy", 0.0f));
   overworld::setWalkedM(s_prefs.getFloat("walked", 0.0f));
   locator::Pos start;
@@ -333,11 +344,11 @@ void composeMenu(lgfx::LGFX_Sprite& b, int32_t bandY) {
     text(b, bandY, k.sub, k.x + BTN_W / 2, BTN_Y + 52, hud::F9, 1.0f, WHITE, BTN_W - 8);
   }
 
-  snprintf(buf, sizeof buf, "Coins %u   Best %u   Walked %d m", (unsigned)s_wallet,
-           (unsigned)encounter::bestScore(), (int)overworld::walkedM());
+  snprintf(buf, sizeof buf, "RANK %u   Coins %u   Best %u", (unsigned)battle::rankOf(s_rankPts),
+           (unsigned)s_wallet, (unsigned)encounter::bestScore());
   text(b, bandY, buf, cx, 222, hud::F12, 1.0f, WHITE);
-  snprintf(buf, sizeof buf, "Battles won %u   Lost %u   Got away %u", (unsigned)s_escapes,
-           (unsigned)s_lost, (unsigned)s_gotAway);
+  snprintf(buf, sizeof buf, "Won %u   Lost %u   Got away %u   Walked %d m", (unsigned)s_escapes,
+           (unsigned)s_lost, (unsigned)s_gotAway, (int)overworld::walkedM());
   text(b, bandY, buf, cx, 252, hud::F9, 1.0f, rgb565(200, 200, 200));
 }
 

@@ -252,3 +252,22 @@
 #define BATTLE_HUNT_SLACK      1.6f   // x; 1.6 -> Shade ~14 s, Brute ~22 s, Phantom ~22 s
 #define BATTLE_HUNT_WARN_S     5.0f   // s left when the Hunt timer turns red
 #define DEFEAT_BONUS_COINS     60     // wallet bonus for defeating an enemy (x level)
+
+// --- Runner rank (R-RANK, user 2026-10-08): sneakers are permanent, so enemies
+// scale with the player's RANK, earned from battles. Points: escape +1, defeat +2,
+// caught / got away -1 (user: losses CAN drop rank). Rank = 1 + points / PER.
+#define RANK_PTS_PER          3      // points per rank
+#define RANK_MAX              10
+#define RANK_PTS_ESCAPE       1
+#define RANK_PTS_DEFEAT       2
+#define RANK_PTS_LOSS         1      // taken away on CAUGHT or GOT AWAY (floor 0)
+// Per rank above 1 (t = rank - 1):
+#define RANK_GAP_GAIN_STEP    0.04f  // m/s less Pursuit gap gain (enemy runs faster)
+#define RANK_GAP_GAIN_MIN     0.15f  // m/s floor so escaping always stays possible
+#define RANK_GAP_LOSS_STEP    0.05f  // x more gap lost per stumble (+5%/rank)
+#define RANK_SPEED_STEP       0.5f   // m/s faster road in battles
+#define RANK_ROW_GAP_STEP     0.03f  // x denser Pursuit obstacle rows (-3%/rank, floor 0.7x)
+#define RANK_HP_EVERY         2      // +1 enemy HP every N ranks
+#define RANK_ATTACK_STEP      0.04f  // x shorter Hunt attack interval (-4%/rank, floor 0.65x)
+#define RANK_ORB_STEP         2      // % fewer orb drops per rank (floor 35%)
+#define RANK_REWARD_STEP      0.15f  // x more win bonus coins per rank (+15%/rank)

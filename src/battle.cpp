@@ -40,6 +40,11 @@ const KindDef* s_k = &KINDS[0];
 uint8_t s_level = 1;
 float   s_goalM = 600.0f;
 battle::Stats s_stats;
+uint16_t s_rankPts = 0;
+uint8_t  s_rankT = 0;                // rank - 1
+int      s_hpMax = 5;
+float    s_attackS = 1.6f;           // this battle's attack interval (rank-scaled)
+int      s_orbPct = 70;
 
 Phase   s_phase = Phase::Pursuit;
 Outcome s_outcome = Outcome::None;
@@ -72,7 +77,9 @@ void banner(const char* t, uint16_t c) {
 }
 
 float gapGain() {
-  return BATTLE_GAP_GAIN_L1 - (s_level - 1) * BATTLE_GAP_GAIN_STEP + s_stats.gapGainBonus;
+  const float g = BATTLE_GAP_GAIN_L1 - (s_level - 1) * BATTLE_GAP_GAIN_STEP
+                  - s_rankT * RANK_GAP_GAIN_STEP + s_stats.gapGainBonus;
+  return g > RANK_GAP_GAIN_MIN ? g : RANK_GAP_GAIN_MIN;
 }
 
 void beginOvertake() {
@@ -117,7 +124,7 @@ void attack() {
     }
   }
   // Orb in a free lane of the same row, so it never sits inside an obstacle.
-  if ((int)(rnd() % 100) < s_k->orbPct) {
+  if ((int)(rnd() % 100) < s_orbPct) {
     int8_t free[3]; int nf = 0;
     for (int8_t l = -1; l <= 1; ++l) if (!blocked[l + 1]) free[nf++] = l;
     if (nf) encounter::engine::spawnOrb(free[rnd() % nf], wz);
@@ -138,7 +145,28 @@ void heart(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y, bool full)
 
 namespace battle {
 
-void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats) {
+uint8_t rankOf(uint16_t pts) {
+  const uint16_t r = 1 + pts / RANK_PTS_PER;
+  return (uint8_t)(r > RANK_MAX ? RANK_MAX : r);
+}
+
+uint16_t ptsAfter(uint16_t pts, Outcome o) {
+  const uint16_t cap = RANK_MAX * RANK_PTS_PER - 1;
+  int p = pts;
+  if (o == Outcome::Escaped) p += RANK_PTS_ESCAPE;
+  else if (o == Outcome::Defeated) p += RANK_PTS_DEFEAT;
+  else if (o == Outcome::Caught || o == Outcome::GotAway) p -= RANK_PTS_LOSS;
+  if (p < 0) p = 0;
+  return (uint16_t)(p > cap ? cap : p);
+}
+
+float rewardMul(uint8_t r) { return 1.0f + (r - 1) * RANK_REWARD_STEP; }
+uint8_t rank() { return (uint8_t)(s_rankT + 1); }
+uint16_t rankPts() { return s_rankPts; }
+float speedBonus() { return s_rankT * RANK_SPEED_STEP; }
+float rowGapMul() { return fmaxf(0.7f, 1.0f - s_rankT * RANK_ROW_GAP_STEP); }
+
+void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_t rankPts) {
   s_k = &KINDS[kind < 3 ? kind : 0];
   s_level = level;
   s_goalM = goalM;
@@ -148,7 +176,13 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats) {
   s_outcome = Outcome::None;
   s_gap = s_gapShown = BATTLE_GAP_START_M + stats.startGapBonus;
   s_hearts = BATTLE_HEARTS + stats.extraHearts;
-  s_hp = s_k->hp;
+  s_rankPts = rankPts;
+  s_rankT = (uint8_t)(rankOf(rankPts) - 1);
+  s_hpMax = s_k->hp + s_rankT / RANK_HP_EVERY;
+  s_hp = s_hpMax;
+  s_attackS = s_k->attackS * fmaxf(0.65f, 1.0f - s_rankT * RANK_ATTACK_STEP);
+  s_orbPct = s_k->orbPct - s_rankT * RANK_ORB_STEP;
+  if (s_orbPct < 35) s_orbPct = 35;
   s_huntT = 0.0f;
   s_zAhead = 0.0f;
   s_flashT = s_blinkT = 0.0f;
@@ -181,8 +215,8 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
         s_attackT = 0.8f;
         // Time limit from the fastest possible kill: every orb collected, every attack
         // dropping one at the kind's orb rate.
-        const float orbsPerS = (s_k->orbPct / 100.0f) / s_k->attackS;
-        const float needed = (float)((s_k->hp + s_stats.orbPower - 1) / s_stats.orbPower);
+        const float orbsPerS = (s_orbPct / 100.0f) / s_attackS;
+        const float needed = (float)((s_hpMax + s_stats.orbPower - 1) / s_stats.orbPower);
         s_huntT = needed / orbsPerS * BATTLE_HUNT_SLACK;
         s_laneT = 1.0f;
       }
@@ -210,7 +244,7 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
       s_attackT -= dt;
       if (s_attackT <= 0.0f && fabsf(s_lane - s_laneTarget) < 0.05f) {
         attack();
-        s_attackT = s_k->attackS * rndf(0.85f, 1.15f);
+        s_attackT = s_attackS * rndf(0.85f, 1.15f);
       }
       break;
     }
@@ -220,7 +254,8 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
 void onObstacleHit(bool wall) {
   char buf[32];
   if (s_phase == Phase::Pursuit) {
-    const float loss = (wall ? BATTLE_GAP_LOSS_WALL : BATTLE_GAP_LOSS_BARRIER) * s_stats.gapLossMul;
+    const float loss = (wall ? BATTLE_GAP_LOSS_WALL : BATTLE_GAP_LOSS_BARRIER) * s_stats.gapLossMul *
+                       (1.0f + s_rankT * RANK_GAP_LOSS_STEP);
     s_gap -= loss;
     s_gapShown = s_gap;                         // the pursuer lunges in at once
     snprintf(buf, sizeof buf, "STUMBLE!  -%d m", (int)loss);
@@ -356,10 +391,10 @@ void composeHud(lgfx::LGFX_Sprite& b, int32_t bandY, float time) {
   } else {                                                           // hearts + enemy HP
     for (int i = 0; i < BATTLE_HEARTS + s_stats.extraHearts; ++i)
       heart(b, bandY, 12 + i * 20, 52, i < s_hearts);
-    const float f = (float)s_hp / s_k->hp;
+    const float f = (float)s_hp / s_hpMax;
     hud::rect(b, bandY, cx - 90, 48, 180, 12, rgb565(32, 32, 36));
     hud::rect(b, bandY, cx - 88, 50, (int32_t)(176 * f), 8, rgb565(235, 60, 60));
-    snprintf(buf, sizeof buf, "HP %d / %d", s_hp, s_k->hp);
+    snprintf(buf, sizeof buf, "HP %d / %d", s_hp, s_hpMax);
     hud::text(b, bandY, buf, cx, 72, hud::F9, 1.0f, rgb565(255, 255, 255));
     if (s_phase == Phase::Hunt) {                                    // time limit
       const int secs = (int)ceilf(s_huntT);

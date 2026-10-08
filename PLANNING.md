@@ -80,6 +80,17 @@ Arcade mode stays the endless runner.
 - Run-energy shields carry over: each absorbs one stumble's gap loss (Phase 1) or one
   heart (Phase 2).
 
+**Runner rank** (user, 2026-10-08: permanent sneakers need enemies that keep up).
+- Points from battles: escape +1, defeat +2, caught / got away −1 (losses can drop
+  rank). Rank = 1 + points / 3, max 10. Saved in the profile ("rankpts").
+- Each rank above 1 scales EVERY enemy: −0.04 m/s Pursuit gap gain (floor 0.15),
+  +5% gap lost per stumble, +0.5 m/s road speed, rows 3% denser (floor 0.7x),
+  +1 HP every 2 ranks, attacks 4% more often (floor 0.65x), 2% fewer orbs (floor 35%).
+  Win bonuses +15% per rank. Without SPRINT, a level-3 enemy at rank 10 is near the
+  gap-gain floor; SPRINT III restores ~0.36 m/s — sneakers are how you keep up.
+- Shown: menu (RANK n), battle countdown, end screens (RANK UP / RANK DOWN / n/3).
+- Drinks unchanged: each is used up by the one battle it's picked for (user).
+
 **Shop** (menu button). Coins from battles + arcade.
 - SNEAKERS — permanent stat tiers (3 lines x 3 tiers, e.g. 100 / 250 / 500 coins):
   SPRINT (gap grows faster), SPRING (higher, longer jump), GRIP (shorter stumble,
@@ -124,7 +135,7 @@ Arcade mode stays the endless runner.
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump (top) / duck (bottom, B1-R3), any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
-| battle | src/battle.* | battle rules on top of encounter: Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
+| battle | src/battle.* | battle rules on top of encounter (+ runner rank scaling and rank helpers): Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | B1 (awaiting hw) |
 | audio | src/audio.* | square/noise synth on the onboard I2S amp, own task (core 0): 2 SFX voices + M1 music sequencer (lead/bass/drums); play(Sfx), music(Track); volumes in config | AU0 hw-verified 2026-10-08 ("sounds great") |
 | music_data | src/music_data.h | GENERATED song row tables (flash) — edit tools/music_gen.py, not this file | M1 |
 | music_gen | tools/music_gen.py | host tool: song notation -> src/music_data.h | M1 |

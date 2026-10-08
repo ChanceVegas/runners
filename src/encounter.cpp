@@ -193,6 +193,8 @@ void beginStage() {
   s_duckChance = OBST_DUCK_CHANCE + (s_stage - 1) * STAGE_DUCK_STEP;
   if (s_duckChance > STAGE_DUCK_CAP) s_duckChance = STAGE_DUCK_CAP;
   if (s_mode == encounter::Mode::Battle) {                   // walls rare in a Pursuit
+    s_speed += battle::speedBonus();                         // rank: faster road
+    s_speedMax = fminf(s_speedMax + battle::speedBonus(), STAGE_SPEED_CAP);
     s_wallChance = BATTLE_WALL_CHANCE;
     s_duckChance = BATTLE_DUCK_CHANCE;
   }
@@ -411,6 +413,19 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   rect(b, bandY, cx - 10 + lx, feet - 76, 20, 9, HAIR);
 }
 
+// Battle end screens: rank change from this outcome (same rule game_state saves).
+void rankNote(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t y) {
+  char buf[40];
+  const uint16_t before = battle::rankPts(), after = battle::ptsAfter(before, s_outcome);
+  const uint8_t r0 = battle::rankOf(before), r1 = battle::rankOf(after);
+  if (r1 > r0) { snprintf(buf, sizeof buf, "RANK UP!  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_GREEN); }
+  else if (r1 < r0) { snprintf(buf, sizeof buf, "RANK DOWN  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_RED); }
+  else {
+    snprintf(buf, sizeof buf, "RANK %u  (%u / %u)", r1, (unsigned)(after % RANK_PTS_PER), (unsigned)RANK_PTS_PER);
+    text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F9, 1.0f, C_GREY);
+  }
+}
+
 void drawCoinIcon(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t x, int32_t y) {
   if (!rowsHit(y - 9, y + 9, bandY, b.height())) return;
   b.fillEllipse(x, y - bandY, 8, 9, C_GOLD);
@@ -530,7 +545,7 @@ void update(float dt) {
   while (rows && s_nextRowWz < s_travel + OBST_SPAWN_Z && s_nextRowWz < s_runStart + s_goalM - 20.0f) {
     spawnRow(s_nextRowWz);
     s_nextRowWz += (OBST_GAP_START_M + (OBST_GAP_MIN_M - OBST_GAP_START_M) * fminf(prog, 1.0f)) *
-                   (battleMode ? BATTLE_ROW_GAP_MUL : 1.0f);
+                   (battleMode ? BATTLE_ROW_GAP_MUL * battle::rowGapMul() : 1.0f);
   }
 
   const float pz = playerZ();
@@ -766,6 +781,8 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       if (chase) {
         snprintf(buf, sizeof buf, "%s IS CHASING YOU", battle::enemyName());
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_RED);
+        snprintf(buf, sizeof buf, "RANK %u", (unsigned)battle::rank());
+        text(band, bandY, buf, cx, 204, F12, 1.0f, C_WHITE);
       } else if (s_stage > 1) {
         snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_WHITE);
@@ -791,10 +808,11 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
         if (s_dropName) {
           snprintf(buf, sizeof buf, "It dropped a %s drink!", s_dropName);
-          text(band, bandY, buf, cx, 186, F12, 1.0f, rgb565(120, 230, 255));
+          text(band, bandY, buf, cx, 184, F12, 1.0f, rgb565(120, 230, 255));
         }
+        rankNote(band, bandY, 206);
         if (s_stateT > RUN_END_LOCKOUT_S && blink)
-          text(band, bandY, "TAP TO RETURN TO MAP", cx, 220, F12, 1.0f, C_WHITE);
+          text(band, bandY, "TAP TO RETURN TO MAP", cx, 236, F12, 1.0f, C_WHITE);
         break;
       }
       text(band, bandY, "ESCAPED!", cx, 70, F24, 1.3f, C_GREEN);
@@ -803,6 +821,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
         text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
+        rankNote(band, bandY, 186);
         if (s_stateT > RUN_END_LOCKOUT_S && blink)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
         break;
@@ -822,6 +841,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
+        rankNote(band, bandY, 180);
         if (s_stateT > RUN_END_LOCKOUT_S)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
         break;
@@ -832,6 +852,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
+        rankNote(band, bandY, 180);
         if (s_stateT > RUN_END_LOCKOUT_S)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
         break;
@@ -875,7 +896,7 @@ void startArcade() {
 }
 
 void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
-                 const battle::Stats& stats) {
+                 const battle::Stats& stats, uint16_t rankPts) {
   s_mode = Mode::Battle;
   s_jumpMul = stats.jumpMul;
   // s_dropName is set by setDefeatDrop() just before this call; keep it.
@@ -891,7 +912,7 @@ void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
   s_coins = 0;
   s_bankedM = 0;
   s_newBest = false;
-  battle::start(kind, level, goalM, stats);
+  battle::start(kind, level, goalM, stats, rankPts);
   beginStage();
 }
 

@@ -145,9 +145,8 @@ void sendLowPowerConfig() {
   const KV kv[] = {
     { 0x10740001, 1 },     // UBX output on UART1 -> we can read ACK/NAK
     { 0x209100c5, 1 },     // GSV every epoch -> satellites in view + signal levels
-    { 0x10310025, 0 },     // GLONASS off
-    { 0x10310022, 0 },     // BeiDou off
-    { 0x10310024, 0 },     // QZSS off
+    // G0-R8: constellation keys (GLONASS/BeiDou/QZSS off) removed - they force a GNSS
+    // restart and did not help; the module tracks 0 satellites either way (power issue).
   };
   uint8_t pl[4 + sizeof kv / sizeof kv[0] * 5];
   int n = 0;
@@ -158,7 +157,7 @@ void sendLowPowerConfig() {
     pl[n++] = e.val;                                                 // L and U1 = 1 byte
   }
   ubxSend(0x06, 0x8A, pl, (uint16_t)n);
-  Serial.println("[gps] sent low-power config (GPS+Galileo only, GSV on, RAM only)");
+  Serial.println("[gps] sent diag config (GSV on, UBX ACK on, RAM only)");
 }
 
 void ubxByte(uint8_t c) {

@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  R2 GPS: module in hand, NOT yet soldered (user). Next: A1 art foundation.
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix yet (power, GPS-PWR).
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,29 +16,21 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. G0-R5 GPS (user): flash `=== Runners G0-R5 ===`; serial should show `UBX binary frames
-   detected` and/or `asked the module for 115200 baud` then `LINK OK at 115200`. Then
-   outdoors: tap the map's GPS box for the panel (fixType 3, sats, hAcc).
-   Previous: LINK OK ✅ 2026-10-08 (after swapping the data jumpers, as the
-   user suspected): NMEA at 9600 baud, $GN talkers (multi-GNSS), checksums all good.
-   Indoors: 0 sats, no fix, no time (expected). NEXT: outdoor / window fix test with
-   the map HUD + serial log (G0-R3 = longer link-loss timeout, softer probe text).
-   G0-R1 result (2026-10-08): `raw bytes 0` at every baud for minutes = nothing on IO18.
-   G0-R2 adds a boot pin probe on IO18/IO17 (auto-uses IO17 if TX/RX are swapped).
-   Read the `[gps] pin probe:` line right after the banner (press RST with the monitor open).
-   Wiring (user, 2026-10-08): GPS on J4 socket — VCC->3V3, GND->GND, GPS TX->IO18-RX1,
-   GPS RX->IO17-TX1 (hole order from photo; user asked to verify with a meter).
-   - [ ] Serial `[gps] LINK OK at N baud` within ~10 s (indoors is fine for this).
-         `raw bytes 0` = nothing on RX: power/GND/TX->IO18 wrong or swapped.
-   - [ ] Indoors: sats in view > 0, probably "no fix". At a window/outside: FIX,
-         sats used >= 4, plausible lat/lon (don't post exact coordinates publicly).
-   - [ ] Map HUD bottom-left shows "GPS n sats ..." (red = no data, amber = no fix,
-         green = fix). Game still uses drag movement (GPS not wired into play yet).
-   - [ ] fps/render unchanged.
+1. G0 GPS power fix (user, HARDWARE): link is solid (9600, checksums good, module ACKs
+   UBX) but it tracks 0 satellites and resets every ~26 s (see GPS-PWR). Feed GPS VCC
+   from 5 V (boost module from J4 3V3/GND, VOUT+ to GPS VCC only, set/verify ~5.0 V
+   first; or 5 V from USB), grounds shared, data wires unchanged. Flash
+   `=== Runners G0-R8 ===`, go outside, open the map GPS panel.
+   - [ ] No more "SILENCE" lines for 5+ minutes.
+   - [ ] GSV sats view > 0 within ~1 min, then FIX (sats used >= 4).
+   - [ ] Map HUD box goes green. fps unchanged (panel closed).
    A3 map art: PASSED (user: "map art tiles look perfect").
    Then: R2 proper (GPS drives the locator + approved Safety items 1–5) — breakdown first.
 
 ## Known Issues / Risks
+- GPS-PWR (open, hardware): on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
+  RAM config lost) and its GSV reports 0 satellites in view on every cycle. Software
+  can't fix it; G0-R7 constellation cut changed nothing. Next: 5 V supply.
 - ART-PERF (watch; A2 log 2026-10-08: battle run ≤ 31 ms with the big pursuer, but
   countdown peaked 37 ms and MENU 35 — text-heavy frames, ~2.5 ms from the budget). A1 sprites cost ~0.5–1 ms (ARCADE run 25–26 ms vs ~24.5). The
   peaks are still TEXT-heavy frames, not art: MENU and battle countdown hit 35–36 ms of
@@ -150,6 +142,14 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — G0-R7 result
+- G0-R7 log: config ACCEPTED (ACK 06-8A) every relink, GSV now present: `$GPGSV,1,1,00`
+  and `$GAGSV,1,1,00` = 0 satellites tracked. Still 10.4 s silence every ~26 s. User
+  read this as "no link"; the link is fine, there is no satellite reception.
+- Done: G0-R8 — dropped the GLONASS/BeiDou/QZSS-off keys (no effect; constellation
+  changes force a GNSS restart). Kept GSV + UBX ACK as diagnostics.
+- Commit: diag(gps): drop constellation keys, keep GSV/ACK diag config (G0-R8)
+
 ### 2026-10-08 — Session 3 (cont.) — GPS low-power experiment
 - User reseated the jumpers; asked to try software first (no good 5 V source yet; has a
   5 V 1 A boost module — explained safe wiring: VIN from J4 3V3/GND, VOUT+ to GPS VCC

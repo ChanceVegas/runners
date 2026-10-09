@@ -42,10 +42,11 @@ const KindDef* s_k = &KINDS[0];
 uint8_t s_level = 1;
 float   s_goalM = 600.0f;
 battle::Stats s_stats;
-uint16_t s_rankPts = 0;
-uint8_t  s_rankT = 0;                // rank - 1
+uint32_t s_xp = 0;                   // player's XP when the battle started
+uint8_t  s_plvl = 1;                 // player level
+float    s_diff = 0.0f;              // difficulty units from the player level (config DIFF_*)
 int      s_hpMax = 5;
-float    s_attackS = 1.6f;           // this battle's attack interval (rank-scaled)
+float    s_attackS = 1.6f;           // this battle's attack interval (level-scaled)
 int      s_orbPct = 70;
 
 Phase   s_phase = Phase::Pursuit;
@@ -84,9 +85,9 @@ void banner(const char* t, uint16_t c) {
 
 float gapGain() {
   const float g = BATTLE_GAP_GAIN_L1 - (s_level - 1) * BATTLE_GAP_GAIN_STEP
-                  - s_rankT * RANK_GAP_GAIN_STEP + s_stats.gapGainBonus;
+                  - s_diff * DIFF_GAP_GAIN_STEP + s_stats.gapGainBonus;
   const float w = g + (s_passed ? BATTLE_PASS_GAIN_BONUS : 0.0f);
-  return w > RANK_GAP_GAIN_MIN ? w : RANK_GAP_GAIN_MIN;
+  return w > DIFF_GAP_GAIN_MIN ? w : DIFF_GAP_GAIN_MIN;
 }
 
 void beginOvertake() {
@@ -166,28 +167,39 @@ const ArtSprite& frontArt(Attack a) {
 
 namespace battle {
 
-uint8_t rankOf(uint16_t pts) {
-  const uint16_t r = 1 + pts / RANK_PTS_PER;
-  return (uint8_t)(r > RANK_MAX ? RANK_MAX : r);
+uint32_t xpToReach(uint8_t level) {
+  // XP from L to L+1 = BASE + STEP*L, so total to reach level n = sum over L=1..n-1.
+  if (level <= 1) return 0;
+  const uint32_t n = level - 1;
+  return n * LEVEL_XP_BASE + LEVEL_XP_STEP * n * (n + 1) / 2;
 }
 
-uint16_t ptsAfter(uint16_t pts, Outcome o) {
-  const uint16_t cap = RANK_MAX * RANK_PTS_PER - 1;
-  int p = pts;
-  if (o == Outcome::Escaped) p += RANK_PTS_ESCAPE;
-  else if (o == Outcome::Defeated) p += RANK_PTS_DEFEAT;
-  else if (o == Outcome::Caught || o == Outcome::GotAway) p -= RANK_PTS_LOSS;
-  if (p < 0) p = 0;
-  return (uint16_t)(p > cap ? cap : p);
+uint8_t levelOf(uint32_t xp) {
+  uint8_t l = 1;
+  while (l < LEVEL_MAX && xp >= xpToReach(l + 1)) l++;
+  return l;
 }
 
-float rewardMul(uint8_t r) { return 1.0f + (r - 1) * RANK_REWARD_STEP; }
-uint8_t rank() { return (uint8_t)(s_rankT + 1); }
-uint16_t rankPts() { return s_rankPts; }
-float speedBonus() { return s_rankT * RANK_SPEED_STEP; }
-float rowGapMul() { return fmaxf(0.7f, 1.0f - s_rankT * RANK_ROW_GAP_STEP); }
+uint16_t xpGain(uint8_t kind, uint8_t enemyLevel, Outcome o) {
+  int base = o == Outcome::Escaped ? XP_ESCAPE : o == Outcome::Defeated ? XP_DEFEAT
+           : o == Outcome::GotAway ? XP_GOTAWAY : o == Outcome::Caught ? XP_CAUGHT : 0;
+  const int typePct = kind == 1 ? XP_BRUTE_PCT : kind == 2 ? XP_PHANTOM_PCT : XP_SHADE_PCT;
+  const int lvlPct = 100 + (enemyLevel > 1 ? (enemyLevel - 1) : 0) * XP_LEVEL_STEP_PCT;
+  return (uint16_t)((base * typePct * lvlPct + 5000) / 10000);
+}
 
-void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_t rankPts) {
+uint16_t xpGainNow(Outcome o) { return xpGain((uint8_t)(s_k - KINDS), s_level, o); }
+
+float diffOf(uint8_t playerLevel) {
+  return (playerLevel - 1) * DIFF_AT_MAX / (float)(LEVEL_MAX - 1);
+}
+float rewardMul(uint8_t l) { return 1.0f + diffOf(l) * DIFF_REWARD_STEP; }
+uint8_t playerLevel() { return s_plvl; }
+uint32_t startXp() { return s_xp; }
+float speedBonus() { return s_diff * DIFF_SPEED_STEP; }
+float rowGapMul() { return fmaxf(0.7f, 1.0f - s_diff * DIFF_ROW_GAP_STEP); }
+
+void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint32_t xp) {
   s_k = &KINDS[kind < 3 ? kind : 0];
   s_level = level;
   s_goalM = goalM;
@@ -197,12 +209,13 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_
   s_outcome = Outcome::None;
   s_gap = s_gapShown = BATTLE_GAP_START_M + stats.startGapBonus;
   s_hearts = BATTLE_HEARTS + stats.extraHearts;
-  s_rankPts = rankPts;
-  s_rankT = (uint8_t)(rankOf(rankPts) - 1);
-  s_hpMax = s_k->hp + s_rankT / RANK_HP_EVERY;
+  s_xp = xp;
+  s_plvl = levelOf(xp);
+  s_diff = diffOf(s_plvl);
+  s_hpMax = s_k->hp + (int)(s_diff / DIFF_HP_EVERY);
   s_hp = s_hpMax;
-  s_attackS = s_k->attackS * fmaxf(0.65f, 1.0f - s_rankT * RANK_ATTACK_STEP);
-  s_orbPct = s_k->orbPct - s_rankT * RANK_ORB_STEP;
+  s_attackS = s_k->attackS * fmaxf(0.65f, 1.0f - s_diff * DIFF_ATTACK_STEP);
+  s_orbPct = s_k->orbPct - (int)(s_diff * DIFF_ORB_STEP);
   if (s_orbPct < 35) s_orbPct = 35;
   s_huntT = 0.0f;
   s_zAhead = 0.0f;
@@ -315,7 +328,7 @@ void onObstacleHit(bool wall) {
   char buf[32];
   if (s_phase == Phase::Pursuit) {
     const float loss = (wall ? BATTLE_GAP_LOSS_WALL : BATTLE_GAP_LOSS_BARRIER) * s_stats.gapLossMul *
-                       (1.0f + s_rankT * RANK_GAP_LOSS_STEP);
+                       (1.0f + s_diff * DIFF_GAP_LOSS_STEP);
     s_gap -= loss;
     s_gapShown = s_gap;                         // the pursuer lunges in at once
     snprintf(buf, sizeof buf, "STUMBLE!  -%d m", (int)loss);

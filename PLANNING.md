@@ -78,7 +78,7 @@ Arcade mode stays the endless runner.
     run past it, then DEFEATED. Attacks never land closer than 18 m. Orb pity: never
     two attacks in a row without an orb.
   - PASS (RK-R3, user): after "CAUGHT IT!" you run past it — "YOU PASSED THE <NAME>!".
-    DEFEATED is locked in (bonus, drop, rank +2) and the race restarts: gap 25 m, the
+    DEFEATED is locked in (bonus, drop, defeat XP) and the race restarts: gap 25 m, the
     enemy weakened (+0.2 m/s gap gain), a new finish 300 m on. Escape = DEFEATED
     screen. If it catches you again: a Hunt at half HP; losing then still loses the
     battle's coins but keeps the defeat bonus.
@@ -89,15 +89,23 @@ Arcade mode stays the endless runner.
 - Run-energy shields carry over: each absorbs one stumble's gap loss (Phase 1) or one
   heart (Phase 2).
 
-**Runner rank** (user, 2026-10-08: permanent sneakers need enemies that keep up).
-- Points from battles: escape +1, defeat +2, caught / got away −1 (losses can drop
-  rank). Rank = 1 + points / 3, max 10. Saved in the profile ("rankpts").
-- Each rank above 1 scales EVERY enemy: −0.04 m/s Pursuit gap gain (floor 0.15),
-  +5% gap lost per stumble, +0.5 m/s road speed, rows 3% denser (floor 0.7x),
-  +1 HP every 2 ranks, attacks 4% more often (floor 0.65x), 2% fewer orbs (floor 35%).
-  Win bonuses +15% per rank. Without SPRINT, a level-3 enemy at rank 10 is near the
-  gap-gain floor; SPRINT III restores ~0.36 m/s — sneakers are how you keep up.
-- Shown: menu (RANK n), battle countdown, end screens (RANK UP / RANK DOWN / n/3).
+**Runner level (L1 — APPROVED 2026-10-09, replaces rank).**
+- XP from every battle, never lost (user: losses don't cost XP or levels). Base XP:
+  escape 10, defeat 25, got away 5, caught 3; x1 / 1.5 / 2 by enemy level, x1.0 /
+  1.2 / 1.4 Shade / Brute / Phantom. Levels 1–50 (user); XP from L to L+1 =
+  40 + 10 x L (L2 at 50 XP, ~14,200 total to L50). Saved as "xp" (old "rankpts"
+  migrated at 10 XP per point).
+- Difficulty d = (level − 1) x 9 / 49, so L50 = the old rank 10. Per d: −0.04 m/s
+  Pursuit gap gain (floor 0.15), +5% gap lost per stumble, +0.5 m/s road speed, rows
+  3% denser (floor 0.7x), +1 HP per 2 d, attacks 4% more often (floor 0.65x), 2% fewer
+  orbs (floor 35%), win bonuses +15%. SPRINT III is how you keep up late.
+- Start position (L1b): L1–14 enemy behind (Pursuit), L15–29 beside, L30–50 ahead =
+  straight into the Hunt. Escape rules at beside/ahead: OPEN (decide with tuning).
+- Display (L1c): XP bar + level on the map top bar; "+XP / LEVEL UP!" on end screens.
+  Level-up rewards: user wants them, WHAT is OPEN — L1c leaves a hook.
+- Steps: L1a XP + levels + scaling (banner L1A) -> L1b start positions -> L1c display.
+- Then E1: 3 new enemies (user approved count), unlocked at player levels; names/art
+  proposed by Claude for approval.
 - Drinks unchanged: each is used up by the one battle it's picked for (user).
 
 **Shop** (menu button). Coins from battles + arcade.
@@ -147,7 +155,7 @@ Arcade mode stays the endless runner.
 | input | src/input.* | touch → abstract actions via TAP ZONES (left/right third = lane step, middle = jump (top) / duck (bottom, B1-R3), any = pressed); 100 Hz sampler task | DONE (R1-R3, hw-verified) |
 | lanes | src/lanes.* | pseudo-3D road: sky, hills, 3-lane road, curves, projection, camera shake | DONE (R1, hw-verified: 25.3 fps, ~21 ms) |
 | encounter | src/encounter.* | lane-runner engine: runner, obstacles, coins, orbs, stumble, stages, score + saved best (NVS), countdown/crash/clear/game-over flow, HUD; Arcade + Battle modes; engine:: spawn API for battle | P1 hw-verified; Battle mode = B1 |
-| battle | src/battle.* | battle rules on top of encounter (+ runner rank scaling and rank helpers): Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | DONE (B1..RK-R3, hw-verified) |
+| battle | src/battle.* | battle rules on top of encounter (+ runner level/XP scaling and helpers): Pursuit (gap meter, pursuer behind, hit impact) -> Overtake -> Hunt (enemy ahead attacks per kind, orbs vs HP, hearts, time limit -> GOT AWAY); per-kind data table; placeholder shape art | DONE (B1..RK-R3, hw-verified) |
 | audio | src/audio.* | square/noise synth on the onboard I2S amp, own task (core 0): 2 SFX voices + M1 music sequencer (lead/bass/drums); play(Sfx), music(Track); volumes in config | AU0/M1/VOL hw-verified 2026-10-08 |
 | sprite | src/sprite.* | palette-indexed sprite blitter: direct band-buffer writes, scaled, flip, colour 0 transparent | A1 |
 | art_data | src/art_data.h | GENERATED sprite pixels + shared palette (flash) — edit tools/art_gen.py | A1 |
@@ -199,6 +207,9 @@ Arcade mode stays the endless runner.
   (placeholder shapes). DONE 2026-10-08 (hw-verified, incl. rank + pass).
 - **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen.
   DONE 2026-10-08 (hw-verified). Arcade banks 50% of its coins (user).
+- **L1 — Levels + XP:** replaces rank; rank-driven start positions. APPROVED
+  2026-10-09, IN PROGRESS (L1a).
+- **E1 — 3 new enemies:** unlocked by player level. After L1.
 - **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
   SFX (user, 2026-10-08). DONE 2026-10-08 (hw-verified).
 - **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.

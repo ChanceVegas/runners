@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  A1-A3 art ✅. G0 GPS: UART link ✅, no fix yet (power, GPS-PWR).
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1 levels IN PROGRESS.
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,14 +16,15 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. G0 GPS power fix (user, HARDWARE): link is solid (9600, checksums good, module ACKs
-   UBX) but it tracks 0 satellites and resets every ~26 s (see GPS-PWR). Feed GPS VCC
-   from 5 V (boost module from J4 3V3/GND, VOUT+ to GPS VCC only, set/verify ~5.0 V
-   first; or 5 V from USB), grounds shared, data wires unchanged. Flash
-   `=== Runners G0-R8 ===`, go outside, open the map GPS panel.
-   - [ ] No more "SILENCE" lines for 5+ minutes.
-   - [ ] GSV sats view > 0 within ~1 min, then FIX (sats used >= 4).
-   - [ ] Map HUD box goes green. fps unchanged (panel closed).
+1. L1A (user): `git pull`, flash, confirm `=== Runners L1A ===`. Existing rank points
+   convert once (serial `[game] migrated rank points -> N XP`).
+   - [ ] Menu shows LEVEL n (not RANK); battle countdown shows YOUR LEVEL n.
+   - [ ] End screens show `+N XP  LEVEL n (x / y)` or `LEVEL UP!`; losing never drops level.
+   - [ ] Serial `[game] +N XP -> total, level a -> b` after each battle.
+   - [ ] Battles feel the same at low level (L1-L5 ~ old rank 1-2).
+   Then L1b (start positions), L1c (map XP bar), E1 (3 new enemies).
+2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
+   the M100 from 5 V USB as a free test (GPS-PWR).
    A3 map art: PASSED (user: "map art tiles look perfect").
    Then: R2 proper (GPS drives the locator + approved Safety items 1–5) — breakdown first.
 
@@ -142,6 +143,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — L1 levels + XP
+- User: hold GPS (will buy a 3.3 V module; I suggested a 5 V USB test first since the
+  M100 is already 3.3 V rated). Replace rank with XP/levels: no XP loss, max 50,
+  level-ups should give something (TBD), start beside at L15 / ahead at L30, +3 enemies
+  unlocked by level (Claude to propose). Rewards + escape rules: OPEN.
+- Done: L1a — battle levelOf/xpToReach/xpGain, difficulty d replaces rank in all
+  scaling, game_state saves "xp" (migrates "rankpts"), menu LEVEL, countdown YOUR
+  LEVEL, end screens +XP / LEVEL UP. Banner L1A.
+- Commit: feat(battle): levels + XP replace rank (L1A)
+
 ### 2026-10-09 — Session 3 (cont.) — G0-R7 result
 - G0-R7 log: config ACCEPTED (ACK 06-8A) every relink, GSV now present: `$GPGSV,1,1,00`
   and `$GAGSV,1,1,00` = 0 satellites tracked. Still 10.4 s silence every ~26 s. User

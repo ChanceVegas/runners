@@ -198,7 +198,7 @@ void beginStage() {
   s_duckChance = OBST_DUCK_CHANCE + (s_stage - 1) * STAGE_DUCK_STEP;
   if (s_duckChance > STAGE_DUCK_CAP) s_duckChance = STAGE_DUCK_CAP;
   if (s_mode == encounter::Mode::Battle) {                   // walls rare in a Pursuit
-    s_speed += battle::speedBonus();                         // rank: faster road
+    s_speed += battle::speedBonus();                         // player level: faster road
     s_speedMax = fminf(s_speedMax + battle::speedBonus(), STAGE_SPEED_CAP);
     s_wallChance = BATTLE_WALL_CHANCE;
     s_duckChance = BATTLE_DUCK_CHANCE;
@@ -345,17 +345,23 @@ void drawRunner(lgfx::LGFX_Sprite& b, int32_t bandY, const DrawItem& d) {
   sprite::drawBottom(b, bandY, f, cx + lx, feet - bob, SC, ph == 2);
 }
 
-// Battle end screens: rank change from this outcome (same rule game_state saves).
-void rankNote(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t y) {
-  char buf[40];
+// Battle end screens: XP gained from this outcome (same rule game_state saves).
+void xpNote(lgfx::LGFX_Sprite& b, int32_t bandY, int32_t y) {
+  char buf[48];
   // Passing it locked in DEFEATED, even if it caught you again afterwards.
   const battle::Outcome o = battle::passedIt() ? battle::Outcome::Defeated : s_outcome;
-  const uint16_t before = battle::rankPts(), after = battle::ptsAfter(before, o);
-  const uint8_t r0 = battle::rankOf(before), r1 = battle::rankOf(after);
-  if (r1 > r0) { snprintf(buf, sizeof buf, "RANK UP!  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_GREEN); }
-  else if (r1 < r0) { snprintf(buf, sizeof buf, "RANK DOWN  %u -> %u", r0, r1); text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_RED); }
-  else {
-    snprintf(buf, sizeof buf, "RANK %u  (%u / %u)", r1, (unsigned)(after % RANK_PTS_PER), (unsigned)RANK_PTS_PER);
+  const uint32_t before = battle::startXp(), after = before + battle::xpGainNow(o);
+  const uint8_t l0 = battle::levelOf(before), l1 = battle::levelOf(after);
+  if (l1 > l0) {
+    snprintf(buf, sizeof buf, "+%u XP   LEVEL UP!  %u -> %u", (unsigned)(after - before), l0, l1);
+    text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F12, 1.0f, C_GREEN);
+  } else if (l1 >= LEVEL_MAX) {
+    snprintf(buf, sizeof buf, "+%u XP   LEVEL %u (MAX)", (unsigned)(after - before), l1);
+    text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F9, 1.0f, C_GREY);
+  } else {
+    const uint32_t a0 = battle::xpToReach(l1), a1 = battle::xpToReach(l1 + 1);
+    snprintf(buf, sizeof buf, "+%u XP   LEVEL %u  (%u / %u)", (unsigned)(after - before), l1,
+             (unsigned)(after - a0), (unsigned)(a1 - a0));
     text(b, bandY, buf, LCD_WIDTH / 2, y, hud::F9, 1.0f, C_GREY);
   }
 }
@@ -718,7 +724,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       if (chase) {
         snprintf(buf, sizeof buf, "%s IS CHASING YOU", battle::enemyName());
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_RED);
-        snprintf(buf, sizeof buf, "RANK %u", (unsigned)battle::rank());
+        snprintf(buf, sizeof buf, "YOUR LEVEL %u", (unsigned)battle::playerLevel());
         text(band, bandY, buf, cx, 204, F12, 1.0f, C_WHITE);
       } else if (s_stage > 1) {
         snprintf(buf, sizeof buf, "STAGE %u", (unsigned)s_stage);
@@ -747,7 +753,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
           snprintf(buf, sizeof buf, "It dropped a %s drink!", s_dropName);
           text(band, bandY, buf, cx, 184, F12, 1.0f, rgb565(120, 230, 255));
         }
-        rankNote(band, bandY, 206);
+        xpNote(band, bandY, 206);
         if (s_stateT > RUN_END_LOCKOUT_S && blink)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 236, F12, 1.0f, C_WHITE);
         break;
@@ -758,7 +764,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 122, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins collected", (unsigned)s_coins);
         text(band, bandY, buf, cx, 160, F12, 1.0f, C_YELLOW);
-        rankNote(band, bandY, 186);
+        xpNote(band, bandY, 186);
         if (s_stateT > RUN_END_LOCKOUT_S && blink)
           text(band, bandY, "TAP TO RETURN TO MAP", cx, 210, F12, 1.0f, C_WHITE);
         break;
@@ -778,7 +784,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
-        rankNote(band, bandY, 180);
+        xpNote(band, bandY, 180);
         if (battle::passedIt())
           text(band, bandY, "You passed it earlier: defeat bonus kept", cx, 202, F9, 1.0f,
                rgb565(120, 230, 255));
@@ -792,7 +798,7 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
         text(band, bandY, buf, cx, 114, F18, 1.0f, C_WHITE);
         snprintf(buf, sizeof buf, "%u coins lost", (unsigned)s_coins);
         text(band, bandY, buf, cx, 152, F12, 1.0f, C_RED);
-        rankNote(band, bandY, 180);
+        xpNote(band, bandY, 180);
         if (battle::passedIt())
           text(band, bandY, "You passed it earlier: defeat bonus kept", cx, 202, F9, 1.0f,
                rgb565(120, 230, 255));
@@ -840,7 +846,7 @@ void startArcade() {
 }
 
 void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
-                 const battle::Stats& stats, uint16_t rankPts) {
+                 const battle::Stats& stats, uint32_t xp) {
   s_mode = Mode::Battle;
   s_jumpMul = stats.jumpMul;
   // s_dropName is set by setDefeatDrop() just before this call; keep it.
@@ -857,7 +863,7 @@ void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
   s_coins = 0;
   s_bankedM = 0;
   s_newBest = false;
-  battle::start(kind, level, goalM, stats, rankPts);
+  battle::start(kind, level, goalM, stats, xp);
   beginStage();
 }
 

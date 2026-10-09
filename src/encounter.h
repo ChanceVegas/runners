@@ -31,7 +31,7 @@ bool init();                    // seed RNG, load best score from flash, enter R
 // `goalM` metres = escape distance, `level` = speed tier, `shields` absorb hits.
 void startArcade();
 void startBattle(uint8_t kind, uint8_t level, float goalM, uint8_t shields,
-                 const battle::Stats& stats, uint16_t rankPts);
+                 const battle::Stats& stats, uint32_t xp);
 // Battle: name of a drink the enemy drops if DEFEATED (shown on that screen), or
 // nullptr. Call right before every startBattle (startArcade clears it).
 void setDefeatDrop(const char* drinkName);

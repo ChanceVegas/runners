@@ -25,15 +25,18 @@ struct Stats {
 };
 
 // kind: 0 Shade, 1 Brute, 2 Phantom (world::EnemyKind order). level 1..3.
-// rankPts: the player's rank points; the rank scales the enemy (config RANK_*).
-void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint16_t rankPts);
+// xp: the player's total XP; the player's level scales the enemy (config DIFF_*).
+void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint32_t xp);
 
-// Runner rank: pure helpers shared by game_state (saving) and encounter (end screen).
-uint8_t  rankOf(uint16_t pts);                     // 1..RANK_MAX
-uint16_t ptsAfter(uint16_t pts, Outcome o);        // points after a battle ending in o
-float    rewardMul(uint8_t rank);                  // win-bonus multiplier at a rank
-uint8_t  rank();                                   // this battle's rank
-uint16_t rankPts();                                // this battle's starting points
+// Runner level (L1): pure helpers shared by game_state (saving) and encounter (end screen).
+uint8_t  levelOf(uint32_t xp);                     // 1..LEVEL_MAX
+uint32_t xpToReach(uint8_t level);                 // total XP at which a level starts
+uint16_t xpGain(uint8_t kind, uint8_t enemyLevel, Outcome o);   // XP for one battle (never < 0)
+uint16_t xpGainNow(Outcome o);                     // xpGain for the current battle's enemy
+float    diffOf(uint8_t playerLevel);              // difficulty units d at a level (0..DIFF_AT_MAX)
+float    rewardMul(uint8_t playerLevel);           // win-bonus multiplier at a level
+uint8_t  playerLevel();                            // this battle's player level
+uint32_t startXp();                                // this battle's starting XP
 float    speedBonus();                             // m/s added to the battle road speed
 float    rowGapMul();                              // multiplier on Pursuit row spacing
 

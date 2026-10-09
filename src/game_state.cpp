@@ -35,7 +35,7 @@ Mode s_mode = Mode::Menu;
 Preferences s_prefs;
 uint32_t s_wallet = 0, s_escapes = 0;     // escapes = battles won (escaped or defeated)
 uint32_t s_lost = 0, s_gotAway = 0;
-uint16_t s_rankPts = 0;                   // runner rank points (battle::rankOf -> rank)       // battles lost: caught (hearts 0) / enemy got away (timer)
+uint32_t s_xp = 0;                        // runner XP (battle::levelOf -> level); never lost
 float s_saveT = 0.0f;
 float s_menuT = 0.0f;                      // ignore taps right after entering the menu
 
@@ -85,7 +85,7 @@ void saveProfile() {
   s_prefs.putUInt("escapes", s_escapes);
   s_prefs.putUInt("lost", s_lost);
   s_prefs.putUInt("gotaway", s_gotAway);
-  s_prefs.putUShort("rankpts", s_rankPts);
+  s_prefs.putUInt("xp", s_xp);
   s_prefs.putFloat("energy", overworld::energy());
   s_prefs.putFloat("walked", overworld::walkedM());
   s_prefs.putInt("tx", p.tx);
@@ -143,10 +143,10 @@ void enterBattle(const world::Enemy& e) {
   layersEncounter();
   encounter::setDefeatDrop(s_dropItem >= 0 ? shop::name((shop::Item)s_dropItem) : nullptr);
   encounter::startBattle((uint8_t)e.kind, world::level(e.kind), world::goalM(e.kind),
-                         s_battleShields, stats, s_rankPts);
-  Serial.printf("[game] battle: %s level %u rank %u goal %d m shields %u (guard %u) gain+%.2f jump x%.2f "
+                         s_battleShields, stats, s_xp);
+  Serial.printf("[game] battle: %s level %u player L%u goal %d m shields %u (guard %u) gain+%.2f jump x%.2f "
                 "grip x%.2f orb %u rush %d\n", world::name(e.kind), (unsigned)world::level(e.kind),
-                (unsigned)battle::rankOf(s_rankPts),
+                (unsigned)battle::levelOf(s_xp),
                 (int)world::goalM(e.kind), (unsigned)s_battleShields, (unsigned)guard,
                 stats.gapGainBonus, stats.jumpMul, stats.gapLossMul, (unsigned)stats.orbPower,
                 (int)stats.startGapBonus);
@@ -179,7 +179,7 @@ void finishBattle() {
   if (r.won || r.defeated) {                    // defeated = passed it (kept even if caught later)
     const uint8_t lv = world::level(s_battleEnemy.kind);
     s_wallet += (uint32_t)((r.defeated ? DEFEAT_BONUS_COINS : ESCAPE_BONUS_COINS) * lv *
-                           battle::rewardMul(battle::rankOf(s_rankPts)));
+                           battle::rewardMul(battle::levelOf(s_xp)));
     ++s_escapes;
     world::markEscaped(s_battleEnemy);
     if (r.defeated && s_dropItem >= 0) {
@@ -190,9 +190,11 @@ void finishBattle() {
   const battle::Outcome o = r.defeated ? battle::Outcome::Defeated   // passed it = defeated
                          : r.won ? battle::Outcome::Escaped
                          : r.gotAway ? battle::Outcome::GotAway : battle::Outcome::Caught;
-  const uint8_t r0 = battle::rankOf(s_rankPts);
-  s_rankPts = battle::ptsAfter(s_rankPts, o);
-  Serial.printf("[game] rank %u -> %u (points %u)\n", r0, battle::rankOf(s_rankPts), s_rankPts);
+  const uint8_t l0 = battle::levelOf(s_xp);
+  const uint16_t gain = battle::xpGain((uint8_t)s_battleEnemy.kind, world::level(s_battleEnemy.kind), o);
+  s_xp += gain;
+  Serial.printf("[game] +%u XP -> %u, level %u -> %u\n", (unsigned)gain, (unsigned)s_xp, l0,
+                battle::levelOf(s_xp));
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
                 r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT (coins lost)")),
@@ -233,7 +235,14 @@ bool init() {
   s_escapes = s_prefs.getUInt("escapes", 0);
   s_lost = s_prefs.getUInt("lost", 0);
   s_gotAway = s_prefs.getUInt("gotaway", 0);
-  s_rankPts = s_prefs.getUShort("rankpts", 0);
+  if (s_prefs.isKey("xp")) {
+    s_xp = s_prefs.getUInt("xp", 0);
+  } else if (s_prefs.isKey("rankpts")) {            // L1 migration: 1 old rank point = 1 escape
+    s_xp = (uint32_t)s_prefs.getUShort("rankpts", 0) * XP_ESCAPE;
+    s_prefs.putUInt("xp", s_xp);
+    s_prefs.remove("rankpts");
+    Serial.printf("[game] migrated rank points -> %u XP\n", (unsigned)s_xp);
+  }
   overworld::setEnergy(s_prefs.getFloat("energy", 0.0f));
   overworld::setWalkedM(s_prefs.getFloat("walked", 0.0f));
   locator::Pos start;
@@ -368,7 +377,7 @@ void composeMenu(lgfx::LGFX_Sprite& b, int32_t bandY) {
     text(b, bandY, k.sub, k.x + BTN_W / 2, BTN_Y + 52, hud::F9, 1.0f, WHITE, BTN_W - 8);
   }
 
-  snprintf(buf, sizeof buf, "RANK %u   Coins %u   Best %u", (unsigned)battle::rankOf(s_rankPts),
+  snprintf(buf, sizeof buf, "LEVEL %u   Coins %u   Best %u", (unsigned)battle::levelOf(s_xp),
            (unsigned)s_wallet, (unsigned)encounter::bestScore());
   text(b, bandY, buf, cx, 222, hud::F12, 1.0f, WHITE);
   snprintf(buf, sizeof buf, "Won %u   Lost %u   Got away %u   Walked %d m", (unsigned)s_escapes,

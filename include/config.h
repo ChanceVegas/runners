@@ -264,7 +264,7 @@
                                       // ~0.7 s at 26 m/s), even when the enemy is nearer
 #define BATTLE_PASS_S          0.9f   // s of the "you run past it" animation
 // After you pass it (RK-R3, user): "YOU PASSED THE <NAME>!", the enemy is DEFEATED
-// (bonus, drop and rank points locked in) and the race restarts with it behind you,
+// (bonus, drop and XP locked in) and the race restarts with it behind you,
 // weakened. Escape again to finish; if it catches you, a shorter Hunt.
 #define BATTLE_PASS_GAP_M      25.0f  // m gap when the race restarts after a pass
 #define BATTLE_PASS_ESCAPE_M   300.0f // m of running to the new finish after a pass
@@ -290,21 +290,28 @@
 #define BATTLE_HUNT_WARN_S     5.0f   // s left when the Hunt timer turns red
 #define DEFEAT_BONUS_COINS     60     // wallet bonus for defeating an enemy (x level)
 
-// --- Runner rank (R-RANK, user 2026-10-08): sneakers are permanent, so enemies
-// scale with the player's RANK, earned from battles. Points: escape +1, defeat +2,
-// caught / got away -1 (user: losses CAN drop rank). Rank = 1 + points / PER.
-#define RANK_PTS_PER          3      // points per rank
-#define RANK_MAX              10
-#define RANK_PTS_ESCAPE       1
-#define RANK_PTS_DEFEAT       2
-#define RANK_PTS_LOSS         1      // taken away on CAUGHT or GOT AWAY (floor 0)
-// Per rank above 1 (t = rank - 1):
-#define RANK_GAP_GAIN_STEP    0.04f  // m/s less Pursuit gap gain (enemy runs faster)
-#define RANK_GAP_GAIN_MIN     0.15f  // m/s floor so escaping always stays possible
-#define RANK_GAP_LOSS_STEP    0.05f  // x more gap lost per stumble (+5%/rank)
-#define RANK_SPEED_STEP       0.5f   // m/s faster road in battles
-#define RANK_ROW_GAP_STEP     0.03f  // x denser Pursuit obstacle rows (-3%/rank, floor 0.7x)
-#define RANK_HP_EVERY         2      // +1 enemy HP every N ranks
-#define RANK_ATTACK_STEP      0.04f  // x shorter Hunt attack interval (-4%/rank, floor 0.65x)
-#define RANK_ORB_STEP         2      // % fewer orb drops per rank (floor 35%)
-#define RANK_REWARD_STEP      0.15f  // x more win bonus coins per rank (+15%/rank)
+// --- Runner level (L1, user 2026-10-08): replaces rank. Every battle gives XP; XP and
+// levels are NEVER lost (user). Harder enemies give more XP. Enemies scale with level.
+#define LEVEL_MAX             50
+#define LEVEL_XP_BASE         40     // XP to go from level L to L+1 = BASE + STEP * L
+#define LEVEL_XP_STEP         10     //   (L2 at 50 XP, L10 ~810, L50 ~14,200 total)
+#define XP_ESCAPE             10     // XP for escaping (gap reached)
+#define XP_DEFEAT             25     // XP for defeating (passing) the enemy
+#define XP_GOTAWAY            5      // XP when the enemy got away (Hunt timer ran out)
+#define XP_CAUGHT             3      // XP when caught (hearts 0) - still something for trying
+#define XP_LEVEL_STEP_PCT     50     // % more XP per enemy level above 1 (L1/L2/L3 = x1/1.5/2)
+#define XP_SHADE_PCT          100    // % XP by enemy type (harder types pay more)
+#define XP_BRUTE_PCT          120
+#define XP_PHANTOM_PCT        140
+// Enemy difficulty: d = (level - 1) * DIFF_AT_MAX / (LEVEL_MAX - 1), so level 50 = the
+// old rank 10 (d 9). Per difficulty unit d:
+#define DIFF_AT_MAX           9.0f   // d at LEVEL_MAX
+#define DIFF_GAP_GAIN_STEP    0.04f  // m/s less Pursuit gap gain (enemy runs faster)
+#define DIFF_GAP_GAIN_MIN     0.15f  // m/s floor so escaping always stays possible
+#define DIFF_GAP_LOSS_STEP    0.05f  // x more gap lost per stumble (+5%/d)
+#define DIFF_SPEED_STEP       0.5f   // m/s faster road in battles
+#define DIFF_ROW_GAP_STEP     0.03f  // x denser Pursuit obstacle rows (-3%/d, floor 0.7x)
+#define DIFF_HP_EVERY         2.0f   // +1 enemy HP every N d
+#define DIFF_ATTACK_STEP      0.04f  // x shorter Hunt attack interval (-4%/d, floor 0.65x)
+#define DIFF_ORB_STEP         2.0f   // % fewer orb drops per d (floor 35%)
+#define DIFF_REWARD_STEP      0.15f  // x more win bonus coins per d (+15%/d)

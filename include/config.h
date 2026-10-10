@@ -235,9 +235,9 @@
 #define ENEMY_STALKER_GOAL_M  900.0f  // m chase length
 #define ENEMY_HORNET_GOAL_M  1000.0f
 #define ENEMY_WARDEN_GOAL_M  1200.0f  // boss: long race
-#define ENEMY_STALKER_UNLOCK_LV 10    // player level that unlocks fighting it
-#define ENEMY_HORNET_UNLOCK_LV  20
-#define ENEMY_WARDEN_UNLOCK_LV  35
+#define ENEMY_STALKER_UNLOCK_LV 12    // player level that unlocks fighting it (x1.2 with cap 60)
+#define ENEMY_HORNET_UNLOCK_LV  24
+#define ENEMY_WARDEN_UNLOCK_LV  42
 // Common (non-rare) spawn mix, cumulative % thresholds of one hash roll:
 #define OW_MIX_SHADE         48     // 0-47 Shade
 #define OW_MIX_BRUTE         72     // 48-71 Brute
@@ -258,8 +258,8 @@
 // obstacle pattern; orbs strike it; hearts are your life.
 #define BATTLE_GAP_START_M     30.0f  // m gap when a battle starts (enemy BEHIND you)
 // L1b start positions (user 2026-10-09): the player's level decides where the enemy starts.
-#define BATTLE_START_BESIDE_LV 15     // from this level the enemy starts BESIDE you (tiny gap)
-#define BATTLE_START_AHEAD_LV  30     // from this level it starts AHEAD = straight into the Hunt
+#define BATTLE_START_BESIDE_LV 18     // from this level the enemy starts BESIDE you (tiny gap)
+#define BATTLE_START_AHEAD_LV  36     // from this level it starts AHEAD = straight into the Hunt
 #define BATTLE_GAP_BESIDE_M    6.0f   // m gap for a BESIDE start: run clean or it overtakes fast
 #define DEBUG_START_CYCLE      0      // TEST ONLY (L1B hw test): 1 = ignore level, cycle
                                       // BEHIND -> BESIDE -> AHEAD each battle. Set 0 after.
@@ -334,10 +334,10 @@
 
 // --- Runner level (L1, user 2026-10-08): replaces rank. Every battle gives XP; XP and
 // levels are NEVER lost (user). Harder enemies give more XP. Enemies scale with level.
-#define LEVEL_MAX             50
+#define LEVEL_MAX             60     // user 2026-10-10: was 50
 #define LEVELUP_BANNER_S      3.0f   // s the map shows "LEVEL UP! n" after a battle levels you up
 #define LEVEL_XP_BASE         40     // XP to go from level L to L+1 = BASE + STEP * L
-#define LEVEL_XP_STEP         10     //   (L2 at 50 XP, L10 ~810, L50 ~14,200 total)
+#define LEVEL_XP_STEP         10     //   (L2 at 50 XP, L10 ~810, L60 ~20,100 total)
 #define XP_ESCAPE             10     // XP for escaping (gap reached)
 #define XP_DEFEAT             25     // XP for defeating (passing) the enemy
 #define XP_GOTAWAY            5      // XP when the enemy got away (Hunt timer ran out)
@@ -349,7 +349,7 @@
 #define XP_STALKER_PCT        160
 #define XP_HORNET_PCT         180
 #define XP_WARDEN_PCT         250
-// Enemy difficulty: d = (level - 1) * DIFF_AT_MAX / (LEVEL_MAX - 1), so level 50 = the
+// Enemy difficulty: d = (level - 1) * DIFF_AT_MAX / (LEVEL_MAX - 1), so the top level = the
 // old rank 10 (d 9). Per difficulty unit d:
 #define DIFF_AT_MAX           9.0f   // d at LEVEL_MAX
 #define DIFF_GAP_GAIN_STEP    0.04f  // m/s less Pursuit gap gain (enemy runs faster)

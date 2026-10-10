@@ -108,14 +108,14 @@ Arcade mode stays the endless runner.
 **Runner level (L1 — APPROVED 2026-10-09, replaces rank).**
 - XP from every battle, never lost (user: losses don't cost XP or levels). Base XP:
   escape 10, defeat 25, got away 5, caught 3; x1 / 1.5 / 2 by enemy level, x1.0 /
-  1.2 / 1.4 Shade / Brute / Phantom. Levels 1–50 (user); XP from L to L+1 =
-  40 + 10 x L (L2 at 50 XP, ~14,200 total to L50). Saved as "xp" (old "rankpts"
+  1.2 / 1.4 Shade / Brute / Phantom. Levels 1–60 (user; was 50 until 2026-10-10); XP
+  from L to L+1 = 40 + 10 x L (L2 at 50 XP, ~20,100 total to L60). Saved as "xp" (old "rankpts"
   migrated at 10 XP per point).
-- Difficulty d = (level − 1) x 9 / 49, so L50 = the old rank 10. Per d: −0.04 m/s
+- Difficulty d = (level − 1) x 9 / 59, so L60 = the old rank 10. Per d: −0.04 m/s
   Pursuit gap gain (floor 0.15), +5% gap lost per stumble, +0.5 m/s road speed, rows
   3% denser (floor 0.7x), +1 HP per 2 d, attacks 4% more often (floor 0.65x), 2% fewer
   orbs (floor 35%), win bonuses +15%. SPRINT III is how you keep up late.
-- Start position (L1b): L1–14 enemy behind (Pursuit), L15–29 beside, L30–50 ahead =
+- Start position (L1b): L1–17 enemy behind (Pursuit), L18–35 beside, L36–60 ahead =
   straight into the Hunt. Escape rules at beside/ahead: OPEN (decide with tuning).
 - Display (L1c): XP bar + level on the map top bar; "+XP / LEVEL UP!" on end screens.
   Level-up rewards: user wants them, WHAT is OPEN — L1c leaves a hook.
@@ -127,12 +127,14 @@ wake); no gameplay effect (movement is real walking).
 **E1 — three new enemies (APPROVED 2026-10-09, user: "everything looks fine. i approve").**
 | Enemy | Unlock | Hunt attack | Pursuit | HP | XP |
 |---|---|---|---|---|---|
-| STALKER | L10 | moves into YOUR lane, blocks it + one neighbour | closes the gap faster | 6 | x1.6 |
-| HORNET | L20 | combos: low barrier then duck bar right after (jump, then duck); attacks often | denser rows | 5 | x1.8 |
-| WARDEN | L35 | walls across two lanes; slow but heavy; boss | 1,200 m race | 10 | x2.5 |
+| STALKER | L12 | moves into YOUR lane, blocks it + one neighbour | closes the gap faster | 6 | x1.6 |
+| HORNET | L24 | combos: low barrier then duck bar right after (jump, then duck); attacks often | denser rows | 5 | x1.8 |
+| WARDEN | L42 | walls across two lanes; slow but heavy; boss | 1,200 m race | 10 | x2.5 |
 - Shared world: new kinds spawn for EVERYONE (deterministic hash, so players at one spot
   see the same enemy); below the unlock level they show grey with a padlock and can't be
   fought. Spawn mix (common): Shade 48 / Brute 24 / Stalker 12 / Hornet 10 / Warden 6 %.
+- Level cap 60 (2026-10-10): unlocks scaled x1.2 to L12 / L24 / L42; start
+  positions to L18 / L36.
 - Steps: E1a roster + locked display -> E1b Stalker -> E1c Hornet -> E1d Warden (each:
   behaviour + art + hw test; DEBUG_UNLOCK_ALL to test early).
   User (2026-10-09): build all of them in one go. Warden hit = 2 hearts; Hornet combo

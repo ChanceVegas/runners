@@ -15,7 +15,7 @@ struct Tile {
   uint8_t deco;        // 0..255 per-tile hash for decoration variety (flowers, trees)
 };
 
-enum class EnemyKind : uint8_t { Shade, Brute, Phantom };
+enum class EnemyKind : uint8_t { Shade, Brute, Phantom, Stalker, Hornet, Warden };
 
 struct Enemy {
   int32_t cx, cy;      // spawn cell
@@ -41,6 +41,9 @@ int enemiesNear(const locator::Pos& centre, int radiusTiles, bool running,
 void markEscaped(const Enemy& e);
 
 uint8_t level(EnemyKind k);        // 1..3: chase speed tier
+uint8_t unlockLevel(EnemyKind k);  // player level needed to fight it (E1)
+bool    ready(EnemyKind k);        // battle behaviour exists (E1 kinds go live one by one)
+bool    locked(EnemyKind k, uint8_t playerLevel);   // on the map but can't be fought
 float   goalM(EnemyKind k);        // chase length, m
 const char* name(EnemyKind k);
 

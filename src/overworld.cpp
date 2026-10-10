@@ -56,7 +56,7 @@ int32_t d_firstTx = 0, d_firstTy = 0, d_offX = 0, d_offY = 0;
 int32_t c_firstTx = INT32_MIN, c_firstTy = INT32_MIN;   // tile cache key
 world::Tile s_tiles[ROWS][COLS];
 float d_time = 0.0f;
-struct EnemyDraw { int16_t x, y; uint8_t kind; bool target; uint8_t phase; };
+struct EnemyDraw { int16_t x, y; uint8_t kind; bool target; uint8_t phase; bool locked; };
 EnemyDraw s_edraw[MAX_ENEMIES];
 int s_nEdraw = 0;
 
@@ -128,9 +128,21 @@ void drawEnemy(lgfx::LGFX_Sprite& b, int32_t bandY, const EnemyDraw& e) {
   }
   b.fillEllipse(x, e.y + 11 - bandY, 11, 3, rgb565(20, 30, 20));       // ground shadow
   // A3: the same front-view art as the battle pursuer, at map size (~25x29).
-  const ArtSprite& a = e.kind == (uint8_t)world::EnemyKind::Shade ? ART_SHADE_F
-                     : e.kind == (uint8_t)world::EnemyKind::Brute ? ART_BRUTE_F : ART_PHANTOM_F;
-  const int32_t w = a.w * 9 / 10, h = a.h * 9 / 10;
+  // E1 kinds borrow a silhouette until their own art lands (E1b/c/d).
+  using world::EnemyKind;
+  const EnemyKind k = (EnemyKind)e.kind;
+  const ArtSprite& a = (k == EnemyKind::Shade || k == EnemyKind::Stalker) ? ART_SHADE_F
+                     : (k == EnemyKind::Brute || k == EnemyKind::Warden) ? ART_BRUTE_F : ART_PHANTOM_F;
+  const int32_t pct = k == EnemyKind::Warden ? 115 : 90;               // Warden: bigger
+  const int32_t w = a.w * pct / 100, h = a.h * pct / 100;
+  if (e.locked) {                                       // E1: grey silhouette + padlock
+    sprite::draw(b, bandY, a, x - w / 2, y + 12 - h, w, h, false, rgb565(110, 110, 120));
+    const int32_t ly = by + 12 - h - 12;                // padlock above its head
+    b.drawRoundRect(x - 4, ly - 7, 9, 9, 3, rgb565(230, 230, 230));
+    b.fillRect(x - 6, ly, 13, 9, rgb565(230, 200, 60));
+    b.fillRect(x, ly + 3, 2, 3, rgb565(60, 50, 20));
+    return;
+  }
   sprite::draw(b, bandY, a, x - w / 2, y + 12 - h, w, h);
   if (e.kind == (uint8_t)world::EnemyKind::Phantom) {   // rare: sparkle
     const int32_t sp = ((int32_t)(d_time * 8.0f + e.phase)) % 4;
@@ -197,8 +209,9 @@ void update(float dt) {
     const float d = sqrtf(dx * dx + dy * dy);
     if (d < best) { best = d; s_target = i; }
   }
+  const bool targetLocked = s_target >= 0 && world::locked(s_enemies[s_target].kind, s_level);
 
-  if (s_target >= 0 && !s_needMove && s_move == locator::Move::Still) {
+  if (s_target >= 0 && !targetLocked && !s_needMove && s_move == locator::Move::Still) {
     s_hold += dt;
     if (s_hold >= OW_STILL_HOLD_S) {
       s_engaged = true;
@@ -246,8 +259,10 @@ void beginRender(float alpha) {
     int32_t sx, sy;
     worldToScreen(s_enemies[i].pos, sx, sy);
     if (sx < -70 || sx > LCD_WIDTH + 70 || sy < -70 || sy > LCD_HEIGHT + 70) continue;
+    const bool lk = world::locked(s_enemies[i].kind, s_level);
     s_edraw[s_nEdraw++] = { (int16_t)sx, (int16_t)sy, (uint8_t)s_enemies[i].kind,
-                            i == s_target, (uint8_t)(s_enemies[i].cx * 7 + s_enemies[i].cy * 13) };
+                            i == s_target && !lk,              // no engage ring when locked
+                            (uint8_t)(s_enemies[i].cx * 7 + s_enemies[i].cy * 13), lk };
   }
 }
 
@@ -368,8 +383,14 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   const int32_t BY = LCD_HEIGHT - 34;
   if (s_target >= 0) {
     const world::Enemy& e = s_enemies[s_target];
-    rect(band, bandY, 0, BY, LCD_WIDTH, 34, rgb565(60, 20, 20));
-    if (s_needMove)
+    const bool lk = world::locked(e.kind, s_level);
+    rect(band, bandY, 0, BY, LCD_WIDTH, 34, lk ? rgb565(40, 40, 50) : rgb565(60, 20, 20));
+    if (lk && !world::ready(e.kind))
+      snprintf(buf, sizeof buf, "%s - LOCKED (coming soon)", world::name(e.kind));
+    else if (lk)
+      snprintf(buf, sizeof buf, "%s - LOCKED until LEVEL %u", world::name(e.kind),
+               (unsigned)world::unlockLevel(e.kind));
+    else if (s_needMove)
       snprintf(buf, sizeof buf, "Move away and come back to face the %s", world::name(e.kind));
     else if (s_move == locator::Move::Still)
       snprintf(buf, sizeof buf, "Hold still... the %s is coming!", world::name(e.kind));

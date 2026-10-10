@@ -104,8 +104,18 @@ Arcade mode stays the endless runner.
 - Display (L1c): XP bar + level on the map top bar; "+XP / LEVEL UP!" on end screens.
   Level-up rewards: user wants them, WHAT is OPEN — L1c leaves a hook.
 - Steps: L1a XP + levels + scaling (banner L1A) -> L1b start positions -> L1c display.
-- Then E1: 3 new enemies (user approved count), unlocked at player levels; names/art
-  proposed by Claude for approval.
+
+**E1 — three new enemies (APPROVED 2026-10-09, user: "everything looks fine. i approve").**
+| Enemy | Unlock | Hunt attack | Pursuit | HP | XP |
+|---|---|---|---|---|---|
+| STALKER | L10 | moves into YOUR lane, blocks it + one neighbour | closes the gap faster | 6 | x1.6 |
+| HORNET | L20 | combos: low barrier then duck bar right after (jump, then duck); attacks often | denser rows | 5 | x1.8 |
+| WARDEN | L35 | walls across two lanes; slow but heavy; boss | 1,200 m race | 10 | x2.5 |
+- Shared world: new kinds spawn for EVERYONE (deterministic hash, so players at one spot
+  see the same enemy); below the unlock level they show grey with a padlock and can't be
+  fought. Spawn mix (common): Shade 48 / Brute 24 / Stalker 12 / Hornet 10 / Warden 6 %.
+- Steps: E1a roster + locked display -> E1b Stalker -> E1c Hornet -> E1d Warden (each:
+  behaviour + art + hw test; DEBUG_UNLOCK_ALL to test early).
 - Drinks unchanged: each is used up by the one battle it's picked for (user).
 
 **Shop** (menu button). Coins from battles + arcade.
@@ -208,8 +218,8 @@ Arcade mode stays the endless runner.
 - **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen.
   DONE 2026-10-08 (hw-verified). Arcade banks 50% of its coins (user).
 - **L1 — Levels + XP:** replaces rank; level-driven start positions. APPROVED
-  2026-10-09. L1a + L1b DONE (hw-verified); L1c built (on test).
-- **E1 — 3 new enemies:** unlocked by player level. After L1.
+  2026-10-09. DONE (L1a-c hw-verified).
+- **E1 — 3 new enemies:** unlocked by player level. APPROVED 2026-10-09; E1a built.
 - **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
   SFX (user, 2026-10-08). DONE 2026-10-08 (hw-verified).
 - **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.

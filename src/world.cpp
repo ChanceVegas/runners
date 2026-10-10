@@ -99,7 +99,12 @@ int enemiesNear(const locator::Pos& c, int radiusTiles, bool running, Enemy* out
       EnemyKind k;
       const bool rare = (int)((h >> 8) % 100) < OW_RARE_CHANCE;
       if (rare) k = EnemyKind::Phantom;
-      else k = ((int)((h >> 4) % 100) < 30) ? EnemyKind::Brute : EnemyKind::Shade;
+      else {
+        const int r = (int)((h >> 4) % 100);
+        k = r < OW_MIX_SHADE ? EnemyKind::Shade : r < OW_MIX_BRUTE ? EnemyKind::Brute
+          : r < OW_MIX_STALKER ? EnemyKind::Stalker : r < OW_MIX_HORNET ? EnemyKind::Hornet
+          : EnemyKind::Warden;
+      }
 
       Memo* m = findMemo(cx, cy, w);
       if (m && m->escaped) continue;
@@ -116,17 +121,57 @@ int enemiesNear(const locator::Pos& c, int radiusTiles, bool running, Enemy* out
 void markEscaped(const Enemy& e) { memo(e.cx, e.cy, e.window).escaped = true; }
 
 uint8_t level(EnemyKind k) {
-  switch (k) { case EnemyKind::Shade: return 1; case EnemyKind::Brute: return 2; default: return 3; }
+  switch (k) {
+    case EnemyKind::Shade:   return 1;
+    case EnemyKind::Brute:
+    case EnemyKind::Stalker: return 2;
+    default:                 return 3;   // Phantom, Hornet, Warden
+  }
+}
+uint8_t unlockLevel(EnemyKind k) {
+  switch (k) {
+    case EnemyKind::Stalker: return ENEMY_STALKER_UNLOCK_LV;
+    case EnemyKind::Hornet:  return ENEMY_HORNET_UNLOCK_LV;
+    case EnemyKind::Warden:  return ENEMY_WARDEN_UNLOCK_LV;
+    default:                 return 1;
+  }
+}
+bool ready(EnemyKind k) {
+  switch (k) {
+    case EnemyKind::Stalker: return E1_STALKER_READY;
+    case EnemyKind::Hornet:  return E1_HORNET_READY;
+    case EnemyKind::Warden:  return E1_WARDEN_READY;
+    default:                 return true;
+  }
+}
+bool locked(EnemyKind k, uint8_t playerLevel) {
+  if (!ready(k)) return true;
+#if DEBUG_UNLOCK_ALL
+  (void)playerLevel;
+  return false;
+#else
+  return playerLevel < unlockLevel(k);
+#endif
 }
 float goalM(EnemyKind k) {
   switch (k) {
     case EnemyKind::Shade: return ENEMY_SHADE_GOAL_M;
     case EnemyKind::Brute: return ENEMY_BRUTE_GOAL_M;
+    case EnemyKind::Stalker: return ENEMY_STALKER_GOAL_M;
+    case EnemyKind::Hornet:  return ENEMY_HORNET_GOAL_M;
+    case EnemyKind::Warden:  return ENEMY_WARDEN_GOAL_M;
     default:               return ENEMY_PHANTOM_GOAL_M;
   }
 }
 const char* name(EnemyKind k) {
-  switch (k) { case EnemyKind::Shade: return "SHADE"; case EnemyKind::Brute: return "BRUTE"; default: return "PHANTOM"; }
+  switch (k) {
+    case EnemyKind::Shade:   return "SHADE";
+    case EnemyKind::Brute:   return "BRUTE";
+    case EnemyKind::Stalker: return "STALKER";
+    case EnemyKind::Hornet:  return "HORNET";
+    case EnemyKind::Warden:  return "WARDEN";
+    default:                 return "PHANTOM";
+  }
 }
 
 } // namespace world

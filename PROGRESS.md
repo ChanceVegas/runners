@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1: L1A ✅ L1B ✅, L1C on test.
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1 levels ✅. E1 new enemies: E1A on test.
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,15 +16,15 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. L1C (user): `git pull`, flash, confirm `=== Runners L1C ===`. Test cycle is OFF again
-   (you're L4, so every battle starts BEHIND).
-   - [ ] Map: XP strip under the top bar: "LV 4", blue progress bar, "41 / 80 XP".
-   - [ ] Win a battle: strip advances. On a level-up the map shows "LEVEL UP!  LEVEL n" for
-         ~3 s and serial prints `[game] LEVEL UP a -> b (reward: TBD)`.
-   - [ ] EXPLORE render ms within ~1 ms of before (was 26-29 avg).
-   L1B: PASSED 2026-10-09 (all three starts on hw; user: "felt really good, definitely adds
-   some more excitement"). BESIDE gap kept at 6 m (user chose no change).
-   Then: E1 (3 new enemies, unlocked by level) — proposal first.
+1. E1A (user): `git pull`, flash, confirm `=== Runners E1A ===`. Walk around the map.
+   - [ ] New enemies appear among the usual ones (about 1 in 4 common spawns): grey
+         silhouettes with a yellow padlock above them; a Warden is a bigger grey Brute shape.
+   - [ ] Standing next to one: grey bottom banner "STALKER - LOCKED (coming soon)" (same
+         for HORNET / WARDEN); no engage ring, holding still does NOT start a battle.
+   - [ ] Shade / Brute / Phantom still engage and fight exactly as before.
+   - [ ] EXPLORE render ms about the same (26-29 avg).
+   L1C: PASSED 2026-10-09 (strip + "LEVEL UP!" looked fine; level-up fired at 267 XP).
+   Then: E1b Stalker (behaviour + art).
 2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
    the M100 from 5 V USB as a free test (GPS-PWR).
    A3 map art: PASSED (user: "map art tiles look perfect").
@@ -151,6 +151,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — L1 complete, E1 approved, E1a
+- L1C on hw: level-up 4 -> 5 at 267 XP, banner + strip fine (user). L1 DONE.
+- E1 proposal approved as-is (Stalker L10, Hornet L20, Warden L35; locked-on-map so the
+  shared world stays identical for all players).
+- Done: E1a — EnemyKind +Stalker/Hornet/Warden, spawn mix, world::unlockLevel/ready/
+  locked, grey silhouette + padlock, locked banner, no engage. E1_*_READY = 0 (no battle
+  behaviour yet), DEBUG_UNLOCK_ALL test switch. Banner E1A.
+- Commit: feat(world): new enemy roster, locked on the map (E1A)
+
 ### 2026-10-09 — Session 3 (cont.) — L1B passed, L1c XP strip
 - L1B on hw: BEHIND/BESIDE/AHEAD all correct; AHEAD -> Hunt -> pass -> DEFEATED +45 XP,
   level 3 -> 4. User liked it; BESIDE left as is. I flagged BESIDE is only hard early.

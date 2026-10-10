@@ -230,6 +230,24 @@
 #define ENEMY_SHADE_GOAL_M   600.0f // common: shorter chase
 #define ENEMY_BRUTE_GOAL_M   900.0f // tougher: stage-2 speed
 #define ENEMY_PHANTOM_GOAL_M 1200.0f// rare: stage-3 speed, long chase
+// E1 (user-approved 2026-10-09): three new enemies, on the map for EVERYONE (shared world),
+// but locked (grey + padlock, can't be fought) below their unlock level.
+#define ENEMY_STALKER_GOAL_M  900.0f  // m chase length
+#define ENEMY_HORNET_GOAL_M  1000.0f
+#define ENEMY_WARDEN_GOAL_M  1200.0f  // boss: long race
+#define ENEMY_STALKER_UNLOCK_LV 10    // player level that unlocks fighting it
+#define ENEMY_HORNET_UNLOCK_LV  20
+#define ENEMY_WARDEN_UNLOCK_LV  35
+// Common (non-rare) spawn mix, cumulative % thresholds of one hash roll:
+#define OW_MIX_SHADE         48     // 0-47 Shade
+#define OW_MIX_BRUTE         72     // 48-71 Brute
+#define OW_MIX_STALKER       84     // 72-83 Stalker
+#define OW_MIX_HORNET        94     // 84-93 Hornet, 94-99 Warden
+// Which new kinds have battle behaviour yet (E1b/c/d flip these to 1). 0 = always locked.
+#define E1_STALKER_READY     0
+#define E1_HORNET_READY      0
+#define E1_WARDEN_READY      0
+#define DEBUG_UNLOCK_ALL     0      // TEST ONLY: 1 = ignore unlock levels (ready kinds only)
 #define ESCAPE_BONUS_COINS   25     // wallet bonus for escaping (x level)
 
 // ============================================================================

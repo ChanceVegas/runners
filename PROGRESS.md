@@ -29,7 +29,13 @@ session doesn't know it happened.
    Then: R2 proper (GPS drives the locator + approved Safety items 1–5) — breakdown first.
 
 ## Known Issues / Risks
-- GPS-PWR (open, hardware): on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
+- PWR-1 (open, hardware, 2026-10-09): battery power via IP5310 boost board (1S LG 18650
+  1490 mAh). CrowPanel J1 (BAT) connector was torn off; its "+" pad is damaged. J1's big
+  corner tabs are GND (schematic) - a wire there shorted the boost output. Current wiring:
+  boost 5V -> D2 (SS14) ANODE = BAT+ net (diode test 0.209 V); boost GND -> J4 GND; M100
+  VCC on boost 5V. Boost board trips at once even so; user suspects the board, has a
+  replacement. Not yet verified: no-short (BAT+ to GND) with the board on USB.
+ on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
   RAM config lost) and its GSV reports 0 satellites in view on every cycle. Software
   can't fix it; G0-R7 constellation cut changed nothing. Next: 5 V supply.
 - ART-PERF (watch; A2 log 2026-10-08: battle run ≤ 31 ms with the big pursuer, but
@@ -143,6 +149,12 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — battery power wiring (hardware only)
+- User wired the IP5310 boost board + 18650 to feed the CrowPanel BAT input and the M100
+  at 5 V (plan: boost button = hard power switch, later IO38 soft power button). J1 got
+  damaged; rerouted BAT+ to D2's anode. Boost board dies immediately; replacing it.
+  See PWR-1. No code changes. L1A still awaiting the user's hardware test.
+
 ### 2026-10-09 — Session 3 (cont.) — L1 levels + XP
 - User: hold GPS (will buy a 3.3 V module; I suggested a 5 V USB test first since the
   M100 is already 3.3 V rated). Replace rank with XP/levels: no XP loss, max 50,

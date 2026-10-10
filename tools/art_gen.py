@@ -593,6 +593,44 @@ AV_FEET_SIDE = [[
     "............",
 ]]
 
+# Swimming avatar (user 2026-10-09: "instead of walking over water, he/she should swim").
+# 12x9 at 2x: only head + shoulders above a ripple ring; arm strokes alternate per frame.
+def _arm_left(head):
+    rows_ = list(head)
+    over = ["kk..", "ks..", "ks..", "ks..", ".kk."]
+    for i, o in enumerate(over):
+        rows_[i] = ''.join(o[j] if o[j] != '.' else rows_[i][j] for j in range(4)) + rows_[i][4:]
+    return rows_
+SWIM_RING = [
+    "..!kggggk!..",
+    ".!!!!!!!!!!.",
+    "..!!....!!..",
+]
+def swim(head, frame):
+    g = _arm_left(head) + SWIM_RING
+    return [r[::-1] for r in g] if frame else g
+SWIM_SIDE = [[
+    "....kkkk....",
+    "...khhhhk...",
+    "..khhHhhhk..",
+    "..khhhsssk..",
+    "..khhssxsk..",
+    "...kkssssk..",
+    "..!kgggk!skk",                # arm reaching forward
+    ".!!!!!!!!!!.",
+    "..!!....!!..",
+], [
+    "....kkkk....",
+    "...khhhhk...",
+    "..khhHhhhk..",
+    "..khhhsssk..",
+    "..khhssxsk..",
+    "...kkssssk..",
+    "kks!kgggk!..",                # arm pulling back
+    ".!!!!!!!!!!.",
+    "..!!....!!..",
+]]
+
 SPRITES = [
     ('RUN_A',   UPPER + RUN_A_LEGS),
     ('RUN_B',   UPPER + RUN_B_LEGS),
@@ -638,6 +676,10 @@ SPRITES = [
     ('AV_UP1',   AV_HEAD_UP + AV_BODY_BACK + AV_FEET[1]),
     ('AV_SIDE0', AV_HEAD_SIDE + AV_BODY_SIDE + AV_FEET_SIDE[0]),
     ('AV_SIDE1', AV_HEAD_SIDE + AV_BODY_SIDE + AV_FEET_SIDE[1]),
+    # swimming avatar
+    ('SW_DOWN0', swim(AV_HEAD_DOWN, 0)), ('SW_DOWN1', swim(AV_HEAD_DOWN, 1)),
+    ('SW_UP0',   swim(AV_HEAD_UP, 0)),   ('SW_UP1',   swim(AV_HEAD_UP, 1)),
+    ('SW_SIDE0', SWIM_SIDE[0]),          ('SW_SIDE1', SWIM_SIDE[1]),
 ]
 
 def check(name, g):

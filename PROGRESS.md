@@ -16,12 +16,15 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. E1A (user): `git pull`, flash, confirm `=== Runners E1A ===`. Walk around the map.
+1. E1A2 (user): `git pull`, flash, confirm `=== Runners E1A2 ===` (E1A + swimming). Walk around the map.
    - [ ] New enemies appear among the usual ones (about 1 in 4 common spawns): grey
          silhouettes with a yellow padlock above them; a Warden is a bigger grey Brute shape.
    - [ ] Standing next to one: grey bottom banner "STALKER - LOCKED (coming soon)" (same
          for HORNET / WARDEN); no engage ring, holding still does NOT start a battle.
    - [ ] Shade / Brute / Phantom still engage and fight exactly as before.
+   - [ ] SWIM: walk onto water -> avatar becomes head + shoulders in a ripple ring, arms
+         stroking (faster when running), light wake behind; standing still in water = slow
+         treading. Back on land -> normal walking avatar.
    - [ ] EXPLORE render ms about the same (26-29 avg).
    L1C: PASSED 2026-10-09 (strip + "LEVEL UP!" looked fine; level-up fired at 267 XP).
    Then: E1b Stalker (behaviour + art).
@@ -151,6 +154,12 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — swimming avatar
+- User: on water the player should swim instead of walking. Asked: look only (chosen) vs
+  gameplay effects. Done: SW_DOWN/UP/SIDE x2 sprites (art_gen.py), overworld draws them on
+  water tiles with a wake (no shadow/speed streaks); slow treading when still. Banner E1A2.
+- Commit: feat(overworld): swimming avatar on water
+
 ### 2026-10-09 — Session 3 (cont.) — L1 complete, E1 approved, E1a
 - L1C on hw: level-up 4 -> 5 at 267 XP, banner + strip fine (user). L1 DONE.
 - E1 proposal approved as-is (Stalker L10, Hornet L20, Warden L35; locked-on-map so the

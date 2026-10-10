@@ -156,20 +156,36 @@ void drawPlayer(lgfx::LGFX_Sprite& b, int32_t bandY) {
   const int32_t by = y - bandY;
   const float h = locator::headingRad();
   const float hx = cosf(h), hy = sinf(h);
-  if (s_move == locator::Move::Run) {                   // speed streaks behind
-    for (int i = 1; i <= 3; ++i)
-      b.fillRect(x - (int32_t)(hx * (10 + i * 5)) - 1, by - (int32_t)(hy * (10 + i * 5)) - 1,
-                 3, 3, rgb565(230, 240, 255));
-  }
-  b.fillEllipse(x, by + 9, 10, 4, rgb565(20, 30, 20));
-  // A3 avatar (12x15 art at 2x): facing from the heading, 2-step walk while moving.
   const bool moving = s_move != locator::Move::Still;
-  const bool step = moving && (((int32_t)(d_time * (s_move == locator::Move::Run ? 8.0f : 5.0f))) & 1);
+  // Swim on water tiles (user 2026-10-09, look only): head + strokes above a ripple, wake
+  // behind instead of speed streaks / ground shadow. Treads water slowly when still.
+  const bool swim = world::terrainAt(d_pos.tx, d_pos.ty).terrain == world::Terrain::Water;
+  if (swim) {
+    if (moving)                                         // wake: short light streaks
+      for (int i = 1; i <= 3; ++i)
+        b.fillRect(x - (int32_t)(hx * (8 + i * 6)) - 2, by + 6 - (int32_t)(hy * (8 + i * 6)),
+                   5 - i, 2, rgb565(150, 202, 242));
+  } else {
+    if (s_move == locator::Move::Run) {                 // speed streaks behind
+      for (int i = 1; i <= 3; ++i)
+        b.fillRect(x - (int32_t)(hx * (10 + i * 5)) - 1, by - (int32_t)(hy * (10 + i * 5)) - 1,
+                   3, 3, rgb565(230, 240, 255));
+    }
+    b.fillEllipse(x, by + 9, 10, 4, rgb565(20, 30, 20));
+  }
+  // A3 avatar (12x15 art at 2x): facing from the heading, 2-step walk while moving.
+  const float rate = !moving ? (swim ? 1.5f : 0.0f) : (s_move == locator::Move::Run ? 8.0f : 5.0f);
+  const bool step = (moving || swim) && (((int32_t)(d_time * rate)) & 1);
   const ArtSprite* a;
   bool flip = false;
-  if (fabsf(hx) > fabsf(hy)) { a = step ? &ART_AV_SIDE1 : &ART_AV_SIDE0; flip = hx < 0.0f; }
-  else if (hy > 0.0f)        { a = step ? &ART_AV_DOWN1 : &ART_AV_DOWN0; }
-  else                       { a = step ? &ART_AV_UP1 : &ART_AV_UP0; }
+  if (fabsf(hx) > fabsf(hy)) {
+    a = swim ? (step ? &ART_SW_SIDE1 : &ART_SW_SIDE0) : (step ? &ART_AV_SIDE1 : &ART_AV_SIDE0);
+    flip = hx < 0.0f;
+  } else if (hy > 0.0f) {
+    a = swim ? (step ? &ART_SW_DOWN1 : &ART_SW_DOWN0) : (step ? &ART_AV_DOWN1 : &ART_AV_DOWN0);
+  } else {
+    a = swim ? (step ? &ART_SW_UP1 : &ART_SW_UP0) : (step ? &ART_AV_UP1 : &ART_AV_UP0);
+  }
   sprite::drawBottom(b, bandY, *a, x, y + 11, 2.0f, flip);
 }
 

@@ -105,6 +105,9 @@ Arcade mode stays the endless runner.
   Level-up rewards: user wants them, WHAT is OPEN — L1c leaves a hook.
 - Steps: L1a XP + levels + scaling (banner L1A) -> L1b start positions -> L1c display.
 
+**Swimming (user 2026-10-09, look only):** on water tiles the map avatar swims (own sprites,
+wake); no gameplay effect (movement is real walking).
+
 **E1 — three new enemies (APPROVED 2026-10-09, user: "everything looks fine. i approve").**
 | Enemy | Unlock | Hunt attack | Pursuit | HP | XP |
 |---|---|---|---|---|---|

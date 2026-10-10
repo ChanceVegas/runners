@@ -722,7 +722,10 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
       if (n >= 1) { snprintf(buf, sizeof buf, "%d", n); text(band, bandY, buf, cx, 120, F24, 2.0f, C_YELLOW); }
       else text(band, bandY, "GO!", cx, 120, F24, 1.8f, C_GREEN);
       if (chase) {
-        snprintf(buf, sizeof buf, "%s IS CHASING YOU", battle::enemyName());
+        const battle::Start sp = battle::startPos();
+        snprintf(buf, sizeof buf, sp == battle::Start::Ahead ? "%s IS AHEAD - CATCH IT"
+                                : sp == battle::Start::Beside ? "%s IS RIGHT BESIDE YOU"
+                                : "%s IS CHASING YOU", battle::enemyName());
         text(band, bandY, buf, cx, 176, F18, 1.0f, C_RED);
         snprintf(buf, sizeof buf, "YOUR LEVEL %u", (unsigned)battle::playerLevel());
         text(band, bandY, buf, cx, 204, F12, 1.0f, C_WHITE);

@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1 levels IN PROGRESS.
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1: L1A ✅, L1B on test.
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,13 +16,17 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. L1A (user): `git pull`, flash, confirm `=== Runners L1A ===`. Existing rank points
-   convert once (serial `[game] migrated rank points -> N XP`).
-   - [ ] Menu shows LEVEL n (not RANK); battle countdown shows YOUR LEVEL n.
-   - [ ] End screens show `+N XP  LEVEL n (x / y)` or `LEVEL UP!`; losing never drops level.
-   - [ ] Serial `[game] +N XP -> total, level a -> b` after each battle.
-   - [ ] Battles feel the same at low level (L1-L5 ~ old rank 1-2).
-   Then L1b (start positions), L1c (map XP bar), E1 (3 new enemies).
+1. L1B (user): `git pull`, flash, confirm `=== Runners L1B ===`. TEST BUILD: start
+   position cycles BEHIND -> BESIDE -> AHEAD on each battle, ignoring your level
+   (DEBUG_START_CYCLE 1). Serial prints `[battle] start BEHIND/BESIDE/AHEAD`.
+   - [ ] BEHIND: as before ("<ENEMY> IS CHASING YOU", gap 30 m).
+   - [ ] BESIDE: "<ENEMY> IS RIGHT BESIDE YOU", then "NECK AND NECK - RUN!"; gap starts
+         ~6 m (pursuer big/close); clean running pulls away, a stumble = overtake.
+   - [ ] AHEAD: "<ENEMY> IS AHEAD - CATCH IT", then straight into the Hunt (no race bar),
+         timer running, orbs/hearts as usual. Pass it -> race restarts as before.
+   - [ ] fps/render unchanged.
+   L1A: PASSED 2026-10-09 (user: end screen "+18 XP Level 3 (38/70)", matches the math).
+   Then: DEBUG_START_CYCLE -> 0, L1c (map XP bar), E1 (3 new enemies).
 2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
    the M100 from 5 V USB as a free test (GPS-PWR).
    A3 map art: PASSED (user: "map art tiles look perfect").
@@ -149,6 +153,14 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — L1A passed, L1b start positions
+- L1A on hw: player L3 (migrated), Brute L2 escape -> "+18 XP Level 3 (38/70)" = exact.
+- Done: L1b — battle::Start {Behind, Beside, Ahead} from player level (15 / 30, config).
+  BESIDE = 6 m starting gap (+RUSH); AHEAD = starts in the Hunt at full distance (shared
+  enterHunt()). Countdown text per start; start banner deferred to the first run frame
+  so it doesn't overlap "3-2-1". Test switch DEBUG_START_CYCLE (on in this build).
+- Commit: feat(battle): enemy start position by level (L1B)
+
 ### 2026-10-09 — Session 3 (cont.) — battery power wiring (hardware only)
 - User wired the IP5310 boost board + 18650 to feed the CrowPanel BAT input and the M100
   at 5 V (plan: boost button = hard power switch, later IO38 soft power button). J1 got

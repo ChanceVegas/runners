@@ -11,6 +11,7 @@
 namespace battle {
 
 enum class Phase : uint8_t { Pursuit, Overtake, Hunt };
+enum class Start : uint8_t { Behind, Beside, Ahead };   // L1b: by player level
 enum class Outcome : uint8_t { None, Escaped, Defeated, Caught, GotAway };   // GotAway = Hunt timer ran out
 
 // Player modifiers (sneakers / drinks from the shop; defaults = no upgrades).
@@ -53,6 +54,7 @@ Outcome outcome();
 float   stumbleSeconds(bool wall);  // stumble length for this hit (stats applied)
 float   huntSecondsLeft();          // Hunt time limit remaining (s)
 const char* enemyName();
+Start   startPos();                                // where this battle's enemy started
 
 // Hunt/overtake: enemy depth ahead of the runner (m), its lane, and whether it should
 // be drawn in the road's depth-sorted list this frame.

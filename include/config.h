@@ -238,7 +238,13 @@
 // you STUMBLE (no death) and cost ground. Gap >= ESCAPE or reaching the goal = escape.
 // Gap <= 0 = the enemy overtakes -> Phase 2 HUNT: enemy ahead attacks with its own
 // obstacle pattern; orbs strike it; hearts are your life.
-#define BATTLE_GAP_START_M     30.0f  // m gap when a battle starts
+#define BATTLE_GAP_START_M     30.0f  // m gap when a battle starts (enemy BEHIND you)
+// L1b start positions (user 2026-10-09): the player's level decides where the enemy starts.
+#define BATTLE_START_BESIDE_LV 15     // from this level the enemy starts BESIDE you (tiny gap)
+#define BATTLE_START_AHEAD_LV  30     // from this level it starts AHEAD = straight into the Hunt
+#define BATTLE_GAP_BESIDE_M    6.0f   // m gap for a BESIDE start: run clean or it overtakes fast
+#define DEBUG_START_CYCLE      1      // TEST ONLY (L1B hw test): 1 = ignore level, cycle
+                                      // BEHIND -> BESIDE -> AHEAD each battle. Set 0 after.
 #define BATTLE_GAP_ESCAPE_M    60.0f  // m gap that counts as escaped
 #define BATTLE_GAP_VIS_M       40.0f  // m gap at/above which the pursuer is barely visible
 #define BATTLE_GAP_GAIN_L1     0.80f  // m/s gap gained running clean vs a level-1 enemy

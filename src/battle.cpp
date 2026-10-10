@@ -57,6 +57,8 @@ int   s_hp = 5;
 float s_travel = 0.0f, s_playerZ = 6.0f;
 
 float s_overT = 0.0f;
+battle::Start s_start = battle::Start::Behind;
+bool  s_startBanner = false;         // show the BESIDE/AHEAD banner once the run starts (not over the countdown)
 float s_zAhead = 0.0f;
 float s_passT = 0.0f;                // DEFEATED: s into the "run past it" animation
 bool  s_lastOrb = true;              // orb pity: never two attacks in a row without one
@@ -98,6 +100,18 @@ void beginOvertake() {
   if (s_passed && s_hp <= 0) s_hp = (s_hpMax + 1) / 2;    // re-caught a passed enemy: half HP
   encounter::engine::clearAhead();
   banner("IT'S AHEAD - CATCH IT!", rgb565(255, 220, 40));
+}
+
+// Overtake finished (or an AHEAD start): the Hunt begins with its time limit.
+void enterHunt() {
+  s_phase = Phase::Hunt;
+  s_attackT = 0.8f;
+  // Time limit from the fastest possible kill: every orb collected, every attack
+  // dropping one at the kind's orb rate.
+  const float orbsPerS = (s_orbPct / 100.0f) / s_attackS;
+  const float needed = (float)((s_hpMax + s_stats.orbPower - 1) / s_stats.orbPower);
+  s_huntT = needed / orbsPerS * BATTLE_HUNT_SLACK;
+  s_laneT = 1.0f;
 }
 
 void attack() {
@@ -225,12 +239,37 @@ void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint32_
   s_runM = 0.0f;
   s_flashT = s_blinkT = 0.0f;
   s_bannerT = 0.0f;
+  s_lane = s_laneTarget = 0.0f;
+
+  // L1b: start position by player level. RUSH (startGapBonus) still widens a BESIDE gap;
+  // it does nothing for an AHEAD start (user: leave it for now).
+  s_start = s_plvl >= BATTLE_START_AHEAD_LV ? Start::Ahead
+          : s_plvl >= BATTLE_START_BESIDE_LV ? Start::Beside : Start::Behind;
+#if DEBUG_START_CYCLE
+  static uint8_t s_cycle = 0;
+  s_start = (Start)(s_cycle++ % 3);
+#endif
+  if (s_start == Start::Beside) {
+    s_gap = s_gapShown = BATTLE_GAP_BESIDE_M + stats.startGapBonus;
+  } else if (s_start == Start::Ahead) {
+    s_zAhead = BATTLE_HUNT_Z_M;                // already out in front: no Pursuit at all
+    enterHunt();
+  }
+  s_startBanner = s_start != Start::Behind;
+  Serial.printf("[battle] start %s (player L%u)\n",
+                s_start == Start::Ahead ? "AHEAD" : s_start == Start::Beside ? "BESIDE" : "BEHIND",
+                (unsigned)s_plvl);
 }
 
 void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
   s_travel = travel;
   s_playerZ = playerZ;
   s_runM = runM;
+  if (s_startBanner) {                                     // first run frame after the countdown
+    s_startBanner = false;
+    if (s_start == Start::Beside) banner("NECK AND NECK - RUN!", rgb565(255, 160, 40));
+    else banner("IT'S AHEAD - CATCH IT!", rgb565(255, 220, 40));
+  }
   if (s_bannerT > 0) s_bannerT -= dt;
   if (s_flashT > 0) s_flashT -= dt;
   if (s_blinkT > 0) s_blinkT -= dt;
@@ -275,16 +314,7 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
       const float t = fminf(s_overT / BATTLE_OVERTAKE_S, 1.0f);
       const float e = t * t * (3.0f - 2.0f * t);
       s_zAhead = 0.5f + (BATTLE_HUNT_Z_M - 0.5f) * e;
-      if (t >= 1.0f) {
-        s_phase = Phase::Hunt;
-        s_attackT = 0.8f;
-        // Time limit from the fastest possible kill: every orb collected, every attack
-        // dropping one at the kind's orb rate.
-        const float orbsPerS = (s_orbPct / 100.0f) / s_attackS;
-        const float needed = (float)((s_hpMax + s_stats.orbPower - 1) / s_stats.orbPower);
-        s_huntT = needed / orbsPerS * BATTLE_HUNT_SLACK;
-        s_laneT = 1.0f;
-      }
+      if (t >= 1.0f) enterHunt();
       break;
     }
 
@@ -363,6 +393,7 @@ float   stumbleSeconds(bool wall) {
 }
 float   huntSecondsLeft() { return s_huntT; }
 const char* enemyName() { return s_k->name; }
+Start   startPos()  { return s_start; }
 bool  passing() { return s_passT > 0.0f; }
 bool  passedIt() { return s_passed; }
 // Hidden once you draw level during the pass (it's "behind" you from then on).

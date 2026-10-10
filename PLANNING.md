@@ -254,3 +254,16 @@ wake); no gameplay effect (movement is real walking).
 8. **Run energy use:** DECIDED R3: shields in chases (50 energy each, max 2, unused
    refunded). The PLANNING "boost" idea is deferred — no free tap zone for it.
 6. **Player encounter rules:** what happens when two players meet (race? co-op?). R4.
+9. **OpenStreetMap world (user, 2026-10-10: "I want to use OpenStreetMap. Going to have
+   to figure that out."):** OPEN, future. Idea: drive the map from real OSM data
+   (water = real water, forest = parks/woods, trail = footpaths, roads) instead of the
+   pure hash terrain. Points to settle first:
+   - No internet in the field: pre-processed data for a play area, stored on the TF card
+     (slot is on the board; 4 MB flash is too small). A host tool (tools/) converts an OSM
+     extract into our tile format. Coverage size vs card space TBD.
+   - Shared world stays deterministic only if every device has the same extract version.
+   - Licence: ODbL — "© OpenStreetMap contributors" must be shown in-game. Public tile
+     servers forbid bulk downloading; use extracts (e.g. Geofabrik), not their tiles.
+   - Safety bonus: real roads/water are known, so spawns can avoid roads and real water
+     (ties into the Safety section).
+   - Needs a working GPS first (G0 / PWR-1).

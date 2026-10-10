@@ -322,3 +322,32 @@ LiPo (to source): 1S, protected (PCM), 4.2 V standard chemistry, JST-PH 2.0 lead
 Open questions for the user: carry style; outdoor sealing (splash?) and material
 (PETG/ASA for sun vs PLA); measured board outline, mounting holes and component heights;
 keep the stock acrylic front or full printed shell; CAD tool (parametric script vs CAD).
+
+## SEC1 Locked firmware + web updates (user, 2026-10-10 — PROPOSED, not approved)
+Goal (user): the device only runs our firmware; nobody can flash anything else; updates
+come from our website as encrypted files that "unlock" the CrowPanel for the write.
+No Wi-Fi / BLE for updates — USB only.
+How (ESP32-S3 built-in features):
+- Secure Boot v2: the chip refuses to boot any bootloader/app not signed with our
+  private key (public-key digest burned into eFuse).
+- Flash encryption (release mode): flash contents are AES-encrypted with a key that
+  never leaves the chip -> firmware can't be read out or cloned.
+- Disable JTAG and the ROM serial download mode (or "secure download mode") -> esptool
+  can no longer write flash over USB.
+- Our firmware contains the updater: website -> browser (Web Serial, Chrome/Edge) ->
+  USB-C (CH340) -> device. Update mode only after on-screen confirmation. Image must be
+  signed (checked before switching) and is pre-encrypted for transport (website file is
+  useless to anyone else). Two OTA app slots: a failed/aborted update keeps the old one.
+  Anti-rollback: secure version counter in eFuse (old, vulnerable builds refused).
+- Same channel later carries map data to the internal SD card.
+Costs / risks (must be accepted before work starts):
+- eFuses are ONE-TIME and irreversible: a mistake bricks the board. Practise on a spare
+  board bought for that; dev boards stay unlocked; only finished units get locked.
+- Toolchain: Arduino-ESP32 2.0.14's prebuilt bootloader doesn't support these features
+  as shipped -> move to ESP-IDF with Arduino as a component (big change, done late).
+- Signing key: kept offline by the user. Lost key = no more updates for locked units;
+  leaked key = anyone can sign.
+- Flash encryption adds a little flash-read cost (art lives in flash) -> re-measure the
+  render budget.
+- Website: Web Serial only works in Chromium browsers; hosting TBD.
+When: near the end (after gameplay + enclosure), as its own milestone with a breakdown.

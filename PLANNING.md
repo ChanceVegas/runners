@@ -252,6 +252,9 @@ wake); no gameplay effect (movement is real walking).
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.
 - **R5 — Game loop:** states, Run energy economy, scoring/progression, HUD, menus.
+- **H1 — Enclosure + battery (user, 2026-10-10):** a 3D-printed case for the
+  CrowPanel + boost board + GPS + speaker + a slim LiPo. PLANNED — requirements below
+  (section "H1 Enclosure"); breakdown needs user answers + measurements first.
 - **R6 — Field hardware + polish:** sunlight-readable display, battery, enclosure,
   real art pass, power management.
 
@@ -260,6 +263,8 @@ wake); no gameplay effect (movement is real walking).
    battery/supercap (fast re-fix). Two units. User to purchase.
 2. **Field hardware:** CrowPanel 4.3 is prototype-only (transmissive TFT washes out
    in sun, resistive touch, no onboard battery). Decide by R6.
+   2026-10-10: user wants an enclosure for the CrowPanel build (H1) — effectively the
+   v1 field unit. Sunlight readability is still the known weak point.
 3. **Encounter controls:** DECIDED 2026-10-06 (user): TAP ZONES — left third = lane
    left, right third = lane right, middle = jump. Swipe/flick gestures were removed:
    gesture recognition needs several samples, so it lagged on resistive touch even at
@@ -288,3 +293,24 @@ wake); no gameplay effect (movement is real walking).
    - Safety bonus: real roads/water are known, so spawns can avoid roads and real water
      (ties into the Safety section).
    - Needs a working GPS first (G0 / PWR-1).
+
+## H1 Enclosure (planned 2026-10-10)
+Contents: CrowPanel 4.3 (display side out), IP5310 boost board, M100 GPS, 7.2 ohm
+speaker, slim 1S LiPo, wiring. Printed on the user's printer.
+Must have:
+- GPS antenna facing the sky, nothing metal/battery above it, a thin plastic roof only.
+- Openings: CrowPanel USB-C (flash/serial), boost-board USB-C (charging), boost button
+  (power), RESET/BOOT pinholes, TF card slot (map data later), speaker grille.
+- Battery pocket with foam, away from the boost board's inductor (heat), strain-relieved
+  leads; no sharp edges near the pouch.
+- Touch: front frame must not press on the resistive touch panel edge (false touches).
+- Mount/carry: TBD (handheld, forearm strap, chest, handlebar?).
+LiPo (to source): 1S, protected (PCM), 4.2 V standard chemistry, JST-PH 2.0 leads.
+- Runtime target ~3 h at ~0.6 A from the cell (estimate - measure on hw) -> about
+  2000 mAh. Also the boost board may charge at up to ~2 A, which a 2000 mAh cell can
+  take (1C); a 1000 mAh cell would be over-driven.
+- Slim pouch sizes in that class: ~6 x 50 x 60 mm (605060, ~2000 mAh) or ~5 x 50 x 60.
+  Final pick after the CrowPanel back is measured (fits behind the board?).
+Open questions for the user: carry style; outdoor sealing (splash?) and material
+(PETG/ASA for sun vs PLA); measured board outline, mounting holes and component heights;
+keep the stock acrylic front or full printed shell; CAD tool (parametric script vs CAD).

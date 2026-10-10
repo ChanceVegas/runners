@@ -252,6 +252,7 @@ wake); no gameplay effect (movement is real walking).
 - **R4 — Players:** ESP-NOW presence between two boards, shared-world check (both see
   the same enemy at the same spot), player-vs-player encounter handshake.
 - **R5 — Game loop:** states, Run energy economy, scoring/progression, HUD, menus.
+- **SEC1 — Locked firmware + web updates:** LAST milestone (user order). See section.
 - **H1 — Enclosure + battery (user, 2026-10-10):** a 3D-printed case for the
   CrowPanel + boost board + GPS + speaker + a slim LiPo. PLANNED — requirements below
   (section "H1 Enclosure"); breakdown needs user answers + measurements first.
@@ -323,7 +324,9 @@ Open questions for the user: carry style; outdoor sealing (splash?) and material
 (PETG/ASA for sun vs PLA); measured board outline, mounting holes and component heights;
 keep the stock acrylic front or full printed shell; CAD tool (parametric script vs CAD).
 
-## SEC1 Locked firmware + web updates (user, 2026-10-10 — PROPOSED, not approved)
+## SEC1 Locked firmware + web updates (user, 2026-10-10 — AGREED IN PRINCIPLE, LAST)
+Order (user, 2026-10-10): develop the game, tune it, THEN updating + security last.
+Updates are USB-only (no Wi-Fi / BLE update path). Step breakdown still needs approval.
 Goal (user): the device only runs our firmware; nobody can flash anything else; updates
 come from our website as encrypted files that "unlock" the CrowPanel for the write.
 No Wi-Fi / BLE for updates — USB only.

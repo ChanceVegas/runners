@@ -161,6 +161,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-10 — Session 3 (cont.) — planning only (OSM, enclosure, security)
+- Planning notes, no code: OSM real-map data (Open Decision 9); H1 enclosure + LiPo
+  (~2000 mAh slim pouch, internal microSD, endurance-grade card 8-32 GB FAT32); SEC1
+  locked firmware (secure boot + flash encryption + web/USB signed updates).
+- User order: game first, tune it, then updating + security LAST. Updates USB-only.
+- Still waiting on hw: E1K test (new enemies, kits, swim, cap 60).
+
 ### 2026-10-10 — Session 3 (cont.) — level cap 60, race kits
 - User: cap 60 (from my originality audit); keep SPRING sneakers for now; enemies should
   wear track & field kit during races.

@@ -95,7 +95,19 @@ void saveProfile() {
   s_saveT = 0.0f;
 }
 
-void syncHudStats() { overworld::setStats(s_wallet, s_escapes); }
+void syncHudStats() {
+  overworld::setStats(s_wallet, s_escapes);
+  const uint8_t l = battle::levelOf(s_xp);
+  const uint32_t a0 = battle::xpToReach(l);
+  overworld::setLevel(l, s_xp - a0, l >= LEVEL_MAX ? 0 : battle::xpToReach(l + 1) - a0);
+}
+
+// L1c hook: what a level-up GIVES the player is still undecided (user, 2026-10-09).
+// Everything that should happen on a level-up goes here.
+void onLevelUp(uint8_t from, uint8_t to) {
+  overworld::flashLevelUp(to);
+  Serial.printf("[game] LEVEL UP %u -> %u (reward: TBD)\n", (unsigned)from, (unsigned)to);
+}
 
 // First boot: spiral out from the origin to the nearest land tile.
 locator::Pos findLand(int32_t tx, int32_t ty) {
@@ -195,6 +207,7 @@ void finishBattle() {
   s_xp += gain;
   Serial.printf("[game] +%u XP -> %u, level %u -> %u\n", (unsigned)gain, (unsigned)s_xp, l0,
                 battle::levelOf(s_xp));
+  if (battle::levelOf(s_xp) > l0) onLevelUp(l0, battle::levelOf(s_xp));
   overworld::requireMoveBeforeEngage();
   Serial.printf("[game] battle %s: +%u coins, shields used %u, wallet %u\n",
                 r.defeated ? "DEFEATED" : (r.won ? "ESCAPED" : (r.gotAway ? "GOT AWAY (coins lost)" : "CAUGHT (coins lost)")),

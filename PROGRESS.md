@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1: L1A ✅, L1B on test.
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1: L1A ✅ L1B ✅, L1C on test.
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,17 +16,15 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. L1B (user): `git pull`, flash, confirm `=== Runners L1B ===`. TEST BUILD: start
-   position cycles BEHIND -> BESIDE -> AHEAD on each battle, ignoring your level
-   (DEBUG_START_CYCLE 1). Serial prints `[battle] start BEHIND/BESIDE/AHEAD`.
-   - [ ] BEHIND: as before ("<ENEMY> IS CHASING YOU", gap 30 m).
-   - [ ] BESIDE: "<ENEMY> IS RIGHT BESIDE YOU", then "NECK AND NECK - RUN!"; gap starts
-         ~6 m (pursuer big/close); clean running pulls away, a stumble = overtake.
-   - [ ] AHEAD: "<ENEMY> IS AHEAD - CATCH IT", then straight into the Hunt (no race bar),
-         timer running, orbs/hearts as usual. Pass it -> race restarts as before.
-   - [ ] fps/render unchanged.
-   L1A: PASSED 2026-10-09 (user: end screen "+18 XP Level 3 (38/70)", matches the math).
-   Then: DEBUG_START_CYCLE -> 0, L1c (map XP bar), E1 (3 new enemies).
+1. L1C (user): `git pull`, flash, confirm `=== Runners L1C ===`. Test cycle is OFF again
+   (you're L4, so every battle starts BEHIND).
+   - [ ] Map: XP strip under the top bar: "LV 4", blue progress bar, "41 / 80 XP".
+   - [ ] Win a battle: strip advances. On a level-up the map shows "LEVEL UP!  LEVEL n" for
+         ~3 s and serial prints `[game] LEVEL UP a -> b (reward: TBD)`.
+   - [ ] EXPLORE render ms within ~1 ms of before (was 26-29 avg).
+   L1B: PASSED 2026-10-09 (all three starts on hw; user: "felt really good, definitely adds
+   some more excitement"). BESIDE gap kept at 6 m (user chose no change).
+   Then: E1 (3 new enemies, unlocked by level) — proposal first.
 2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
    the M100 from 5 V USB as a free test (GPS-PWR).
    A3 map art: PASSED (user: "map art tiles look perfect").
@@ -153,6 +151,13 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — L1B passed, L1c XP strip
+- L1B on hw: BEHIND/BESIDE/AHEAD all correct; AHEAD -> Hunt -> pass -> DEFEATED +45 XP,
+  level 3 -> 4. User liked it; BESIDE left as is. I flagged BESIDE is only hard early.
+- Done: L1c — map XP strip (LV, bar, xp/span, MAX LEVEL), "LEVEL UP!" map banner (3 s),
+  game_state::onLevelUp() hook (reward TBD). DEBUG_START_CYCLE back to 0. Banner L1C.
+- Commit: feat(overworld): XP strip + level-up banner (L1C)
+
 ### 2026-10-09 — Session 3 (cont.) — L1A passed, L1b start positions
 - L1A on hw: player L3 (migrated), Brute L2 escape -> "+18 XP Level 3 (38/70)" = exact.
 - Done: L1b — battle::Start {Behind, Beside, Ahead} from player level (15 / 30, config).

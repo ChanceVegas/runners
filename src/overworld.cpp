@@ -44,6 +44,9 @@ bool  s_gpsPanel = false;            // G0: tap the GPS status box for the detai
 float s_energy = 0.0f;
 float s_walked = 0.0f;
 uint32_t s_wallet = 0, s_escapes = 0;
+uint8_t  s_level = 1;                     // L1c XP strip
+uint32_t s_xpIn = 0, s_xpSpan = 1;
+float    s_lvlBannerT = 0.0f;
 locator::Move s_move = locator::Move::Still;
 
 // ---- Render state ----
@@ -168,6 +171,7 @@ bool init() {
 }
 
 void update(float dt) {
+  if (s_lvlBannerT > 0.0f) s_lvlBannerT -= dt;
   s_prev = s_cur;
   s_cur = locator::pos();
   s_move = locator::move();
@@ -309,6 +313,27 @@ void composeHud(lgfx::LGFX_Sprite& band, int32_t bandY) {
   snprintf(buf, sizeof buf, "%u", (unsigned)s_wallet);
   text(band, bandY, buf, 440, 16, hud::F12, 1.0f, YELLOW, 70);
 
+  // L1c: XP strip just under the top bar: level, progress bar, XP into the level.
+  {
+    const int32_t Y = TOP_BAR_H, H = 13;
+    const uint16_t XPC = rgb565(120, 200, 255);
+    rect(band, bandY, 0, Y, LCD_WIDTH, H, rgb565(16, 18, 26));
+    snprintf(buf, sizeof buf, "LV %u", (unsigned)s_level);
+    text(band, bandY, buf, 24, Y + 7, hud::F9, 1.0f, XPC, 44);
+    rect(band, bandY, 50, Y + 3, 330, 7, rgb565(50, 54, 66));
+    const float p = s_xpSpan ? fminf((float)s_xpIn / (float)s_xpSpan, 1.0f) : 1.0f;
+    if (p > 0.0f) rect(band, bandY, 50, Y + 3, (int32_t)(330 * p), 7, XPC);
+    if (s_xpSpan) snprintf(buf, sizeof buf, "%u / %u XP", (unsigned)s_xpIn, (unsigned)s_xpSpan);
+    else snprintf(buf, sizeof buf, "MAX LEVEL");
+    text(band, bandY, buf, 430, Y + 7, hud::F9, 1.0f, GREY, 96);
+  }
+  if (s_lvlBannerT > 0.0f) {
+    snprintf(buf, sizeof buf, "LEVEL UP!  LEVEL %u", (unsigned)s_level);
+    rect(band, bandY, 90, 56, 300, 30, rgb565(16, 18, 26));
+    hud::frame(band, bandY, 90, 56, 300, 30, rgb565(120, 200, 255));
+    text(band, bandY, buf, LCD_WIDTH / 2, 71, hud::F12, 1.0f, rgb565(255, 220, 40), 290);
+  }
+
   // G0: GPS status (bottom-left, above the banner) so it can be checked outdoors.
   {
     const gps::Fix& g = gps::fix();
@@ -380,5 +405,7 @@ void  setEnergy(float e)  { s_energy = e < 0 ? 0 : (e > ENERGY_MAX ? ENERGY_MAX 
 float walkedM()           { return s_walked; }
 void  setWalkedM(float m) { s_walked = m; }
 void  setStats(uint32_t wallet, uint32_t escapes) { s_wallet = wallet; s_escapes = escapes; }
+void  setLevel(uint8_t level, uint32_t xpIn, uint32_t xpSpan) { s_level = level; s_xpIn = xpIn; s_xpSpan = xpSpan; }
+void  flashLevelUp(uint8_t level) { s_level = level; s_lvlBannerT = LEVELUP_BANNER_S; }
 
 } // namespace overworld

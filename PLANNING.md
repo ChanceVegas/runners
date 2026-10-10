@@ -208,7 +208,7 @@ Arcade mode stays the endless runner.
 - **S1 — Shop:** sneakers (stat tiers) + drinks (one-use), pre-battle drink screen.
   DONE 2026-10-08 (hw-verified). Arcade banks 50% of its coins (user).
 - **L1 — Levels + XP:** replaces rank; level-driven start positions. APPROVED
-  2026-10-09. L1a DONE (hw-verified); L1b built (on test); L1c next.
+  2026-10-09. L1a + L1b DONE (hw-verified); L1c built (on test).
 - **E1 — 3 new enemies:** unlocked by player level. After L1.
 - **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
   SFX (user, 2026-10-08). DONE 2026-10-08 (hw-verified).

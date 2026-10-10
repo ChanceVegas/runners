@@ -34,5 +34,9 @@ void  setEnergy(float e);
 float walkedM();                    // real-world metres walked/run (all time)
 void  setWalkedM(float m);
 void  setStats(uint32_t wallet, uint32_t escapes);   // for the HUD
+// L1c: runner level + progress for the XP strip. xpIn = XP into this level, xpSpan = XP
+// the level needs (0 = max level).
+void  setLevel(uint8_t level, uint32_t xpIn, uint32_t xpSpan);
+void  flashLevelUp(uint8_t level);  // "LEVEL UP!" banner on the map for LEVELUP_BANNER_S
 
 }

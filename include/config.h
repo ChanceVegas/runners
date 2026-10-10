@@ -243,7 +243,7 @@
 #define BATTLE_START_BESIDE_LV 15     // from this level the enemy starts BESIDE you (tiny gap)
 #define BATTLE_START_AHEAD_LV  30     // from this level it starts AHEAD = straight into the Hunt
 #define BATTLE_GAP_BESIDE_M    6.0f   // m gap for a BESIDE start: run clean or it overtakes fast
-#define DEBUG_START_CYCLE      1      // TEST ONLY (L1B hw test): 1 = ignore level, cycle
+#define DEBUG_START_CYCLE      0      // TEST ONLY (L1B hw test): 1 = ignore level, cycle
                                       // BEHIND -> BESIDE -> AHEAD each battle. Set 0 after.
 #define BATTLE_GAP_ESCAPE_M    60.0f  // m gap that counts as escaped
 #define BATTLE_GAP_VIS_M       40.0f  // m gap at/above which the pursuer is barely visible
@@ -299,6 +299,7 @@
 // --- Runner level (L1, user 2026-10-08): replaces rank. Every battle gives XP; XP and
 // levels are NEVER lost (user). Harder enemies give more XP. Enemies scale with level.
 #define LEVEL_MAX             50
+#define LEVELUP_BANNER_S      3.0f   // s the map shows "LEVEL UP! n" after a battle levels you up
 #define LEVEL_XP_BASE         40     // XP to go from level L to L+1 = BASE + STEP * L
 #define LEVEL_XP_STEP         10     //   (L2 at 50 XP, L10 ~810, L50 ~14,200 total)
 #define XP_ESCAPE             10     // XP for escaping (gap reached)

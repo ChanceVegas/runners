@@ -16,7 +16,7 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. E1 (user): `git pull`, flash, confirm `=== Runners E1 ===`. ALL of E1 in one build (user:
+1. E1K (user): `git pull`, flash, confirm `=== Runners E1K ===` (E1 + race kits + level cap 60). ALL of E1 in one build (user:
    "let's complete all of the E1A builds in one go"), so E1A2's checks are folded in here.
    TEST BUILD: DEBUG_UNLOCK_ALL 1 = the new enemies are fightable at any level.
    - [ ] Map: Stalker (green hood), Hornet (wasp), Warden (big armour) in their own art,
@@ -28,6 +28,11 @@ session doesn't know it happened.
    - [ ] WARDEN: 1,200 m race; Hunt: walls in two lanes, 10+ HP, a hit costs 2 hearts
          ("CRUSHED! -2 HEARTS").
    - [ ] XP: Stalker x1.6, Hornet x1.8, Warden x2.5 (all level 2/3 enemies).
+   - [ ] RACE KITS: in battles every enemy wears track kit (singlet + white race bib,
+         headband, shorts, white shoes): Shade orange, Brute blue, Phantom red band,
+         Stalker white track top, Hornet blue, Warden purple. Map keeps the normal look.
+   - [ ] LEVEL CAP 60: map strip still shows LV 5 (XP unchanged); beside/ahead now from
+         L18 / L36, unlocks at L12 / L24 / L42 (test build ignores unlocks).
    - [ ] fps 25, render times as before.
    Then: DEBUG_UNLOCK_ALL -> 0 (they lock until L10/20/35 again) + tuning from your feel.
 2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
@@ -156,6 +161,15 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-10 — Session 3 (cont.) — level cap 60, race kits
+- User: cap 60 (from my originality audit); keep SPRING sneakers for now; enemies should
+  wear track & field kit during races.
+- Done: LEVEL_MAX 60; start positions L18 / L36; unlocks L12 / L24 / L42 (all x1.2).
+  Race kits: KIT_* overlays in art_gen.py on every back view + new *_RF fronts (battle);
+  map keeps the plain fronts. Plain unbranded wear (no brand-like stripes/marks). Banner E1K.
+- Commits: feat(battle): level cap 60, unlock and start levels scaled;
+  feat(art): track & field race kits for all enemies
+
 ### 2026-10-10 — Session 3 (cont.) — originality rules
 - User: wants real map data later (OSM, noted as Open Decision 9) and distance from the
   big location / runner games to avoid IP trouble. I gave background (not legal advice:

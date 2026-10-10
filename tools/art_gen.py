@@ -322,9 +322,10 @@ def shade_back(frame):
     recolor(g, 'p', 'q', lambda x, y: y >= 20 and (x + y) % 5 == 0)
     put(g, [(6, 4), (7, 3), (5, 5), (6, 5), (8, 3)], 'P')   # rim light
     fill_rect(g, 9, 6, 12, 18, 'q')                # hood seam down the back
+    KIT_SHADE_BACK(g, frame)
     return rows(outline(g))
 
-def shade_front():
+def shade_front(kit=False):
     g = blank(28, 32)
     fill_circle(g, 13.5, 11, 10, 'p')
     fill_rect(g, 4, 11, 23, 26, 'p')
@@ -340,6 +341,7 @@ def shade_front():
     for x in range(8, 20):                                               # jagged grin
         g[19 + (x % 2)][x] = 'k'
     put(g, [(9, 19), (11, 19), (13, 19), (15, 19), (17, 19)], 'w')
+    if kit: KIT_SHADE_FRONT(g)
     return rows(outline(g))
 
 def brute_back(frame):
@@ -355,9 +357,10 @@ def brute_back(frame):
     fill_rect(g, 10, 8, 11, 17, 'D')               # spine
     recolor(g, 'R', 'D', lambda x, y: x >= 17 and y >= 8)
     put(g, [(4, 8), (5, 8), (6, 8), (4, 9)], 'L')
+    KIT_BRUTE_BACK(g, frame)
     return rows(outline(g))
 
-def brute_front():
+def brute_front(kit=False):
     g = blank(28, 32)
     fill_rect(g, 3, 10, 24, 26, 'R')
     fill_circle(g, 13.5, 8, 6, 'R')
@@ -371,6 +374,7 @@ def brute_front():
     fill_rect(g, 10, 10, 17, 11, 'D')              # mouth
     put(g, [(10, 9), (17, 9), (10, 8), (17, 8)], 'B')                     # tusks
     fill_rect(g, 6, 27, 11, 30, 'D'); fill_rect(g, 16, 27, 21, 30, 'D')   # legs
+    if kit: KIT_BRUTE_FRONT(g)
     return rows(outline(g))
 
 def phantom_back(frame):
@@ -383,9 +387,10 @@ def phantom_back(frame):
             fill_rect(g, x, y, x + (2 if y < 22 else 1), y, 'z')
     recolor(g, 'z', 'j', lambda x, y: x >= 15 or y >= 22)
     put(g, [(7, 5), (8, 4), (7, 6)], 'w')
+    KIT_PHANTOM_BACK(g, frame)
     return rows(outline(g))
 
-def phantom_front():
+def phantom_front(kit=False):
     g = blank(28, 32)
     fill_circle(g, 13.5, 12, 11, 'z')
     for i, tx in enumerate((6, 12, 18)):
@@ -397,7 +402,118 @@ def phantom_front():
     fill_ellipse(g, 9.5, 11, 2.2, 3.2, 'j'); fill_ellipse(g, 17.5, 11, 2.2, 3.2, 'j')   # hollow eyes
     put(g, [(9, 10), (17, 10)], 'w')
     fill_ellipse(g, 13.5, 17, 2.5, 1.6, 'j')       # "oo" mouth
+    if kit: KIT_PHANTOM_FRONT(g)
     return rows(outline(g))
+
+
+# ---- Race kits (user 2026-10-10: enemies wear track & field kit in races) -------
+# Plain, unbranded athletic wear: singlet + race bib, headband, shorts, white shoes.
+# No brand-like marks (no stripes-in-threes, no swoosh-like curves) — see PLANNING
+# Originality Rules. Back views are race-only; fronts have a map version and a kit
+# version (*_RF).
+def bib(g, x0, y0, x1, y1, digits):
+    fill_rect(g, x0, y0, x1, y1, 'w')
+    put(g, digits, 'x')
+
+def KIT_SHADE_BACK(g, frame):
+    fill_rect(g, 4, 3, 17, 4, 'w')                    # headband
+    fill_rect(g, 4, 12, 17, 21, 'o')                  # singlet
+    fill_rect(g, 5, 10, 6, 11, 'o'); fill_rect(g, 15, 10, 16, 11, 'o')   # straps
+    recolor(g, 'o', 'v', lambda x, y: x >= 15)
+    bib(g, 7, 14, 14, 18, [(9, 15), (9, 16), (9, 17), (11, 15), (12, 15), (12, 16), (11, 17), (12, 17)])
+
+def KIT_SHADE_FRONT(g):
+    fill_rect(g, 6, 3, 21, 4, 'w')                    # headband
+    fill_rect(g, 6, 21, 21, 26, 'o')                  # singlet below the grin
+    recolor(g, 'o', 'v', lambda x, y: x >= 19)
+    bib(g, 10, 22, 17, 25, [(12, 23), (12, 24), (14, 23), (15, 23), (15, 24)])
+
+def KIT_BRUTE_BACK(g, frame):
+    fill_rect(g, 7, 3, 14, 3, 'w')                    # headband
+    fill_rect(g, 4, 8, 17, 17, 'a')                   # singlet
+    recolor(g, 'a', 'i', lambda x, y: x >= 15)
+    bib(g, 7, 10, 14, 14, [(9, 11), (9, 12), (9, 13), (11, 11), (12, 11), (12, 12), (12, 13)])
+    for y in range(19, 22):                           # shorts over the leg tops
+        for x in range(4, 18):
+            if g[y][x] == 'D': g[y][x] = 'i'
+    for y in range(23, 28):                           # white shoes instead of black soles
+        for x in range(22):
+            if g[y][x] == 'k' and y > 22: g[y][x] = 'w'
+
+def KIT_BRUTE_FRONT(g):
+    fill_rect(g, 9, 3, 18, 3, 'w')                    # headband between the horns
+    fill_rect(g, 5, 12, 22, 26, 'a')                  # singlet over the chest
+    recolor(g, 'a', 'i', lambda x, y: x >= 20)
+    bib(g, 10, 15, 17, 20, [(12, 16), (12, 17), (12, 18), (12, 19), (14, 16), (15, 16), (15, 17), (14, 18), (14, 19), (15, 19)])
+    fill_rect(g, 6, 27, 11, 28, 'i'); fill_rect(g, 16, 27, 21, 28, 'i')  # shorts
+    fill_rect(g, 6, 30, 11, 30, 'w'); fill_rect(g, 16, 30, 21, 30, 'w')  # shoes
+
+def KIT_PHANTOM_BACK(g, frame):
+    fill_rect(g, 4, 4, 17, 5, 'n')                    # headband
+    fill_rect(g, 4, 11, 17, 15, 'n')                  # singlet band
+    bib(g, 7, 11, 14, 15, [(9, 12), (9, 13), (9, 14), (11, 12), (12, 12), (12, 13), (11, 14), (12, 14)])
+
+def KIT_PHANTOM_FRONT(g):
+    fill_rect(g, 5, 3, 22, 4, 'n')                    # headband
+    fill_rect(g, 6, 19, 21, 22, 'n')                  # singlet band
+    bib(g, 10, 19, 17, 22, [(12, 20), (12, 21), (14, 20), (15, 20), (15, 21)])
+
+def KIT_STALKER_BACK(g, frame):
+    for y in range(8, 21):                            # white track top (hood stays green)
+        for x in range(3, 19):
+            if g[y][x] in ('{', '['): g[y][x] = 'W'
+    fill_rect(g, 3, 9, 3, 20, 'n'); fill_rect(g, 18, 9, 18, 20, 'n')    # one stripe per sleeve
+    bib(g, 7, 10, 14, 14, [(9, 11), (9, 12), (9, 13), (11, 11), (12, 11), (12, 12), (11, 13), (12, 13)])
+    for y in range(19, 22):                           # black shorts
+        for x in range(6, 16):
+            if g[y][x] == '[': g[y][x] = 'x'
+    for y in range(23, 28):
+        for x in range(22):
+            if g[y][x] == 'k': g[y][x] = 'w'          # white shoes
+
+def KIT_STALKER_FRONT(g):
+    for y in range(14, 26):                           # white track top
+        for x in range(0, 28):
+            if g[y][x] in ('{', '['): g[y][x] = 'W'
+    fill_rect(g, 13, 15, 14, 17, 'x')                 # zip
+    fill_rect(g, 2, 14, 7, 14, 'n'); fill_rect(g, 20, 14, 25, 14, 'n')  # sleeve stripe
+    bib(g, 9, 18, 18, 22, [(11, 19), (11, 20), (11, 21), (13, 19), (14, 19), (14, 20), (13, 21), (14, 21), (16, 19), (16, 20), (16, 21)])
+    fill_rect(g, 9, 26, 12, 27, 'x'); fill_rect(g, 15, 26, 18, 27, 'x')  # shorts
+    fill_rect(g, 9, 30, 12, 30, 'w'); fill_rect(g, 15, 30, 18, 30, 'w')  # shoes
+
+def KIT_HORNET_BACK(g, frame):
+    fill_rect(g, 7, 3, 14, 3, 'w')                    # headband on the black head
+    for y in range(9, 18):                            # blue singlet over the upper stripes
+        for x in range(3, 19):
+            if g[y][x] in ('y', 'v', 'x') and y >= 9: g[y][x] = 'a'
+    recolor(g, 'a', 'i', lambda x, y: x >= 15 and 9 <= y <= 17)
+    bib(g, 7, 10, 14, 14, [(9, 11), (9, 12), (9, 13), (11, 11), (12, 11), (12, 12), (11, 13), (12, 13)])
+
+def KIT_HORNET_FRONT(g):
+    fill_rect(g, 8, 3, 19, 3, 'w')                    # headband
+    for y in range(16, 26):                           # blue singlet over the body
+        for x in range(6, 22):
+            if g[y][x] in ('y', 'v', 'x'): g[y][x] = 'a'
+    bib(g, 10, 18, 17, 22, [(12, 19), (12, 20), (12, 21), (14, 19), (15, 19), (15, 20), (14, 21), (15, 21)])
+
+def KIT_WARDEN_BACK(g, frame):
+    for y in range(11, 24):                           # purple singlet replaces the cape
+        for x in range(2, 20):
+            if g[y][x] in ('n', 'D') or (g[y][x] == 'm' and y < 23): g[y][x] = 'p'
+    recolor(g, 'p', 'q', lambda x, y: x >= 14)
+    bib(g, 7, 14, 14, 18, [(9, 15), (9, 16), (9, 17), (11, 15), (12, 15), (12, 16), (11, 17), (12, 17)])
+    for y in range(24, 28):
+        for x in range(22):
+            if g[y][x] == 'k' and y >= 25: g[y][x] = 'w'   # white shoes
+
+def KIT_WARDEN_FRONT(g):
+    for y in range(13, 26):                           # purple singlet over plate + crest + belt
+        for x in range(5, 23):
+            if g[y][x] in ('m', 'e', 'u', 'v'): g[y][x] = 'p'
+    recolor(g, 'p', 'q', lambda x, y: x >= 19)
+    bib(g, 10, 16, 17, 21, [(12, 17), (12, 18), (12, 19), (12, 20), (14, 17), (15, 17), (15, 18), (14, 19), (14, 20), (15, 20)])
+    fill_rect(g, 7, 26, 11, 27, 'q'); fill_rect(g, 16, 26, 20, 27, 'q')  # shorts
+    fill_rect(g, 7, 31, 11, 31, 'w'); fill_rect(g, 16, 31, 20, 31, 'w')  # shoes
 
 # ---- E1 enemies (user-approved 2026-10-09) --------------------------------------
 def stalker_back(frame):           # lean hooded hunter, long arms, striding
@@ -412,9 +528,10 @@ def stalker_back(frame):           # lean hooded hunter, long arms, striding
     fill_rect(g, 10, 2, 11, 17, '[')                  # hood seam / spine
     recolor(g, '{', '[', lambda x, y: x >= 14)
     put(g, [(7, 2), (8, 1), (6, 3)], '}')
+    KIT_STALKER_BACK(g, frame)
     return rows(outline(g))
 
-def stalker_front():
+def stalker_front(kit=False):
     g = blank(28, 32)
     fill_circle(g, 13.5, 8, 7, '{')                   # hood
     fill_ellipse(g, 13.5, 10, 4.5, 4, 'k')            # shadowed face
@@ -428,6 +545,7 @@ def stalker_front():
     recolor(g, '{', '[', lambda x, y: x >= 20 and y > 3)
     put(g, [(9, 3), (10, 2), (8, 4)], '}')
     fill_rect(g, 13, 16, 14, 24, '[')                 # cloak split
+    if kit: KIT_STALKER_FRONT(g)
     return rows(outline(g))
 
 def hornet_back(frame):            # striped abdomen, buzzing wings, stinger
@@ -445,9 +563,10 @@ def hornet_back(frame):            # striped abdomen, buzzing wings, stinger
     put(g, [(7, 0), (8, 1), (14, 0), (13, 1)], 'x')                       # antennae
     recolor(g, 'y', 'v', lambda x, y: x >= 15)
     recolor(g, 'A', 'W', lambda x, y: (x + y) % 3 == 0)                   # wing veins
+    KIT_HORNET_BACK(g, frame)
     return rows(outline(g))
 
-def hornet_front():
+def hornet_front(kit=False):
     g = blank(28, 32)
     fill_ellipse(g, 4.5, 12, 4.5, 8, 'A'); fill_ellipse(g, 23, 12, 4.5, 8, 'A')   # wings
     recolor(g, 'A', 'W', lambda x, y: (x + y) % 3 == 0)
@@ -461,6 +580,7 @@ def hornet_front():
     put(g, [(9, 2), (8, 1), (7, 0), (18, 2), (19, 1), (20, 0)], 'x')      # antennae
     recolor(g, 'y', 'v', lambda x, y: x >= 19 and y > 3)
     put(g, [(13, 30), (14, 30), (13, 31)], 'x')       # stinger tip
+    if kit: KIT_HORNET_FRONT(g)
     return rows(outline(g))
 
 def warden_back(frame):            # armoured boss: helmet, pauldrons, cape
@@ -476,9 +596,10 @@ def warden_back(frame):            # armoured boss: helmet, pauldrons, cape
     fill_rect(g, 1, 7, 20, 7, 'u')                    # gold trim
     put(g, [(10, 0), (11, 0)], 'u')                   # helmet crest
     recolor(g, 'M', 'm', lambda x, y: x >= 16)
+    KIT_WARDEN_BACK(g, frame)
     return rows(outline(g))
 
-def warden_front():
+def warden_front(kit=False):
     g = blank(28, 32)
     fill_rect(g, 9, 0, 18, 9, 'm')                    # helmet
     fill_rect(g, 10, 4, 17, 5, 'A')                   # glowing visor slit
@@ -496,6 +617,7 @@ def warden_front():
     fill_rect(g, 7, 28, 11, 28, 'M'); fill_rect(g, 16, 28, 20, 28, 'M')   # knee plates
     recolor(g, 'm', 'e', lambda x, y: x >= 25 or (x >= 19 and 14 < y < 24))
     recolor(g, 'M', 'm', lambda x, y: x >= 22)
+    if kit: KIT_WARDEN_FRONT(g)
     return rows(outline(g))
 
 def runner_down():                 # 36x10 -> x2 = 72x20 (lying on the road)
@@ -755,10 +877,12 @@ SPRITES = [
     ('PHANTOM_B0', phantom_back(0)),
     ('PHANTOM_B1', phantom_back(1)),
     ('PHANTOM_F',  phantom_front()),
+    ('SHADE_RF', shade_front(kit=True)), ('BRUTE_RF', brute_front(kit=True)), ('PHANTOM_RF', phantom_front(kit=True)),
     # E1
     ('STALKER_B0', stalker_back(0)), ('STALKER_B1', stalker_back(1)), ('STALKER_F', stalker_front()),
     ('HORNET_B0',  hornet_back(0)),  ('HORNET_B1',  hornet_back(1)),  ('HORNET_F',  hornet_front()),
     ('WARDEN_B0',  warden_back(0)),  ('WARDEN_B1',  warden_back(1)),  ('WARDEN_F',  warden_front()),
+    ('STALKER_RF', stalker_front(kit=True)), ('HORNET_RF', hornet_front(kit=True)), ('WARDEN_RF', warden_front(kit=True)),
     ('DOWN',       runner_down()),
     ('HEART',      heart(True)),
     ('HEART_EMPTY', heart(False)),

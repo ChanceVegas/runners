@@ -44,6 +44,9 @@ attorney review (patents on location-based game systems are the main unknown).
   style spawn items.
 - NO train/railway-roof setting, graffiti theme, hoverboards, or a guard-and-dog chaser.
 - Shop items keep their own identity (no copies of other games' power-ups).
+- Clothing / kit art stays unbranded: no logos, no stripes-in-threes or swoosh-like
+  marks (sportswear trademarks).
+- Enemies wear plain track & field kit in races (user, 2026-10-10); map look unchanged.
 - New ideas that resemble a well-known game get flagged to the user BEFORE building.
 
 ## Safety (requirement for R2 GPS — raised by user 2026-10-07)

@@ -208,13 +208,13 @@ const ArtSprite& backArt(Attack a, bool stride) {
   }
 }
 const ArtSprite& frontArt(Attack a) {
-  switch (a) {
-    case Attack::Barrier: return ART_SHADE_F;
-    case Attack::Smash:   return ART_BRUTE_F;
-    case Attack::Stalk:   return ART_STALKER_F;
-    case Attack::Combo:   return ART_HORNET_F;
-    case Attack::Wall2:   return ART_WARDEN_F;
-    default:              return ART_PHANTOM_F;
+  switch (a) {                                  // race kit versions (map keeps *_F)
+    case Attack::Barrier: return ART_SHADE_RF;
+    case Attack::Smash:   return ART_BRUTE_RF;
+    case Attack::Stalk:   return ART_STALKER_RF;
+    case Attack::Combo:   return ART_HORNET_RF;
+    case Attack::Wall2:   return ART_WARDEN_RF;
+    default:              return ART_PHANTOM_RF;
   }
 }
 

@@ -41,13 +41,17 @@ session doesn't know it happened.
    Then: R2 proper (GPS drives the locator + approved Safety items 1–5) — breakdown first.
 
 ## Known Issues / Risks
-- PWR-1 (open, hardware, 2026-10-09): battery power via IP5310 boost board (1S LG 18650
-  1490 mAh). CrowPanel J1 (BAT) connector was torn off; its "+" pad is damaged. J1's big
-  corner tabs are GND (schematic) - a wire there shorted the boost output. Current wiring:
-  boost 5V -> D2 (SS14) ANODE = BAT+ net (diode test 0.209 V); boost GND -> J4 GND; M100
-  VCC on boost 5V. Boost board trips at once even so; user suspects the board, has a
-  replacement. Not yet verified: no-short (BAT+ to GND) with the board on USB.
- on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
+- PWR-1 (open, hardware, updated 2026-10-10): the IP5310 boost boards are phone power-bank
+  boards: battery-mode 5 V only comes on for a device on their USB-C port or a phone-sized
+  load and shuts off in ~1 s otherwise (both boards fine, not broken). Output pads used:
+  the USB-A footprint "+"/"-" on the back. With a charger in its USB-C it passes 5 V
+  through (button ignored) and the CrowPanel RUNS via D2's anode (BAT+ net) - so the
+  CrowPanel side has no short (J1 torn off; J1 corner tabs are GND - never wire there).
+  Decision pending: A) CrowPanel's own battery input (protected cell + slide switch ->
+  D2 anode, GPS on D2 cathode = VIN) or B) a project power board (e.g. PowerBoost 1000C:
+  steady 5 V, EN pin for a soft power button). Interim GPS test: USB power bank into the
+  boost USB-C = 5 V pass-through to CrowPanel + GPS.
+- GPS-PWR (open, hardware): on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
   RAM config lost) and its GSV reports 0 satellites in view on every cycle. Software
   can't fix it; G0-R7 constellation cut changed nothing. Next: 5 V supply.
 - ART-PERF (watch; A2 log 2026-10-08: battle run ≤ 31 ms with the big pursuer, but

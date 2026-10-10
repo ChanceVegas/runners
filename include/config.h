@@ -244,10 +244,10 @@
 #define OW_MIX_STALKER       84     // 72-83 Stalker
 #define OW_MIX_HORNET        94     // 84-93 Hornet, 94-99 Warden
 // Which new kinds have battle behaviour yet (E1b/c/d flip these to 1). 0 = always locked.
-#define E1_STALKER_READY     0
-#define E1_HORNET_READY      0
-#define E1_WARDEN_READY      0
-#define DEBUG_UNLOCK_ALL     0      // TEST ONLY: 1 = ignore unlock levels (ready kinds only)
+#define E1_STALKER_READY     1
+#define E1_HORNET_READY      1
+#define E1_WARDEN_READY      1
+#define DEBUG_UNLOCK_ALL     1      // TEST ONLY: 1 = ignore unlock levels (ready kinds only)
 #define ESCAPE_BONUS_COINS   25     // wallet bonus for escaping (x level)
 
 // ============================================================================
@@ -306,6 +306,24 @@
 #define BATTLE_SHADE_ORB_PCT   75
 #define BATTLE_BRUTE_ORB_PCT   80
 #define BATTLE_PHANTOM_ORB_PCT 60
+// E1 kinds (user-approved 2026-10-09). Same meaning as the three above.
+#define BATTLE_STALKER_HP      6
+#define BATTLE_STALKER_ATTACK_S 1.5f
+#define BATTLE_STALKER_ORB_PCT 70
+#define BATTLE_STALKER_GAP_PEN 0.15f  // m/s less Pursuit gap gain: it closes in faster
+#define BATTLE_STALKER_LANE_S  0.9f   // s between re-aiming at YOUR lane in the Hunt
+#define BATTLE_HORNET_HP       5
+#define BATTLE_HORNET_ATTACK_S 1.15f  // attacks often
+#define BATTLE_HORNET_ORB_PCT  75
+#define BATTLE_HORNET_ROW_MUL  0.80f  // x Pursuit row spacing: denser rows
+#define BATTLE_HORNET_COMBO_S  0.95f  // s between the combo's barrier and its duck bar (jump
+                                      // airtime 0.69 s, a duck tapped mid-air fires on landing);
+                                      // the next attack also waits this long so pairs never overlap
+#define BATTLE_HORNET_COMBO_MIN_M 14.0f // m minimum spacing of the combo pair
+#define BATTLE_WARDEN_HP       10
+#define BATTLE_WARDEN_ATTACK_S 2.0f   // slow...
+#define BATTLE_WARDEN_ORB_PCT  70
+#define BATTLE_WARDEN_HIT_HEARTS 2    // ...but heavy: hearts lost per Hunt hit
 #define BATTLE_ORB_HIT_DEPTH_M 1.0f   // m collect window for orbs
 // Hunt time limit = fastest possible kill (HP / orbs-per-second) x this slack. Out of
 // time = the enemy GETS AWAY: no bonus and the battle's coins are lost.
@@ -328,6 +346,9 @@
 #define XP_SHADE_PCT          100    // % XP by enemy type (harder types pay more)
 #define XP_BRUTE_PCT          120
 #define XP_PHANTOM_PCT        140
+#define XP_STALKER_PCT        160
+#define XP_HORNET_PCT         180
+#define XP_WARDEN_PCT         250
 // Enemy difficulty: d = (level - 1) * DIFF_AT_MAX / (LEVEL_MAX - 1), so level 50 = the
 // old rank 10 (d 9). Per difficulty unit d:
 #define DIFF_AT_MAX           9.0f   // d at LEVEL_MAX

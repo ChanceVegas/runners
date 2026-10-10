@@ -25,7 +25,7 @@ struct Stats {
   float jumpMul      = 1.0f;   // jump launch speed multiplier (SPRING); used by encounter
 };
 
-// kind: 0 Shade, 1 Brute, 2 Phantom (world::EnemyKind order). level 1..3.
+// kind: world::EnemyKind order (Shade, Brute, Phantom, Stalker, Hornet, Warden). level 1..3.
 // xp: the player's total XP; the player's level scales the enemy (config DIFF_*).
 void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint32_t xp);
 
@@ -38,6 +38,9 @@ float    diffOf(uint8_t playerLevel);              // difficulty units d at a le
 float    rewardMul(uint8_t playerLevel);           // win-bonus multiplier at a level
 uint8_t  playerLevel();                            // this battle's player level
 uint32_t startXp();                                // this battle's starting XP
+// The runner's lane (-1..1) and road speed (m/s), set by encounter every frame before
+// update(): the Stalker aims at your lane, the Hornet spaces its combo by your speed.
+void     notePlayer(float lane, float speedMS);
 float    speedBonus();                             // m/s added to the battle road speed
 float    rowGapMul();                              // multiplier on Pursuit row spacing
 

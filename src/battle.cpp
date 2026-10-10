@@ -17,7 +17,7 @@ namespace {
 using battle::Phase;
 using battle::Outcome;
 
-enum class Attack : uint8_t { Barrier, Smash, Phase };   // Shade / Brute / Phantom
+enum class Attack : uint8_t { Barrier, Smash, Phase, Stalk, Combo, Wall2 };   // per kind (world order)
 using encounter::Block;
 
 struct KindDef {
@@ -27,16 +27,26 @@ struct KindDef {
   int orbPct;
   Attack attack;
   uint16_t body, accent;
+  float gapPen;        // m/s less Pursuit gap gain (Stalker)
+  float rowMul;        // x Pursuit row spacing (Hornet: denser)
+  uint8_t hitHearts;   // hearts lost per Hunt hit (Warden: 2)
 };
 
-const KindDef KINDS[3] = {
+const KindDef KINDS[6] = {
   { "SHADE",   BATTLE_SHADE_HP,   BATTLE_SHADE_ATTACK_S,   BATTLE_SHADE_ORB_PCT,   Attack::Barrier,
-    rgb565(120, 60, 170), rgb565(255, 255, 255) },
+    rgb565(120, 60, 170), rgb565(255, 255, 255), 0.0f, 1.0f, 1 },
   { "BRUTE",   BATTLE_BRUTE_HP,   BATTLE_BRUTE_ATTACK_S,   BATTLE_BRUTE_ORB_PCT,   Attack::Smash,
-    rgb565(180, 40, 40),  rgb565(255, 220, 0) },
+    rgb565(180, 40, 40),  rgb565(255, 220, 0), 0.0f, 1.0f, 1 },
   { "PHANTOM", BATTLE_PHANTOM_HP, BATTLE_PHANTOM_ATTACK_S, BATTLE_PHANTOM_ORB_PCT, Attack::Phase,
-    rgb565(60, 190, 220), rgb565(220, 250, 255) },
+    rgb565(60, 190, 220), rgb565(220, 250, 255), 0.0f, 1.0f, 1 },
+  { "STALKER", BATTLE_STALKER_HP, BATTLE_STALKER_ATTACK_S, BATTLE_STALKER_ORB_PCT, Attack::Stalk,
+    rgb565(52, 140, 96), rgb565(222, 40, 40), BATTLE_STALKER_GAP_PEN, 1.0f, 1 },
+  { "HORNET",  BATTLE_HORNET_HP,  BATTLE_HORNET_ATTACK_S,  BATTLE_HORNET_ORB_PCT,  Attack::Combo,
+    rgb565(255, 210, 0), rgb565(24, 24, 24), 0.0f, BATTLE_HORNET_ROW_MUL, 1 },
+  { "WARDEN",  BATTLE_WARDEN_HP,  BATTLE_WARDEN_ATTACK_S,  BATTLE_WARDEN_ORB_PCT,  Attack::Wall2,
+    rgb565(84, 86, 96), rgb565(240, 180, 20), 0.0f, 1.0f, BATTLE_WARDEN_HIT_HEARTS },
 };
+float s_playerLane = 0.0f, s_playerSpeed = 20.0f;   // from encounter (notePlayer)
 
 const KindDef* s_k = &KINDS[0];
 uint8_t s_level = 1;
@@ -87,7 +97,7 @@ void banner(const char* t, uint16_t c) {
 
 float gapGain() {
   const float g = BATTLE_GAP_GAIN_L1 - (s_level - 1) * BATTLE_GAP_GAIN_STEP
-                  - s_diff * DIFF_GAP_GAIN_STEP + s_stats.gapGainBonus;
+                  - s_diff * DIFF_GAP_GAIN_STEP - s_k->gapPen + s_stats.gapGainBonus;
   const float w = g + (s_passed ? BATTLE_PASS_GAIN_BONUS : 0.0f);
   return w > DIFF_GAP_GAIN_MIN ? w : DIFF_GAP_GAIN_MIN;
 }
@@ -137,6 +147,27 @@ void attack() {
       }
       break;
     }
+    case Attack::Stalk: {                                   // Stalker: wall in YOUR lane + barrier beside
+      const int8_t other = (el == 0) ? (int8_t)((rnd() & 1) ? 1 : -1) : 0;
+      encounter::engine::spawnObstacle(Block::Wall, el, wz);
+      encounter::engine::spawnObstacle(Block::Barrier, other, wz);
+      blocked[el + 1] = blocked[other + 1] = 1;
+      break;
+    }
+    case Attack::Combo: {                                   // Hornet: jump, then duck, same lane
+      const float gap = fmaxf(BATTLE_HORNET_COMBO_MIN_M, s_playerSpeed * BATTLE_HORNET_COMBO_S);
+      encounter::engine::spawnObstacle(Block::Barrier, el, wz);
+      encounter::engine::spawnObstacle(Block::Overhead, el, wz + gap);
+      blocked[el + 1] = 1;
+      break;
+    }
+    case Attack::Wall2: {                                   // Warden: walls across two lanes
+      const int8_t other = (el == 0) ? (int8_t)((rnd() & 1) ? 1 : -1) : 0;
+      encounter::engine::spawnObstacle(Block::Wall, el, wz);
+      encounter::engine::spawnObstacle(Block::Wall, other, wz);
+      blocked[el + 1] = blocked[other + 1] = 1;
+      break;
+    }
     case Attack::Phase: {                                   // Phantom: random kind, then blink away
       static const Block KINDS_P[3] = { Block::Barrier, Block::Overhead, Block::Wall };
       encounter::engine::spawnObstacle(KINDS_P[rnd() % 3], el, wz);
@@ -170,11 +201,21 @@ const ArtSprite& backArt(Attack a, bool stride) {
   switch (a) {
     case Attack::Barrier: return stride ? ART_SHADE_B1 : ART_SHADE_B0;
     case Attack::Smash:   return stride ? ART_BRUTE_B1 : ART_BRUTE_B0;
+    case Attack::Stalk:   return stride ? ART_STALKER_B1 : ART_STALKER_B0;
+    case Attack::Combo:   return stride ? ART_HORNET_B1 : ART_HORNET_B0;
+    case Attack::Wall2:   return stride ? ART_WARDEN_B1 : ART_WARDEN_B0;
     default:              return stride ? ART_PHANTOM_B1 : ART_PHANTOM_B0;
   }
 }
 const ArtSprite& frontArt(Attack a) {
-  return a == Attack::Barrier ? ART_SHADE_F : a == Attack::Smash ? ART_BRUTE_F : ART_PHANTOM_F;
+  switch (a) {
+    case Attack::Barrier: return ART_SHADE_F;
+    case Attack::Smash:   return ART_BRUTE_F;
+    case Attack::Stalk:   return ART_STALKER_F;
+    case Attack::Combo:   return ART_HORNET_F;
+    case Attack::Wall2:   return ART_WARDEN_F;
+    default:              return ART_PHANTOM_F;
+  }
 }
 
 } // namespace
@@ -197,7 +238,9 @@ uint8_t levelOf(uint32_t xp) {
 uint16_t xpGain(uint8_t kind, uint8_t enemyLevel, Outcome o) {
   int base = o == Outcome::Escaped ? XP_ESCAPE : o == Outcome::Defeated ? XP_DEFEAT
            : o == Outcome::GotAway ? XP_GOTAWAY : o == Outcome::Caught ? XP_CAUGHT : 0;
-  const int typePct = kind == 1 ? XP_BRUTE_PCT : kind == 2 ? XP_PHANTOM_PCT : XP_SHADE_PCT;
+  static const int PCT[6] = { XP_SHADE_PCT, XP_BRUTE_PCT, XP_PHANTOM_PCT,
+                              XP_STALKER_PCT, XP_HORNET_PCT, XP_WARDEN_PCT };
+  const int typePct = PCT[kind < 6 ? kind : 0];
   const int lvlPct = 100 + (enemyLevel > 1 ? (enemyLevel - 1) : 0) * XP_LEVEL_STEP_PCT;
   return (uint16_t)((base * typePct * lvlPct + 5000) / 10000);
 }
@@ -211,10 +254,11 @@ float rewardMul(uint8_t l) { return 1.0f + diffOf(l) * DIFF_REWARD_STEP; }
 uint8_t playerLevel() { return s_plvl; }
 uint32_t startXp() { return s_xp; }
 float speedBonus() { return s_diff * DIFF_SPEED_STEP; }
-float rowGapMul() { return fmaxf(0.7f, 1.0f - s_diff * DIFF_ROW_GAP_STEP); }
+float rowGapMul() { return fmaxf(0.7f, 1.0f - s_diff * DIFF_ROW_GAP_STEP) * s_k->rowMul; }
+void  notePlayer(float lane, float speedMS) { s_playerLane = lane; s_playerSpeed = speedMS; }
 
 void start(uint8_t kind, uint8_t level, float goalM, const Stats& stats, uint32_t xp) {
-  s_k = &KINDS[kind < 3 ? kind : 0];
+  s_k = &KINDS[kind < 6 ? kind : 0];
   s_level = level;
   s_goalM = goalM;
   s_stats = stats;
@@ -334,10 +378,15 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
       }
       s_laneT -= dt;
       if (s_laneT <= 0.0f) {                                 // pick a new lane
-        float nl;
-        do { nl = (float)((int)(rnd() % 3) - 1); } while (nl == s_laneTarget);
-        s_laneTarget = nl;
-        s_laneT = rndf(1.2f, 2.5f);
+        if (s_k->attack == Attack::Stalk) {                  // Stalker: aim at YOUR lane
+          s_laneTarget = (float)lroundf(s_playerLane);
+          s_laneT = BATTLE_STALKER_LANE_S;
+        } else {
+          float nl;
+          do { nl = (float)((int)(rnd() % 3) - 1); } while (nl == s_laneTarget);
+          s_laneTarget = nl;
+          s_laneT = rndf(1.2f, 2.5f);
+        }
       }
       const float step = BATTLE_ENEMY_LANE_SPEED * dt;
       if (s_lane < s_laneTarget) s_lane = fminf(s_lane + step, s_laneTarget);
@@ -347,6 +396,7 @@ void update(float dt, float travel, float runM, float playerZ, bool stumbling) {
       if (s_attackT <= 0.0f && fabsf(s_lane - s_laneTarget) < 0.05f) {
         attack();
         s_attackT = s_attackS * rndf(0.85f, 1.15f);
+        if (s_k->attack == Attack::Combo) s_attackT += BATTLE_HORNET_COMBO_S;   // pair stays clear
       }
       break;
     }
@@ -364,8 +414,10 @@ void onObstacleHit(bool wall) {
     snprintf(buf, sizeof buf, "STUMBLE!  -%d m", (int)loss);
     banner(buf, rgb565(255, 140, 60));
   } else if (s_phase == Phase::Hunt) {
-    --s_hearts;
-    banner(s_hearts > 0 ? "OUCH!  -1 HEART" : "DOWN!", rgb565(235, 60, 60));
+    s_hearts -= s_k->hitHearts;
+    if (s_hearts < 0) s_hearts = 0;
+    banner(s_hearts <= 0 ? "DOWN!" : (s_k->hitHearts > 1 ? "CRUSHED!  -2 HEARTS" : "OUCH!  -1 HEART"),
+           rgb565(235, 60, 60));
     if (s_hearts <= 0) s_outcome = Outcome::Caught;
   }
 }

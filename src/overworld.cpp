@@ -128,11 +128,11 @@ void drawEnemy(lgfx::LGFX_Sprite& b, int32_t bandY, const EnemyDraw& e) {
   }
   b.fillEllipse(x, e.y + 11 - bandY, 11, 3, rgb565(20, 30, 20));       // ground shadow
   // A3: the same front-view art as the battle pursuer, at map size (~25x29).
-  // E1 kinds borrow a silhouette until their own art lands (E1b/c/d).
   using world::EnemyKind;
   const EnemyKind k = (EnemyKind)e.kind;
-  const ArtSprite& a = (k == EnemyKind::Shade || k == EnemyKind::Stalker) ? ART_SHADE_F
-                     : (k == EnemyKind::Brute || k == EnemyKind::Warden) ? ART_BRUTE_F : ART_PHANTOM_F;
+  const ArtSprite& a = k == EnemyKind::Shade ? ART_SHADE_F : k == EnemyKind::Brute ? ART_BRUTE_F
+                     : k == EnemyKind::Stalker ? ART_STALKER_F : k == EnemyKind::Hornet ? ART_HORNET_F
+                     : k == EnemyKind::Warden ? ART_WARDEN_F : ART_PHANTOM_F;
   const int32_t pct = k == EnemyKind::Warden ? 115 : 90;               // Warden: bigger
   const int32_t w = a.w * pct / 100, h = a.h * pct / 100;
   if (e.locked) {                                       // E1: grey silhouette + padlock

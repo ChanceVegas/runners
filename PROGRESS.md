@@ -7,7 +7,7 @@ session doesn't know it happened.
 - Phase: B1 battles + S1 shop + M1 music + rank + pass + VOL COMPLETE ✅ (2026-10-08,
   VOL-R1 on hw, user: "everything seems to be working great"; level 10 "very very
   minimal distortion" — caps kept). AU0 audio ✅. R3 ✅. P1 ✅. R1 ✅.
-  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1 levels ✅. E1 new enemies: E1A on test.
+  A1-A3 art ✅. G0 GPS: UART link ✅, no fix, ON HOLD (GPS-PWR). L1 levels ✅. E1 new enemies: all built, on test.
 - Builds: yes (espressif32@6.5.0; RAM ~9.3%, Flash 36.7% of 1.3 MB app partition)
 - Runs on hardware: yes — fps 25.0–25.4 in every mode.
 - Measured (RK-R2 log, 2026-10-08): render ms avg MENU ~33 (max 35), EXPLORE 26–28
@@ -16,18 +16,20 @@ session doesn't know it happened.
   Heap flat ~269 KB (−7 KB audio, −1 KB shop/music vs B1).
 
 ## Next Up (in order)
-1. E1A2 (user): `git pull`, flash, confirm `=== Runners E1A2 ===` (E1A + swimming). Walk around the map.
-   - [ ] New enemies appear among the usual ones (about 1 in 4 common spawns): grey
-         silhouettes with a yellow padlock above them; a Warden is a bigger grey Brute shape.
-   - [ ] Standing next to one: grey bottom banner "STALKER - LOCKED (coming soon)" (same
-         for HORNET / WARDEN); no engage ring, holding still does NOT start a battle.
-   - [ ] Shade / Brute / Phantom still engage and fight exactly as before.
-   - [ ] SWIM: walk onto water -> avatar becomes head + shoulders in a ripple ring, arms
-         stroking (faster when running), light wake behind; standing still in water = slow
-         treading. Back on land -> normal walking avatar.
-   - [ ] EXPLORE render ms about the same (26-29 avg).
-   L1C: PASSED 2026-10-09 (strip + "LEVEL UP!" looked fine; level-up fired at 267 XP).
-   Then: E1b Stalker (behaviour + art).
+1. E1 (user): `git pull`, flash, confirm `=== Runners E1 ===`. ALL of E1 in one build (user:
+   "let's complete all of the E1A builds in one go"), so E1A2's checks are folded in here.
+   TEST BUILD: DEBUG_UNLOCK_ALL 1 = the new enemies are fightable at any level.
+   - [ ] Map: Stalker (green hood), Hornet (wasp), Warden (big armour) in their own art,
+         about 1 in 4 common spawns. Swimming on water as described before.
+   - [ ] STALKER: Pursuit gap shrinks faster than usual; Hunt: it moves into YOUR lane and
+         drops a wall there + a barrier next to it (one lane stays free).
+   - [ ] HORNET: denser Pursuit rows; Hunt: barrier, then a duck bar ~1 s later in the same
+         lane (jump, then duck - a duck tapped mid-air fires on landing).
+   - [ ] WARDEN: 1,200 m race; Hunt: walls in two lanes, 10+ HP, a hit costs 2 hearts
+         ("CRUSHED! -2 HEARTS").
+   - [ ] XP: Stalker x1.6, Hornet x1.8, Warden x2.5 (all level 2/3 enemies).
+   - [ ] fps 25, render times as before.
+   Then: DEBUG_UNLOCK_ALL -> 0 (they lock until L10/20/35 again) + tuning from your feel.
 2. GPS: ON HOLD (user 2026-10-09) — buying a different module. Suggested first: power
    the M100 from 5 V USB as a free test (GPS-PWR).
    A3 map art: PASSED (user: "map art tiles look perfect").
@@ -154,6 +156,19 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-09 — Session 3 (cont.) — E1b-d in one build
+- User: do all of E1 at once (I'd planned one enemy per hw test; user's call - the test
+  list covers all three).
+- Done: art (Stalker hood/red eyes, Hornet wasp with flapping wings, Warden armour/cape,
+  front + 2 back frames each; 3 new palette colours). Battle: KINDS[6] + per-kind
+  gapPen / rowMul / hitHearts; attacks Stalk (aims at your lane: wall + barrier),
+  Combo (barrier then duck bar, spaced by your speed x 0.95 s; next attack waits so pairs
+  never overlap), Wall2 (two walls, 2 hearts per hit). encounter feeds battle::notePlayer
+  (lane, speed). XP pcts 160/180/250. Map uses their own art. E1_*_READY 1,
+  DEBUG_UNLOCK_ALL 1 (test). Banner E1. Flash 40.3%.
+- Commits: feat(art): Stalker, Hornet and Warden sprites (E1); feat(battle): Stalker,
+  Hornet and Warden battles (E1)
+
 ### 2026-10-09 — Session 3 (cont.) — swimming avatar
 - User: on water the player should swim instead of walking. Asked: look only (chosen) vs
   gameplay effects. Done: SW_DOWN/UP/SIDE x2 sprites (art_gen.py), overworld draws them on

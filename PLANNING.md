@@ -119,6 +119,8 @@ wake); no gameplay effect (movement is real walking).
   fought. Spawn mix (common): Shade 48 / Brute 24 / Stalker 12 / Hornet 10 / Warden 6 %.
 - Steps: E1a roster + locked display -> E1b Stalker -> E1c Hornet -> E1d Warden (each:
   behaviour + art + hw test; DEBUG_UNLOCK_ALL to test early).
+  User (2026-10-09): build all of them in one go. Warden hit = 2 hearts; Hornet combo
+  spacing = speed x 0.95 s.
 - Drinks unchanged: each is used up by the one battle it's picked for (user).
 
 **Shop** (menu button). Coins from battles + arcade.
@@ -222,7 +224,7 @@ wake); no gameplay effect (movement is real walking).
   DONE 2026-10-08 (hw-verified). Arcade banks 50% of its coins (user).
 - **L1 — Levels + XP:** replaces rank; level-driven start positions. APPROVED
   2026-10-09. DONE (L1a-c hw-verified).
-- **E1 — 3 new enemies:** unlocked by player level. APPROVED 2026-10-09; E1a built.
+- **E1 — 3 new enemies:** unlocked by player level. APPROVED 2026-10-09; all built (one test build).
 - **M1 — Music:** 4 upbeat chiptune loops (menu, explore, battle, arcade) under the
   SFX (user, 2026-10-08). DONE 2026-10-08 (hw-verified).
 - **A1 / A2 — Art:** pixel-art pipeline + runner/obstacles, then enemies + shop/HUD.

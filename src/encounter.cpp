@@ -492,7 +492,10 @@ void update(float dt) {
 
   const float pz = playerZ();
   if (s_invuln > 0.0f) s_invuln -= dt;
-  if (battleMode) battle::update(dt, s_travel, run, pz, s_stumbleT > 0.0f);
+  if (battleMode) {
+    battle::notePlayer((float)s_laneTarget, s_speed);
+    battle::update(dt, s_travel, run, pz, s_stumbleT > 0.0f);
+  }
 
   // Orbs (battle): collect or recycle. Any height counts — they float at waist level.
   for (auto& o : s_orb) {

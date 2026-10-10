@@ -74,6 +74,10 @@ PALETTE = [
     (')', 'trail',       178, 142, 98),
     ('-', 'trail_dk',    148, 114, 76),
     ('+', 'trail_lt',    204, 170, 124),
+    # E1: Stalker (Hornet / Warden reuse existing colours)
+    ('{', 'stalker',     52, 140, 96),
+    ('}', 'stalker_lt',  120, 206, 150),
+    ('[', 'stalker_dk',  22, 78, 54),
 ]
 KEY = {k: i + 1 for i, (k, *_rest) in enumerate(PALETTE)}   # 0 = transparent
 
@@ -395,6 +399,105 @@ def phantom_front():
     fill_ellipse(g, 13.5, 17, 2.5, 1.6, 'j')       # "oo" mouth
     return rows(outline(g))
 
+# ---- E1 enemies (user-approved 2026-10-09) --------------------------------------
+def stalker_back(frame):           # lean hooded hunter, long arms, striding
+    g = blank(22, 28)
+    fill_circle(g, 10.5, 5, 4.5, '{')                 # hood
+    fill_rect(g, 6, 8, 15, 18, '{')                   # narrow torso
+    fill_rect(g, 3, 9, 5, 20, '{'); fill_rect(g, 16, 9, 18, 20, '{')     # long arms
+    put(g, [(3, 21), (4, 22), (5, 21), (16, 21), (17, 22), (18, 21)], '}') # claws
+    la, lb = (26, 23) if frame == 0 else (23, 26)
+    fill_rect(g, 7, 19, 9, la, '['); fill_rect(g, 12, 19, 14, lb, '[')
+    fill_rect(g, 6, la + 1, 9, la + 1, 'k'); fill_rect(g, 12, lb + 1, 15, lb + 1, 'k')
+    fill_rect(g, 10, 2, 11, 17, '[')                  # hood seam / spine
+    recolor(g, '{', '[', lambda x, y: x >= 14)
+    put(g, [(7, 2), (8, 1), (6, 3)], '}')
+    return rows(outline(g))
+
+def stalker_front():
+    g = blank(28, 32)
+    fill_circle(g, 13.5, 8, 7, '{')                   # hood
+    fill_ellipse(g, 13.5, 10, 4.5, 4, 'k')            # shadowed face
+    put(g, [(11, 10), (12, 10), (15, 10), (16, 10)], 'n')                 # red eyes
+    put(g, [(11, 9), (16, 9)], 'y')
+    fill_rect(g, 8, 15, 19, 25, '{')                  # crouched torso
+    fill_rect(g, 2, 14, 7, 16, '{'); fill_rect(g, 20, 14, 25, 16, '{')    # arms out low
+    fill_rect(g, 0, 16, 2, 22, '{'); fill_rect(g, 25, 16, 27, 22, '{')
+    put(g, [(0, 23), (1, 24), (2, 23), (25, 23), (26, 24), (27, 23)], '}')  # claws
+    fill_rect(g, 9, 26, 12, 30, '['); fill_rect(g, 15, 26, 18, 30, '[')   # bent legs
+    recolor(g, '{', '[', lambda x, y: x >= 20 and y > 3)
+    put(g, [(9, 3), (10, 2), (8, 4)], '}')
+    fill_rect(g, 13, 16, 14, 24, '[')                 # cloak split
+    return rows(outline(g))
+
+def hornet_back(frame):            # striped abdomen, buzzing wings, stinger
+    g = blank(22, 28)
+    up = frame == 0
+    if up:                                            # wings raised
+        fill_ellipse(g, 4, 6, 3.5, 6, 'A'); fill_ellipse(g, 17, 6, 3.5, 6, 'A')
+    else:                                             # wings low
+        fill_ellipse(g, 3, 13, 3, 5, 'A'); fill_ellipse(g, 18, 13, 3, 5, 'A')
+    fill_circle(g, 10.5, 5, 4, 'x')                   # head
+    fill_ellipse(g, 10.5, 16, 7, 9, 'y')              # abdomen
+    for y in (11, 15, 19, 23):
+        fill_rect(g, 3, y, 18, y + 1, 'x')
+    put(g, [(10, 25), (11, 25), (10, 26), (11, 26), (10, 27)], 'x')       # stinger
+    put(g, [(7, 0), (8, 1), (14, 0), (13, 1)], 'x')                       # antennae
+    recolor(g, 'y', 'v', lambda x, y: x >= 15)
+    recolor(g, 'A', 'W', lambda x, y: (x + y) % 3 == 0)                   # wing veins
+    return rows(outline(g))
+
+def hornet_front():
+    g = blank(28, 32)
+    fill_ellipse(g, 4.5, 12, 4.5, 8, 'A'); fill_ellipse(g, 23, 12, 4.5, 8, 'A')   # wings
+    recolor(g, 'A', 'W', lambda x, y: (x + y) % 3 == 0)
+    fill_ellipse(g, 13.5, 22, 7, 8, 'y')              # body
+    for y in (17, 21, 25):
+        fill_rect(g, 7, y, 20, y + 1, 'x')
+    fill_circle(g, 13.5, 9, 7, 'y')                   # head
+    fill_ellipse(g, 9.5, 9, 3, 4, 'x'); fill_ellipse(g, 17.5, 9, 3, 4, 'x')   # compound eyes
+    put(g, [(8, 7), (16, 7)], 'w')
+    put(g, [(11, 14), (12, 15), (15, 15), (16, 14)], 'x')                 # mandibles
+    put(g, [(9, 2), (8, 1), (7, 0), (18, 2), (19, 1), (20, 0)], 'x')      # antennae
+    recolor(g, 'y', 'v', lambda x, y: x >= 19 and y > 3)
+    put(g, [(13, 30), (14, 30), (13, 31)], 'x')       # stinger tip
+    return rows(outline(g))
+
+def warden_back(frame):            # armoured boss: helmet, pauldrons, cape
+    g = blank(22, 28)
+    fill_rect(g, 7, 0, 14, 7, 'm')                    # helmet
+    fill_rect(g, 1, 7, 20, 12, 'M')                   # pauldrons
+    fill_rect(g, 4, 12, 17, 22, 'm')                  # torso
+    fill_rect(g, 5, 12, 16, 23, 'n')                  # cape
+    recolor(g, 'n', 'D', lambda x, y: x >= 13 or (x + y) % 4 == 0)
+    la, lb = (27, 25) if frame == 0 else (25, 27)
+    fill_rect(g, 6, 23, 9, la, 'm'); fill_rect(g, 12, 23, 15, lb, 'm')
+    fill_rect(g, 5, la, 9, la, 'k'); fill_rect(g, 12, lb, 16, lb, 'k')
+    fill_rect(g, 1, 7, 20, 7, 'u')                    # gold trim
+    put(g, [(10, 0), (11, 0)], 'u')                   # helmet crest
+    recolor(g, 'M', 'm', lambda x, y: x >= 16)
+    return rows(outline(g))
+
+def warden_front():
+    g = blank(28, 32)
+    fill_rect(g, 9, 0, 18, 9, 'm')                    # helmet
+    fill_rect(g, 10, 4, 17, 5, 'A')                   # glowing visor slit
+    put(g, [(13, 0), (14, 0)], 'u')
+    fill_rect(g, 0, 9, 27, 14, 'M')                   # massive pauldrons
+    fill_rect(g, 0, 9, 27, 9, 'u')                    # gold trim
+    fill_rect(g, 5, 14, 22, 25, 'm')                  # breastplate
+    fill_rect(g, 11, 15, 16, 22, 'u')                 # crest on chest
+    fill_rect(g, 12, 16, 15, 21, 'v')
+    fill_rect(g, 0, 15, 3, 24, 'm'); fill_rect(g, 24, 15, 27, 24, 'm')    # arms (gap to torso)
+    fill_rect(g, 0, 25, 3, 27, 'e'); fill_rect(g, 24, 25, 27, 27, 'e')    # gauntlets
+    fill_rect(g, 5, 24, 22, 25, 'e')                  # belt
+    put(g, [(13, 24), (14, 24)], 'u')                 # buckle
+    fill_rect(g, 7, 26, 11, 31, 'm'); fill_rect(g, 16, 26, 20, 31, 'm')   # legs
+    fill_rect(g, 7, 28, 11, 28, 'M'); fill_rect(g, 16, 28, 20, 28, 'M')   # knee plates
+    recolor(g, 'm', 'e', lambda x, y: x >= 25 or (x >= 19 and 14 < y < 24))
+    recolor(g, 'M', 'm', lambda x, y: x >= 22)
+    return rows(outline(g))
+
 def runner_down():                 # 36x10 -> x2 = 72x20 (lying on the road)
     g = blank(36, 10)
     fill_rect(g, 1, 5, 4, 8, 'w')                  # shoes
@@ -652,6 +755,10 @@ SPRITES = [
     ('PHANTOM_B0', phantom_back(0)),
     ('PHANTOM_B1', phantom_back(1)),
     ('PHANTOM_F',  phantom_front()),
+    # E1
+    ('STALKER_B0', stalker_back(0)), ('STALKER_B1', stalker_back(1)), ('STALKER_F', stalker_front()),
+    ('HORNET_B0',  hornet_back(0)),  ('HORNET_B1',  hornet_back(1)),  ('HORNET_F',  hornet_front()),
+    ('WARDEN_B0',  warden_back(0)),  ('WARDEN_B1',  warden_back(1)),  ('WARDEN_F',  warden_front()),
     ('DOWN',       runner_down()),
     ('HEART',      heart(True)),
     ('HEART_EMPTY', heart(False)),

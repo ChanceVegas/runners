@@ -6,8 +6,10 @@ memory summaries are secondary. If anything contradicts the repo, stop and raise
 
 ## Project
 Runners: GPS-driven outdoor game. Real-world walking/running moves the player across a
-fictional overworld (Pokémon Go aspect); encounters with enemies and nearby players play
-out as 3rd-person pseudo-3D lane chases (Subway Surfers aspect). Design in PLANNING.md.
+top-down overworld map (GPS exploration); encounters with enemies and nearby players play
+out as 3rd-person pseudo-3D lane chases (3-lane chase). Design in PLANNING.md.
+Originality rules (PLANNING.md) are binding: check every new feature against them, and
+never name or imitate other games in code, art, text or docs.
 
 Predecessor: Cave Escape (repo ChanceVegas/cave-escape, archived at tag
 `cave-escape-final`). Renderer, input, toolchain and process carried over from it.

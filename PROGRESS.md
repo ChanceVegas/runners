@@ -156,6 +156,16 @@ session doesn't know it happened.
   band compositor, drag-gesture input, 3-doc process, transfer protocol.
 
 ## Session Log (newest first)
+### 2026-10-10 — Session 3 (cont.) — originality rules
+- User: wants real map data later (OSM, noted as Open Decision 9) and distance from the
+  big location / runner games to avoid IP trouble. I gave background (not legal advice:
+  mechanics mostly unprotected; names/art/trademarks are; patents are the real unknown;
+  attorney review before any release).
+- Done: competitor names removed from CLAUDE.md / PLANNING.md (old wording stays in git
+  history); "Originality Rules" section added to PLANNING (binding, referenced from
+  CLAUDE.md). Audit of current features + optional tweaks raised with the user.
+- Commit: docs: originality rules, drop other games' names from the docs
+
 ### 2026-10-09 — Session 3 (cont.) — E1b-d in one build
 - User: do all of E1 at once (I'd planned one enemy per hw test; user's call - the test
   list covers all three).

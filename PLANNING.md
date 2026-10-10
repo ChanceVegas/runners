@@ -3,14 +3,14 @@
 ## Game Concept (defined 2026-10-05)
 **Real movement fuels the game; your thumb plays it.** Two modes:
 
-**1. Overworld (Pokémon Go aspect).** Top-down fictional map; the player avatar moves
+**1. Overworld (GPS exploration).** Top-down fictional map; the player avatar moves
 as the real player moves (GPS).
 - GPS ground speed classifies the player: still / walking / running.
 - Walking explores and reveals the map.
 - Running charges **Run energy** and raises the spawn rate of rarer enemies.
 - GPS jitter (2–5 m) is irrelevant at map scale.
 
-**2. Encounters (Subway Surfers aspect).** Triggered by meeting an enemy (or player) on
+**2. Encounters (3-lane chase).** Triggered by meeting an enemy (or player) on
 the map. 3rd-person pseudo-3D lane chase: swipe = change lane, flick = jump, Run energy
 spends on boosts.
 - **Encounters only start once GPS reports the player has stopped.** Safety (no
@@ -26,9 +26,25 @@ together see the same map and the same enemy, no internet involved.
 no pairing, ~100–200 m line-of-sight, low latency). BLE kept in reserve for a phone
 companion app. Accepted limit: you only meet players who are physically nearby.
 
-Explicitly OUT of v1: global/online multiplayer, cellular, servers, real-map
-data (OpenStreetMap etc. — the map is fictional by design). Sound effects and chiptune music ARE in
+Explicitly OUT of v1: global/online multiplayer, cellular, servers. Real-map data
+(OpenStreetMap) is now wanted for later — see Open Decision 9. Sound effects and chiptune music ARE in
 (speaker fitted 2026-10-08; also needed for Safety item 3).
+
+## Originality Rules (user, 2026-10-10 — binding)
+The user wants clear distance from other companies' games (caution about IP disputes).
+Not legal advice; before any public or commercial release the user plans an IP / patent
+attorney review (patents on location-based game systems are the main unknown).
+- Never name or reference other games, companies or characters in code, art, UI text,
+  commit messages or docs. Describe features in our own terms.
+- All art, names, music and sound stay original (hand-made in tools/). No look-alike
+  characters, logos, colour schemes or UI layouts.
+- NO capturing, catching, taming or collecting creatures; NO throwing items at enemies
+  to catch or defeat them. Enemies are raced: escape them or pass them.
+- NO gyms, stops, beacons or team control of real-world places; no lures or incense-
+  style spawn items.
+- NO train/railway-roof setting, graffiti theme, hoverboards, or a guard-and-dog chaser.
+- Shop items keep their own identity (no copies of other games' power-ups).
+- New ideas that resemble a well-known game get flagged to the user BEFORE building.
 
 ## Safety (requirement for R2 GPS — raised by user 2026-10-07)
 Players move through the real world while the map is FICTIONAL: on-screen water,
@@ -155,7 +171,7 @@ wake); no gameplay effect (movement is real walking).
   scene-agnostic via registered compose callbacks (renderer::addLayer).
 - Overworld: top-down tile map, scrolled by camera.
 - Encounter: pseudo-3D lane road per the reference article (per-scanline projection,
-  sprites scaled by depth), Pole Position / OutRun class — NOT Subway Surfers 3D.
+  sprites scaled by depth), classic arcade pseudo-3D road technique — not true 3D.
 - Art lives in flash. Default partition gives a 1.3 MB app slot; a custom
   partitions.csv can fund ~2.5 MB+ of assets when art demands it (Doom-on-CYD approach).
 

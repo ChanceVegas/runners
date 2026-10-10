@@ -300,11 +300,19 @@ speaker, slim 1S LiPo, wiring. Printed on the user's printer.
 Must have:
 - GPS antenna facing the sky, nothing metal/battery above it, a thin plastic roof only.
 - Openings: CrowPanel USB-C (flash/serial), boost-board USB-C (charging), boost button
-  (power), RESET/BOOT pinholes, TF card slot (map data later), speaker grille.
+  (power), RESET/BOOT pinholes, speaker grille.
+- TF (microSD) card is INTERNAL (user, 2026-10-10): no outside slot opening; open the
+  case to reach it. Card held so it can't work loose (foam/tab over the slot).
 - Battery pocket with foam, away from the boost board's inductor (heat), strain-relieved
   leads; no sharp edges near the pouch.
 - Touch: front frame must not press on the resistive touch panel edge (false touches).
 - Mount/carry: TBD (handheld, forearm strap, chest, handlebar?).
+microSD (to source): reliable, genuine (counterfeits are common - buy from a reputable
+seller): an endurance/industrial-grade card, 8-32 GB SDHC, formatted FAT32 (the ESP32
+Arduino SD library is happiest with SDHC/FAT32; 64 GB+ SDXC ships as exFAT). Map data is
+read-mostly, so size/speed needs are small. Note: the slot shares the SPI bus with the
+XPT2046 touch controller - firmware must share that bus carefully (when maps land).
+Game saves stay in on-chip flash (NVS), not on the card.
 LiPo (to source): 1S, protected (PCM), 4.2 V standard chemistry, JST-PH 2.0 leads.
 - Runtime target ~3 h at ~0.6 A from the cell (estimate - measure on hw) -> about
   2000 mAh. Also the boost board may charge at up to ~2 A, which a 2000 mAh cell can

@@ -1,3 +1,4 @@
 .pio/
 .vscode/
 tools/art_preview.png
+__pycache__/

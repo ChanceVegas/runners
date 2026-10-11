@@ -47,10 +47,11 @@ session doesn't know it happened.
   the USB-A footprint "+"/"-" on the back. With a charger in its USB-C it passes 5 V
   through (button ignored) and the CrowPanel RUNS via D2's anode (BAT+ net) - so the
   CrowPanel side has no short (J1 torn off; J1 corner tabs are GND - never wire there).
-  Decision pending: A) CrowPanel's own battery input (protected cell + slide switch ->
-  D2 anode, GPS on D2 cathode = VIN) or B) a project power board (e.g. PowerBoost 1000C:
-  steady 5 V, EN pin for a soft power button). Interim GPS test: USB power bank into the
-  boost USB-C = 5 V pass-through to CrowPanel + GPS.
+  DECIDED 2026-10-10 (user): Adafruit bq25185 USB-C charger + 5 V boost (#6106) replaces
+  the IP5310. Wiring plan: LiPo -> JST-PH; 5V -> D2 anode (CrowPanel) + GPS VCC; GND -> J4
+  GND + GPS GND; EN -> slide switch to GND (= off). Watch: TPS61023 stalls on loads >200 mA
+  at switch-on (CrowPanel start-up to verify), 1 A max, 6 h charge timer. Interim GPS test:
+  USB power bank into the IP5310 USB-C = 5 V pass-through.
 - GPS-PWR (open, hardware): on J4 3V3 the M100 resets every ~26-60 s (10.4 s silence,
   RAM config lost) and its GSV reports 0 satellites in view on every cycle. Software
   can't fix it; G0-R7 constellation cut changed nothing. Next: 5 V supply.
